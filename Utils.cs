@@ -11,7 +11,7 @@ public static class Utils
 	private static Random rng = new Random();
 
 	/// <summary>
-	/// Shuffle a list (i.e. randomize the list elements) 
+	/// Shuffle a list (i.e. randomize the list elements)
 	/// </summary>
 	/// <param name="list">the list to shuffle</param>
 	public static void Shuffle<T>(this List<T> list)
@@ -50,46 +50,6 @@ public static class Utils
 		
 		int len = end - start;
 		return data.GetRange(start, len);
-	}
-
-	/// <summary>
-	/// Get the elements between the two indexes.
-	/// Inclusive for start index, exclusive for end index.
-	/// </summary>
-	public static List<T> Slice2<T>(this List<T> data, int start, int end)
-	{
-		int count = data.Count();
-		
-		// Get start/end indexes, negative numbers start at the end of the collection.
-		if (start < 0)
-			start += count;
-		
-		if (end < 0)
-			end += count;
-		
-		int len = end - start;
-		var result = new T[len];
-		Array.Copy(data.ToArray(), start, result, 0, len);
-		return result.ToList();
-	}
-
-	/// <summary>
-	/// Get the elements between the two indexes.
-	/// Inclusive for start index, exclusive for end index.
-	/// </summary>
-	public static List<T> Slice3<T>(this List<T> data, int start, int end)
-	{
-		int count = data.Count();
-		
-		// Get start/end indexes, negative numbers start at the end of the collection.
-		if (start < 0)
-			start += count;
-		
-		if (end < 0)
-			end += count;
-		
-		int len = end - start;
-		return data.Skip(start).Take(len).ToList();
 	}
 	
 	/// <summary>

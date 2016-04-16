@@ -8,6 +8,7 @@ using System.Collections.Generic;
 /// http://xyzbots.com/gcode-optimizer/
 /// https://github.com/andrewhodel/gcode-optimizer
 /// Based on https://github.com/parano/GeneticAlgorithm-TSP
+/// <seealso cref="http://geneticalgorithms.ai-depot.com/Tutorial/Overview.html"/>
 /// Ported by perivar@nerseth.com, 2016
 /// </summary>
 public class GAAlgorithm {
@@ -131,15 +132,25 @@ public class GAAlgorithm {
 	}
 
 	/// <summary>
-	/// Main Genetic Algorithm method that mutates and calculates new value.
+	/// Evolves a population over one generation
+	/// Main Genetic Algorithm method that mutates and calculates new values.
 	/// Is to be called repeatably until the wanted result is found
 	/// </summary>
 	public void GANextGeneration() {
+		
+		// build new population
 		currentGeneration++;
+		
+		/* 3. elitism and roulette wheel selection */
 		Selection();
+		
+		/* 4. crossover */
 		Crossover();
+		
+		/* 5. mutation */
 		Mutation();
 
+		/* 6. re-evaluate current population */
 		SetBestValue();
 	}
 	
@@ -180,21 +191,27 @@ public class GAAlgorithm {
 	
 	void GAInitialize() {
 		CountDistances();
+		
+		/* 1. init population */
 		for(int i=0; i<POPULATION_SIZE; i++) {
-			population.Add(RandomIndivial(points.Count));
+			population.Add(RandomIndividual(points.Count));
 		}
+		
+		/* 2. evaluate current population */
 		SetBestValue();
 	}
 	
 	void Selection() {
 		const int initnum = 4;
 
+		// Keep our best individual if elitism is enabled
 		var parents = new List<List<int>>();
 		parents.Add(population[currentBest.BestPosition]);
 		parents.Add(DoMutate(best.Clone()));
 		parents.Add(AddMutate(best.Clone()));
 		parents.Add(best.Clone());
 
+		/* 3. roulette wheel selection */
 		SetRoulette();
 		for(int i=initnum; i<POPULATION_SIZE; i++) {
 			parents.Add(population[WheelOut(rng.NextDouble())]);
@@ -297,6 +314,7 @@ public class GAAlgorithm {
 	}
 
 	void SetBestValue() {
+		/* 2. evaluate current population */
 		for(int i=0; i<population.Count; i++) {
 			values[i] = Evaluate(population[i].ToArray());
 		}
@@ -353,7 +371,7 @@ public class GAAlgorithm {
 	/// </summary>
 	/// <param name="n">upper bound</param>
 	/// <returns>a shuffled list of numbers between 0 and n</returns>
-	static List<int> RandomIndivial(int n){
+	static List<int> RandomIndividual(int n){
 		var a = new List<int>();
 		for(int i=0; i<n; i++) {
 			a.Add(i);
