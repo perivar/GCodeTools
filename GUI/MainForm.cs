@@ -18,10 +18,10 @@ namespace GCodeOptimizer
 	public partial class MainForm : Form
 	{
 		private static BackgroundWorker _backgroundWorker;
-		private static GAOperations _gaOperations;
-		private static List<Location> _locations;
 		
-		private static TSP_GA _tspGa;
+		private static GAOperations _gaOperations;
+		//private static List<Location> _locations;		
+		//private static TSP_GA _tspGa;
 		
 		private GAAlgorithm _alg;
 		private List<Point> _points;

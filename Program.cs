@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using tsp;
 using System.Windows.Forms;
+using GCodePlotter;
 
 namespace GCodeOptimizer
 {
@@ -18,7 +19,8 @@ namespace GCodeOptimizer
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new MainForm());
+			//Application.Run(new MainForm());
+			Application.Run(new frmPlotter());
 
 			/*
 			var points = TravellingSalesman.DataProvider.GetPoints(@"JavaScript\data.js", "data200");

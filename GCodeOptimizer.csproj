@@ -54,6 +54,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GCode\QuickSettings.cs" />
+    <Compile Include="GCode\SimpleGCodeParser.cs" />
+    <Compile Include="GUI\frmPlotter.cs" />
+    <Compile Include="GUI\frmPlotter.Designer.cs">
+      <DependentUpon>frmPlotter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GUI\MainForm.cs" />
+    <Compile Include="GUI\MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="JavaConverted2\Individual.cs" />
     <Compile Include="JavaConverted2\Population.cs" />
     <Compile Include="JavaConverted\City.cs" />
@@ -65,10 +75,6 @@
     <Compile Include="DataProvider.cs" />
     <Compile Include="JavaScriptConverted\GAAlgorithm.cs" />
     <Compile Include="Location.cs" />
-    <Compile Include="MainForm.cs" />
-    <Compile Include="MainForm.Designer.cs">
-      <DependentUpon>MainForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="GAOperations.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -85,17 +91,26 @@
     <None Include="JavaScript\main.js" />
     <None Include="JavaScript\utils.js" />
     <None Include="packages.config" />
+    <None Include="Samples\dino-example.ngc">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="MainForm.resx">
+    <EmbeddedResource Include="GUI\frmPlotter.resx">
+      <DependentUpon>frmPlotter.Designer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GUI\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="GCode" />
+    <Folder Include="GUI" />
     <Folder Include="JavaConverted" />
     <Folder Include="JavaConverted2" />
     <Folder Include="JavaScript" />
     <Folder Include="JavaScriptConverted" />
+    <Folder Include="Samples" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
