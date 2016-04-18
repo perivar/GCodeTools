@@ -2,6 +2,7 @@
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  *
  * See LICENCE in the project directory for licence information
+ * Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,8 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+
+using System.Text.RegularExpressions;
 
 namespace GCodePlotter
 {
@@ -158,13 +161,93 @@ namespace GCodePlotter
 
 	public class GCodeInstruction
 	{
-		public readonly IFormatProvider InvariantCulture = CultureInfo.InvariantCulture;
+		private static Regex GCodeSplitter = new Regex(@"([A-Z])(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+		// pattern matchers.
+		private static Regex parenPattern  = new Regex(@"\((.*)\)", RegexOptions.Compiled);
+		private static Regex semiPattern = new Regex(@";(.*)", RegexOptions.Compiled);
+		private static Regex deleteBlockPattern = new Regex(@"^(\.*)", RegexOptions.Compiled);
+		
+		public readonly IFormatProvider InvariantCulture = CultureInfo.InvariantCulture;
+		
 		public const float CurveSection = 1;
 
 		public static bool AbsoluteMode = true;
 
 		public GCodeInstruction(string line)
+		{
+			string command = ParseComments(line);
+			
+			if (!string.IsNullOrEmpty(Comment) && string.IsNullOrEmpty(command)) {
+				IsOnlyComment = true;
+			} else {
+				IsOnlyComment = false;
+				
+				// use regexp for the part that remains after removing the comment
+				// or a line that hasn't a comment at all
+				MatchCollection matches = GCodeSplitter.Matches(command.ToUpper());
+
+				if (matches.Count != 0) {
+					this.Command = matches[0].Groups[0].Value;
+					
+					for (int index = 0; index < matches.Count; index++)
+					{
+						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
+
+						//if (Units == DistanceUnit.Inches)
+						//	value *= 25.4f;
+
+						switch (matches[index].Groups[1].Value)
+						{
+								case "X": X = value; break;
+								case "Y": Y = value; break;
+								case "Z": Z = value; break;
+								case "F": F = value; break;
+								case "I": I = value; break;
+								case "J": J = value; break;
+								case "P": P = value; break;
+								//case "R": R = value; break;
+						}
+					}
+				}
+			}
+		}
+		
+		private string ParseComments(string line)
+		{
+			string comment = "";
+			string command = line;
+			
+			MatchCollection parenMatcher = parenPattern.Matches(line);
+			MatchCollection semiMatcher = semiPattern.Matches(line);
+
+			// Note that we only support one style of comments, and only one comment per row.
+			if (parenMatcher.Count != 0) {
+				comment = parenMatcher[0].Groups[1].Value;
+
+				// remove the comments from the command string
+				command = parenPattern.Replace(line, "");
+			}
+
+			if (semiMatcher.Count != 0) {
+				comment = semiMatcher[0].Groups[1].Value;
+
+				// remove the comments from the command string
+				command = semiPattern.Replace(line, "");
+			}
+			
+			if (!string.IsNullOrEmpty(comment)) {
+				// clean up the comment
+				comment = comment.Trim().Replace('|', '\n');
+
+				// and store it
+				Comment = comment;
+			}
+			
+			return command;
+		}
+		
+		public void GCodeInstructionOld(string line)
 		{
 			#region Code
 			if (line.StartsWith("(") && line.EndsWith(")"))
@@ -205,7 +288,7 @@ namespace GCodePlotter
 				char axis = bits[i][0];
 				float? dist = null;
 
-				if (bits[i].Length == 1) // Only Axis, so dist is in next field!
+				if (bits[i].Length == 1) // Only Axis, so distance is in next field!
 				{
 					i++;
 					if (i >= bits.Length)
@@ -234,7 +317,9 @@ namespace GCodePlotter
 						case 'J': this.J = dist; break;
 						case 'P': this.P = dist; break;
 				}
+				
 			}
+			
 			#endregion
 		}
 
@@ -261,18 +346,26 @@ namespace GCodePlotter
 				switch (Command)
 				{
 					case "G0":
-						case "G00": return "Rapid Move";
+					case "G00":
+						return "Rapid Move";
 					case "G1":
-						case "G01": return "Coordinated motion";
+					case "G01":
+						return "Coordinated motion";
 					case "G2":
-						case "G02": return "Clockwise arc motion";
+					case "G02":
+						return "Clockwise arc motion";
 					case "G3":
-						case "G03": return "Counter clockwise arc motion";
+					case "G03":
+						return "Counter clockwise arc motion";
 					case "G4":
-						case "G04": return "Dwell";
-						case "G90": return "Absolute Mode";
-						case "G91": return "Relative Mode";
-						case "G21": return "G21";
+					case "G04":
+						return "Dwell";
+					case "G90":
+						return "Absolute Mode";
+					case "G91":
+						return "Relative Mode";
+					case "G21":
+						return "G21";
 				}
 				return "Unknown " + Command;
 				#endregion
@@ -287,15 +380,20 @@ namespace GCodePlotter
 				switch (Command)
 				{
 					case "G0":
-						case "G00": return CommandList.RapidMove;
+					case "G00":
+						return CommandList.RapidMove;
 					case "G1":
-						case "G01": return CommandList.NormalMove;
+					case "G01":
+						return CommandList.NormalMove;
 					case "G2":
-						case "G02": return CommandList.CWArc;
+					case "G02":
+						return CommandList.CWArc;
 					case "G3":
-						case "G03": return CommandList.CCWArc;
+					case "G03":
+						return CommandList.CCWArc;
 					case "G4":
-						case "G04": return CommandList.Dwell;
+					case "G04":
+						return CommandList.Dwell;
 				}
 				return CommandList.Other;
 				#endregion
@@ -318,25 +416,24 @@ namespace GCodePlotter
 			var sb = new StringBuilder();
 			sb.Append(this.Command);
 
-			if (X.HasValue) sb.AppendFormat(" X {0:F4}", this.X);
-			if (Y.HasValue) sb.AppendFormat(" Y {0:F4}", this.Y);
+			if (X.HasValue) sb.AppendFormat(" X{0:F4}", this.X);
+			if (Y.HasValue) sb.AppendFormat(" Y{0:F4}", this.Y);
 
-			if (Z.HasValue)
-			{
-				if (this.Z <= 0)
-				{
-					if (multiLayer && zoverride.HasValue)
-						sb.AppendFormat(" Z {0:F4}", zoverride.Value);
-					else
-						sb.AppendFormat(" Z {0:F4}", this.Z);
+			if (Z.HasValue) {
+				if (this.Z <= 0) {
+					if (multiLayer && zoverride.HasValue) {
+						sb.AppendFormat(" Z{0:F4}", zoverride.Value);
+					} else {
+						sb.AppendFormat(" Z{0:F4}", this.Z);
+					}
+				} else {
+					sb.AppendFormat(" Z{0:F4}", this.Z);
 				}
-				else
-					sb.AppendFormat(" Z {0:F4}", this.Z);
 			}
-			if (I.HasValue) sb.AppendFormat(" I {0:F4}", this.I);
-			if (J.HasValue) sb.AppendFormat(" J {0:F4}", this.J);
-			if (F.HasValue) sb.AppendFormat(" F {0:F4}", this.F);
-			if (P.HasValue) sb.AppendFormat(" P {0:F4}", this.P);
+			if (I.HasValue) sb.AppendFormat(" I{0:F4}", this.I);
+			if (J.HasValue) sb.AppendFormat(" J{0:F4}", this.J);
+			if (F.HasValue) sb.AppendFormat(" F{0:F4}", this.F);
+			if (P.HasValue) sb.AppendFormat(" P{0:F4}", this.P);
 
 			if (!string.IsNullOrWhiteSpace(Comment))
 				sb.AppendFormat(" ({0})", Comment);
