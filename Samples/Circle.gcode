@@ -8,6 +8,11 @@ G28 X0 Y0; Home x and y axis
 G1 X100 Y100 F4000; Center extruder above bed
 G28 Z0; Home Z axis 
 G1 F3000; Set feed rate (speed) for first move
+
+(CIRCLE)
+G01 X1 Y4
+G02 X1 Y4 I4 J4
+
 (---------- START OF CODE ----------)
 
 
@@ -26,6 +31,5 @@ M9 (Coolant Off)
 M5 (Stop Spindle)
 G0X0Y0 (Origin)
 M30 (End of Program)
-
 
 (---------- END OF CODE ----------)

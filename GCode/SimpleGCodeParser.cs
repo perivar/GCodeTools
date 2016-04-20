@@ -187,7 +187,11 @@ namespace GCodePlotter
 				// or a line that hasn't a comment at all
 				MatchCollection matches = GCodeSplitter.Matches(command.ToUpper());
 
-				if (matches.Count != 0) {
+				if (matches.Count == 1) {
+					// only matched the command, store this
+					this.Command = matches[0].Groups[0].Value;
+				} else if (matches.Count > 1) {
+					// matched the command and something more
 					this.Command = matches[0].Groups[0].Value;
 					
 					for (int index = 0; index < matches.Count; index++)
@@ -202,11 +206,12 @@ namespace GCodePlotter
 								case "X": X = value; break;
 								case "Y": Y = value; break;
 								case "Z": Z = value; break;
+								case "E": E = value; break;
 								case "F": F = value; break;
 								case "I": I = value; break;
 								case "J": J = value; break;
 								case "P": P = value; break;
-								//case "R": R = value; break;
+								case "T": T = (int) value; break;
 						}
 					}
 				}
@@ -328,10 +333,12 @@ namespace GCodePlotter
 		public float? X { get; set; }
 		public float? Y { get; set; }
 		public float? Z { get; set; }
+		public float? E { get; set; }
 		public float? F { get; set; }
 		public float? I { get; set; }
 		public float? J { get; set; }
 		public float? P { get; set; }
+		public int? T { get; set; }
 
 		internal float minX, minY;
 		internal float maxX, maxY;
@@ -432,8 +439,10 @@ namespace GCodePlotter
 			}
 			if (I.HasValue) sb.AppendFormat(" I{0:F4}", this.I);
 			if (J.HasValue) sb.AppendFormat(" J{0:F4}", this.J);
+			if (E.HasValue) sb.AppendFormat(" E{0:F4}", this.E);
 			if (F.HasValue) sb.AppendFormat(" F{0:F4}", this.F);
 			if (P.HasValue) sb.AppendFormat(" P{0:F4}", this.P);
+			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
 
 			if (!string.IsNullOrWhiteSpace(Comment))
 				sb.AppendFormat(" ({0})", Comment);

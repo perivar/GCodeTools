@@ -26,7 +26,6 @@ namespace GCodePlotter
 			#region Code
 			bDataLoaded = false;
 
-			//var lastFile = @"Samples\dino-example.ngc";
 			var lastFile = QuickSettings.Get["LastOpenedFile"];
 			if (!string.IsNullOrWhiteSpace(lastFile))
 			{
@@ -109,7 +108,9 @@ namespace GCodePlotter
 						}
 						else
 						{
-							currentPlot.Name = line.Comment.Substring(23);
+							if (line.Comment.Length > 23) {
+								currentPlot.Name = line.Comment.Substring(23);
+							}
 						}
 					}
 
@@ -470,7 +471,7 @@ namespace GCodePlotter
 
 				var tw = new StreamWriter(file.OpenWrite());
 
-				tw.WriteLine("(File built with Jamakinmegcode)");
+				tw.WriteLine("(File built with GCodeTools)");
 				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
 				tw.WriteLine();
 				tw.WriteLine("(Header)");
@@ -487,8 +488,8 @@ namespace GCodePlotter
 
 				tw.WriteLine();
 				tw.WriteLine("(Footer)");
-				tw.WriteLine("G00 Z 5.00");
-				tw.WriteLine("G00 X 0.00 Y 0.00");
+				tw.WriteLine("G00 Z5.00");
+				tw.WriteLine("G00 X0.00 Y0.00");
 				tw.WriteLine("(Footer end.)");
 				tw.WriteLine();
 
