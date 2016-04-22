@@ -30,11 +30,11 @@ namespace GCodePlotter
 			if (!string.IsNullOrWhiteSpace(lastFile))
 			{
 				// Load data here!
-				var fil = new FileInfo(lastFile);
-				if (fil.Exists)
+				var fileInfo = new FileInfo(lastFile);
+				if (fileInfo.Exists)
 				{
-					txtFile.Text = fil.Name;
-					txtFile.Tag = fil.FullName;
+					txtFile.Text = fileInfo.Name;
+					txtFile.Tag = fileInfo.FullName;
 					Application.DoEvents();
 					cmdParseData.Enabled = true;
 					cmdParseData.PerformClick();
@@ -134,6 +134,8 @@ namespace GCodePlotter
 					}
 
 					currentPlot.GCodeInstructions.Add(line);
+				} else {
+					// non renderable plot
 				}
 			}
 
@@ -189,117 +191,6 @@ namespace GCodePlotter
 			#endregion
 		}
 
-		private void cmdShiftDown_Click(object sender, EventArgs e)
-		{
-			#region Code
-			var objs = lstPlots.SelectedItems.Cast<object>().ToList();
-			var idx = lstPlots.SelectedIndex;
-			if (idx >= lstPlots.Items.Count - objs.Count)
-			{
-				idx = lstPlots.Items.Count - objs.Count;
-			}
-
-			foreach (Plot i in objs)
-			{
-				myPlots.Remove(i);
-				lstPlots.Items.Remove(i);
-			}
-
-			for(int i = 0; i < objs.Count; i++)
-			{
-				if ((idx + i) >= lstPlots.Items.Count)
-				{
-					lstPlots.Items.Add(objs[i]);
-					myPlots.Add((Plot)objs[i]);
-				}
-				else
-				{
-					lstPlots.Items.Insert(idx + i + 1, objs[i]);
-					myPlots.Insert(idx + i + 1, (Plot)objs[i]);
-				}
-
-				lstPlots.SelectedItems.Add(objs[i]);
-			}
-
-			CalculateGCodePlot();
-			RenderPlots();
-			#endregion
-		}
-
-		private void cmdToBottom_Click(object sender, EventArgs e)
-		{
-			#region Code
-			var objs = lstPlots.SelectedItems.Cast<object>().ToList();
-			var idx = lstPlots.SelectedIndex;
-			foreach (Plot i in objs)
-			{
-				lstPlots.Items.Remove(i);
-				myPlots.Remove(i);
-			}
-
-			for (int i = 0; i < objs.Count; i++)
-			{
-				lstPlots.Items.Add(objs[i]);
-				myPlots.Add((Plot)objs[i]);
-				lstPlots.SelectedItems.Add(objs[i]);
-			}
-
-			CalculateGCodePlot();
-			RenderPlots();
-			#endregion
-		}
-
-		private void cmdShiftUp_Click(object sender, EventArgs e)
-		{
-			#region Code
-			var objs = lstPlots.SelectedItems.Cast<object>().ToList();
-			var idx = lstPlots.SelectedIndex;
-			if (idx < 1)
-			{
-				idx = 1;
-			}
-
-			foreach (Plot i in objs)
-			{
-				lstPlots.Items.Remove(i);
-				myPlots.Remove(i);
-			}
-
-			for (int i = 0; i < objs.Count; i++)
-			{
-				lstPlots.Items.Insert(idx + i - 1, objs[i]);
-				myPlots.Insert(idx + i - 1, (Plot)objs[i]);
-				lstPlots.SelectedItems.Add(objs[i]);
-			}
-
-			CalculateGCodePlot();
-			RenderPlots();
-			#endregion
-		}
-
-		private void cmdToTop_Click(object sender, EventArgs e)
-		{
-			#region Code
-			var objs = lstPlots.SelectedItems.Cast<object>().ToList();
-			var idx = lstPlots.SelectedIndex;
-			foreach (Plot i in objs)
-			{
-				lstPlots.Items.Remove(i);
-				myPlots.Remove(i);
-			}
-
-			for (int i = 0; i < objs.Count; i++)
-			{
-				lstPlots.Items.Insert(i, objs[i]);
-				myPlots.Insert(i, (Plot)objs[i]);
-				lstPlots.SelectedItems.Add(objs[i]);
-			}
-
-			CalculateGCodePlot();
-			RenderPlots();
-			#endregion
-		}
-
 		private void lstPlots_SelectedIndexChanged(object sender, EventArgs e)
 		{
 			#region Code
@@ -307,7 +198,6 @@ namespace GCodePlotter
 			#endregion
 		}
 
-		//Plot lastPlot = null;
 		private void SelectPlot(ListBox box)
 		{
 			#region Code
@@ -321,10 +211,15 @@ namespace GCodePlotter
 		{
 			#region Code
 			var multiplier = 4f;
-			if (radZoomTwo.Checked) multiplier = 2;
-			else if (radZoomFour.Checked) multiplier = 4;
-			else if (radZoomEight.Checked) multiplier = 8;
-			else if (radZoomSixteen.Checked) multiplier = 16;
+			if (radZoomTwo.Checked) {
+				multiplier = 2;
+			} else if (radZoomFour.Checked) {
+				multiplier = 4;
+			} else if (radZoomEight.Checked) {
+				multiplier = 8;
+			} else if (radZoomSixteen.Checked) {
+				multiplier = 16;
+			}
 
 			var scale = (10 * multiplier);
 
@@ -454,20 +349,21 @@ namespace GCodePlotter
 			SaveGCodes(true);
 		}
 
-		private void SaveGCodes(bool layers)
+		private void SaveGCodes(bool doMultiLayer)
 		{
 			#region Code
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == System.Windows.Forms.DialogResult.OK)
 			{
 				var file = new FileInfo(sfdSaveDialog.FileName);
-				if (!layers)
+				if (!doMultiLayer)
 				{
 					QuickSettings.Get["LastOpenedFile"] = file.FullName;
 				}
 
-				if (file.Exists)
+				if (file.Exists) {
 					file.Delete();
+				}
 
 				var tw = new StreamWriter(file.OpenWrite());
 
@@ -482,19 +378,18 @@ namespace GCodePlotter
 				myPlots.ForEach(x =>
 				                {
 				                	tw.WriteLine();
-				                	tw.Write(x.BuildGCodeOutput(layers));
+				                	tw.Write(x.BuildGCodeOutput(doMultiLayer));
 				                });
 				tw.Flush();
 
 				tw.WriteLine();
 				tw.WriteLine("(Footer)");
-				tw.WriteLine("G00 Z5.00");
-				tw.WriteLine("G00 X0.00 Y0.00");
+				tw.WriteLine("G00 Z5");
+				tw.WriteLine("G00 X0 Y0");
 				tw.WriteLine("(Footer end.)");
 				tw.WriteLine();
 
 				tw.Flush();
-
 				tw.Close();
 			}
 			#endregion

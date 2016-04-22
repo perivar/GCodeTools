@@ -412,7 +412,7 @@ namespace GCodePlotter
 			return this.ToString(false);
 		}
 
-		public string ToString(bool multiLayer, float? zoverride = null)
+		public string ToString(bool doMultiLayer, float? zOverride = null)
 		{
 			#region Code
 			if (string.IsNullOrWhiteSpace(Command))
@@ -423,25 +423,25 @@ namespace GCodePlotter
 			var sb = new StringBuilder();
 			sb.Append(this.Command);
 
-			if (X.HasValue) sb.AppendFormat(" X{0:F4}", this.X);
-			if (Y.HasValue) sb.AppendFormat(" Y{0:F4}", this.Y);
+			if (X.HasValue) sb.AppendFormat(" X{0:0.####}", this.X);
+			if (Y.HasValue) sb.AppendFormat(" Y{0:0.####}", this.Y);
 
 			if (Z.HasValue) {
 				if (this.Z <= 0) {
-					if (multiLayer && zoverride.HasValue) {
-						sb.AppendFormat(" Z{0:F4}", zoverride.Value);
+					if (doMultiLayer && zOverride.HasValue) {
+						sb.AppendFormat(" Z{0:0.####}", zOverride.Value);
 					} else {
-						sb.AppendFormat(" Z{0:F4}", this.Z);
+						sb.AppendFormat(" Z{0:0.####}", this.Z);
 					}
 				} else {
-					sb.AppendFormat(" Z{0:F4}", this.Z);
+					sb.AppendFormat(" Z{0:0.####}", this.Z);
 				}
 			}
-			if (I.HasValue) sb.AppendFormat(" I{0:F4}", this.I);
-			if (J.HasValue) sb.AppendFormat(" J{0:F4}", this.J);
-			if (E.HasValue) sb.AppendFormat(" E{0:F4}", this.E);
-			if (F.HasValue) sb.AppendFormat(" F{0:F4}", this.F);
-			if (P.HasValue) sb.AppendFormat(" P{0:F4}", this.P);
+			if (I.HasValue) sb.AppendFormat(" I{0:0.####}", this.I);
+			if (J.HasValue) sb.AppendFormat(" J{0:0.####}", this.J);
+			if (E.HasValue) sb.AppendFormat(" E{0:0.####}", this.E);
+			if (F.HasValue) sb.AppendFormat(" F{0:0.####}", this.F);
+			if (P.HasValue) sb.AppendFormat(" P{0:0.####}", this.P);
 			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
 
 			if (!string.IsNullOrWhiteSpace(Comment))
@@ -453,7 +453,7 @@ namespace GCodePlotter
 
 		private StringBuilder GetXY(StringBuilder sb)
 		{
-			return sb.AppendFormat(" ({0:F4},{1:F4} - {2:F4},{3:F4})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
+			return sb.AppendFormat(" ({0:0.####},{1:0.####} - {2:0.####},{3:0.####})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
 		}
 
 		internal bool IsOnlyComment { get; private set; }
@@ -749,14 +749,13 @@ namespace GCodePlotter
 			this.FinalizePlot();
 		}
 
-		public string BuildGCodeOutput(bool multilayer)
+		public string BuildGCodeOutput(bool doMultiLayers)
 		{
 			var sb = new StringBuilder();
 
 			sb.AppendFormat("(Start cutting path id: {0})", this.Name).AppendLine();
 
-			if (multilayer)
-			{
+			if (doMultiLayers) {
 				var data = QuickSettings.Get["ZDepths"];
 				if (string.IsNullOrEmpty(data))
 				{
@@ -764,29 +763,24 @@ namespace GCodePlotter
 				}
 
 				string [] bits = null;
-				if (data.Contains(','))
+				if (data.Contains(',')) {
 					bits = data.Split(',');
-				else
+				} else {
 					bits = new string[] { data };
+				}
 
-				foreach(var line in bits)
-				{
+				foreach(var line in bits) {
 					float f;
-					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f))
-					{
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start layer: {0:F4})", f).AppendLine();
-						foreach (var gCodeLine in this.GCodeInstructions)
-						{
-							sb.AppendLine(gCodeLine.ToString(true, zoverride: f));
+					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
+						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start layer: {0:0.####})", f).AppendLine();
+						foreach (var gCodeLine in this.GCodeInstructions) {
+							sb.AppendLine(gCodeLine.ToString(true, zOverride: f));
 						}
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(End layer: {0:F4})", f).AppendLine();
+						sb.AppendFormat(CultureInfo.InvariantCulture, "(End layer: {0:0.####})", f).AppendLine();
 					}
 				}
-			}
-			else
-			{
-				foreach (var line in this.GCodeInstructions)
-				{
+			} else {
+				foreach (var line in this.GCodeInstructions) {
 					sb.AppendLine(line.ToString(false));
 				}
 			}
