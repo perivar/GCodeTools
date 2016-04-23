@@ -69,7 +69,8 @@ namespace GCodePlotter
 		private DialogResult AskToLoadData()
 		{
 			#region Code
-			return MessageBox.Show("Doing this will load/reload data, are you sure you want to load this data deleting your old data?", "Question!", MessageBoxButtons.YesNo);
+			//return MessageBox.Show("Doing this will load/reload data, are you sure you want to load this data deleting your old data?", "Question!", MessageBoxButtons.YesNo);
+			return DialogResult.OK;
 			#endregion
 		}
 
@@ -81,9 +82,7 @@ namespace GCodePlotter
 
 			lstPlots.Items.Clear();
 
-			var currentPoint = new PointF(0, 0);
-			currentPoint.X = 0;
-			currentPoint.Y = 0;
+			var currentPoint = new Point3D(0, 0, 0);
 
 			myPlots = new List<Plot>();
 			var currentPlot = new Plot();
@@ -151,24 +150,27 @@ namespace GCodePlotter
 				myPlots.Remove(footer);
 			}
 
-			myPlots.ForEach(x => { x.FinalizePlot(); lstPlots.Items.Add(x); });
+			//myPlots.ForEach(x => { x.FinalizePlot(); lstPlots.Items.Add(x); });
+			
+			float absMaxX = 0.0f;
+			float absMaxY = 0.0f;
+			float absMaxZ = 0.0f;
+			foreach (Plot plotItem in myPlots)
+			{
+				plotItem.FinalizePlot();
+				lstPlots.Items.Add(plotItem);
+				
+				absMaxX = Math.Max(absMaxX, plotItem.maxX);
+				absMaxY = Math.Max(absMaxY, plotItem.maxY);
+				absMaxZ = Math.Max(absMaxZ, plotItem.maxZ);
+			}
+			
+			txtDimension.Text = String.Format("X: {0} mm \r\nY: {1} mm \r\nZ: {2} mm", absMaxX, absMaxY, absMaxZ);
 
+			GCodeSplitter.Split(parsedPlots, 10);
+			
 			RenderPlots();
 			bDataLoaded = true;
-			#endregion
-		}
-
-		private void CalculateGCodePlot()
-		{
-			#region Code
-			var currentPoint = new PointF(0, 0);
-			currentPoint.X = 0;
-			currentPoint.Y = 0;
-
-			foreach (var plot in lstPlots.Items.Cast<Plot>())
-			{
-				plot.Replot(ref currentPoint);
-			}
 			#endregion
 		}
 
@@ -240,6 +242,9 @@ namespace GCodePlotter
 
 			var intAbsMaxX = (int)(absMaxX + 1) / 10 + 10;
 			var intAbsMaxY = (int)(absMaxY + 1) / 10 + 10;
+			
+			intAbsMaxX = (int) Math.Min(intAbsMaxX, 1000);
+			intAbsMaxY = (int) Math.Min(intAbsMaxY, 1000);
 
 			if (renderImage == null || intAbsMaxX != renderImage.Width || intAbsMaxY != renderImage.Height)
 			{

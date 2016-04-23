@@ -45,6 +45,7 @@ namespace GCodePlotter
 			this.panel1 = new System.Windows.Forms.Panel();
 			this.panel2 = new System.Windows.Forms.Panel();
 			this.panel4 = new System.Windows.Forms.Panel();
+			this.txtDimension = new System.Windows.Forms.TextBox();
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panel5 = new System.Windows.Forms.Panel();
@@ -166,6 +167,7 @@ namespace GCodePlotter
 			// 
 			// panel4
 			// 
+			this.panel4.Controls.Add(this.txtDimension);
 			this.panel4.Controls.Add(this.cmdSaveLayers);
 			this.panel4.Controls.Add(this.cmdSave);
 			this.panel4.Controls.Add(this.cmdLoad);
@@ -176,6 +178,19 @@ namespace GCodePlotter
 			this.panel4.Name = "panel4";
 			this.panel4.Size = new System.Drawing.Size(120, 509);
 			this.panel4.TabIndex = 11;
+			// 
+			// txtDimension
+			// 
+			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
+			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.txtDimension.Location = new System.Drawing.Point(10, 455);
+			this.txtDimension.Multiline = true;
+			this.txtDimension.Name = "txtDimension";
+			this.txtDimension.ReadOnly = true;
+			this.txtDimension.Size = new System.Drawing.Size(102, 45);
+			this.txtDimension.TabIndex = 11;
 			// 
 			// cmdSaveLayers
 			// 
@@ -190,10 +205,11 @@ namespace GCodePlotter
 			// txtFile
 			// 
 			this.txtFile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-			this.txtFile.Location = new System.Drawing.Point(280, 9);
+			this.txtFile.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.txtFile.Location = new System.Drawing.Point(191, 11);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(151, 20);
+			this.txtFile.Size = new System.Drawing.Size(225, 20);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panel5
@@ -285,6 +301,7 @@ namespace GCodePlotter
 			this.panel2.ResumeLayout(false);
 			this.panel2.PerformLayout();
 			this.panel4.ResumeLayout(false);
+			this.panel4.PerformLayout();
 			this.panel5.ResumeLayout(false);
 			this.panel5.PerformLayout();
 			this.panel6.ResumeLayout(false);
@@ -313,6 +330,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.RadioButton radZoomEight;
 		private System.Windows.Forms.RadioButton radZoomSixteen;
 		private System.Windows.Forms.Panel panel6;
+		private System.Windows.Forms.TextBox txtDimension;
 	}
 }
 

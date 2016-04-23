@@ -15,6 +15,74 @@ using System.Text.RegularExpressions;
 
 namespace GCodePlotter
 {
+	#region Point 3D
+	public struct Point3D {
+		
+		private float x;
+		private float y;
+		private float z;
+		
+		public static readonly Point3D Empty;
+		
+		public bool IsEmpty {
+			get {
+				return this.x == 0f && this.y == 0f && this.z == 0f;
+			}
+		}
+
+		public float X {
+			get {
+				return this.x;
+			}
+			set {
+				this.x = value;
+			}
+		}
+
+		public float Y {
+			get {
+				return this.y;
+			}
+			set {
+				this.y = value;
+			}
+		}
+
+		public float Z {
+			get {
+				return this.z;
+			}
+			set {
+				this.z = value;
+			}
+		}
+
+		public Point3D(float x, float y, float z)
+		{
+			this.x = x;
+			this.y = y;
+			this.z = z;
+		}
+
+		public Point3D(float x, float y)
+		{
+			this.x = x;
+			this.y = y;
+			this.z = 0;
+		}
+		
+		public override string ToString()
+		{
+			return string.Format(CultureInfo.CurrentCulture,
+			                     "{{X={0}, Y={1}, Z={2}}}", new object[] {
+			                     	this.x,
+			                     	this.y,
+			                     	this.z
+			                     });
+		}
+	}
+	#endregion
+	
 	public static class SimpleGCodeParser
 	{
 		public static List<GCodeInstruction> ParseText(string text)
@@ -173,7 +241,76 @@ namespace GCodePlotter
 		public const float CurveSection = 1;
 
 		public static bool AbsoluteMode = true;
+		
+		public static bool Metric = true;
+		
+		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, float feed) {
+			switch (command) {
+				case CommandList.RapidMove:
+					Command = "G0";
+					break;
+				case CommandList.NormalMove:
+					Command = "G1";
+					break;
+				case CommandList.CWArc:
+					Command = "G2";
+					break;
+				case CommandList.CCWArc:
+					Command = "G3";
+					break;
+				case CommandList.Other:
+					break;
+			}
+			
+			this.X = p2.X;
+			this.Y = p2.Y;
+			this.Z = p2.Z;
+			this.F = feed;
+		}
 
+		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed) {
+			switch (command) {
+				case CommandList.RapidMove:
+					Command = "G0";
+					break;
+				case CommandList.NormalMove:
+					Command = "G1";
+					break;
+				case CommandList.CWArc:
+					Command = "G2";
+					break;
+				case CommandList.CCWArc:
+					Command = "G3";
+					break;
+				case CommandList.Other:
+					break;
+			}
+			
+			this.X = p1.X;
+			this.Y = p1.Y;
+			this.I = p3.X;
+			this.J = p3.Y;
+			this.F = feed;
+		}
+		
+		public Point3D CenterPoint {
+			get {
+				if (I.HasValue && J.HasValue) {
+					return new Point3D(I.Value, J.Value);
+				}
+				return Point3D.Empty;
+			}
+		}
+		
+		public Point3D Point {
+			get {
+				if (X.HasValue && Y.HasValue) {
+					return new Point3D(X.Value, Y.Value);
+				}
+				return Point3D.Empty;
+			}
+		}
+		
 		public GCodeInstruction(string line)
 		{
 			string command = ParseComments(line);
@@ -198,9 +335,6 @@ namespace GCodePlotter
 					{
 						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
 
-						//if (Units == DistanceUnit.Inches)
-						//	value *= 25.4f;
-
 						switch (matches[index].Groups[1].Value)
 						{
 								case "X": X = value; break;
@@ -214,6 +348,8 @@ namespace GCodePlotter
 								case "T": T = (int) value; break;
 						}
 					}
+				} else {
+					// empty - ignore
 				}
 			}
 		}
@@ -252,82 +388,6 @@ namespace GCodePlotter
 			return command;
 		}
 		
-		public void GCodeInstructionOld(string line)
-		{
-			#region Code
-			if (line.StartsWith("(") && line.EndsWith(")"))
-			{
-				this.Comment = line.Trim('(', ')');
-				IsOnlyComment = true;
-				return;
-			}
-
-			IsOnlyComment = false;
-			if (line.Contains('('))
-			{
-				var fst = line.IndexOf('(');
-				var nxt = line.IndexOf(')', fst);
-				this.Comment = line.Substring(fst + 1, nxt - fst - 1);
-
-				if (nxt + 1 < line.Length)
-				{
-					line = string.Format(InvariantCulture, "{0} {1}", line.Substring(0, fst - 1), line.Substring(nxt + 1));
-				}
-				else
-				{
-					line = line.Substring(0, fst - 1);
-				}
-
-				line = line.Trim(' ', '\t', '\n');
-			}
-
-			if (!line.Contains(' '))
-			{
-				this.Command = line;
-			}
-
-			string[] bits = line.Split(' ');
-			this.Command = bits[0];
-			for (int i = 1; i < bits.Length; i++)
-			{
-				char axis = bits[i][0];
-				float? dist = null;
-
-				if (bits[i].Length == 1) // Only Axis, so distance is in next field!
-				{
-					i++;
-					if (i >= bits.Length)
-					{
-						throw new ParsingException(string.Format(InvariantCulture, "No distance specified for {0}", axis));
-					}
-
-					dist = float.Parse(bits[i], InvariantCulture);
-				}
-				else
-				{
-					dist = float.Parse(bits[i].Substring(1), InvariantCulture);
-				}
-
-				if (!dist.HasValue) throw new ParsingException(string.Format(InvariantCulture, "No distance specified for {0}", axis));
-
-				if (dist.HasValue) { dist = dist.Value; } // * Multiplier
-
-				switch (char.ToUpper(axis))
-				{
-						case 'X': this.X = dist; break;
-						case 'Y': this.Y = dist; break;
-						case 'Z': this.Z = dist; break;
-						case 'F': this.F = dist; break;
-						case 'I': this.I = dist; break;
-						case 'J': this.J = dist; break;
-						case 'P': this.P = dist; break;
-				}
-				
-			}
-			
-			#endregion
-		}
-
 		public string Comment { get; set; }
 		public string Command { get; set; }
 		public float? X { get; set; }
@@ -340,10 +400,10 @@ namespace GCodePlotter
 		public float? P { get; set; }
 		public int? T { get; set; }
 
-		internal float minX, minY;
-		internal float maxX, maxY;
-		internal PointF StartPoint;
-		internal PointF EndPoint;
+		internal float minX, minY, minZ;
+		internal float maxX, maxY, maxZ;
+		internal Point3D StartPoint;
+		internal Point3D EndPoint;
 
 		public string CommandType
 		{
@@ -371,8 +431,10 @@ namespace GCodePlotter
 						return "Absolute Mode";
 					case "G91":
 						return "Relative Mode";
+					case "G20":
+						return "Set Units to Inches";
 					case "G21":
-						return "G21";
+						return "Set Units to Millimeters";
 				}
 				return "Unknown " + Command;
 				#endregion
@@ -417,7 +479,11 @@ namespace GCodePlotter
 			#region Code
 			if (string.IsNullOrWhiteSpace(Command))
 			{
-				return string.Format("({0})", Comment);
+				if (!string.IsNullOrWhiteSpace(Comment)) {
+					return string.Format("({0})", Comment);
+				} else {
+					return string.Empty;
+				}
 			}
 
 			var sb = new StringBuilder();
@@ -444,14 +510,15 @@ namespace GCodePlotter
 			if (P.HasValue) sb.AppendFormat(" P{0:0.####}", this.P);
 			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
 
-			if (!string.IsNullOrWhiteSpace(Comment))
+			if (!string.IsNullOrWhiteSpace(Comment)) {
 				sb.AppendFormat(" ({0})", Comment);
+			}
 
 			return sb.ToString();
 			#endregion
 		}
 
-		private StringBuilder GetXY(StringBuilder sb)
+		public StringBuilder GetXY(StringBuilder sb)
 		{
 			return sb.AppendFormat(" ({0:0.####},{1:0.####} - {2:0.####},{3:0.####})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
 		}
@@ -464,36 +531,43 @@ namespace GCodePlotter
 			if (CommandEnum == CommandList.NormalMove ||
 			    CommandEnum == CommandList.RapidMove ||
 			    CommandEnum == CommandList.CWArc ||
-			    CommandEnum == CommandList.CCWArc) //||
-				//CommandEnum == CommandList.Dwell)
+			    CommandEnum == CommandList.CCWArc) {
+				
+				// TODO: If only Z is enabled, ignore
+				//if (!X.HasValue && !Y.HasValue && Z.HasValue) {
+				//	return false;
+				//}
 				return true;
+			}
 			return false;
 			#endregion
 		}
 
 		public List<LinePoints> CachedLinePoints { get; set; }
 
-		internal List<LinePoints> RenderCode(ref PointF currentPoint)
+		internal List<LinePoints> RenderCode(ref Point3D currentPoint)
 		{
 			#region Code
 			if (CommandEnum == CommandList.Other)
 			{
 				if (Command == "G90") { AbsoluteMode = true; }
 				if (Command == "G91") { AbsoluteMode = false; }
+				if (Command == "G21") { Metric = true; }
+				if (Command == "G20") { Metric = false; }
 				return null;
 			}
 			if (CommandEnum == CommandList.Dwell)
 				return null;
 
-			var pos = new PointF(currentPoint.X, currentPoint.Y);
+			var pos = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
 			if (AbsoluteMode)
 			{
 				if (X.HasValue)
 					pos.X = X.Value;
 				if (Y.HasValue)
 					pos.Y = Y.Value;
-				//if (Z.HasValue)
-				//	pos.Z = (int)(Z.Value * Multiplier);
+				if (Z.HasValue)
+					pos.Z = Z.Value;
 			}
 			// relative specifies a delta
 			else
@@ -502,42 +576,52 @@ namespace GCodePlotter
 					pos.X += X.Value;
 				if (Y.HasValue)
 					pos.Y += Y.Value;
-				//if (Z.HasValue)
-				//	pos.Z += (int)(Z.Value * Multiplier);
+				if (Z.HasValue)
+					pos.Z += Z.Value;
 			}
 
+			if (!Metric) {
+				pos.X *= 25.4f;
+				pos.Y *= 25.4f;
+				pos.Z *= 25.4f;
+			}
+			
 			if (CommandEnum == CommandList.RapidMove || CommandEnum == CommandList.NormalMove)
 			{
 				maxX = Math.Max(currentPoint.X, pos.X);
 				maxY = Math.Max(currentPoint.Y, pos.Y);
+				maxZ = Math.Max(currentPoint.Z, pos.Z);
 
 				minX = Math.Min(currentPoint.X, pos.X);
 				minY = Math.Min(currentPoint.Y, pos.Y);
+				minZ = Math.Min(currentPoint.Z, pos.Z);
 
-				StartPoint = new PointF(currentPoint.X, currentPoint.Y);
-				EndPoint = new PointF(pos.X, pos.Y);
+				StartPoint = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
+				EndPoint = new Point3D(pos.X, pos.Y, pos.Z);
 
 				var line = new LinePoints(currentPoint, pos, CommandEnum == CommandList.RapidMove ? PenColorList.RapidMove : PenColorList.NormalMove);
 				currentPoint.X = pos.X;
 				currentPoint.Y = pos.Y;
+				currentPoint.Z = pos.Z;
 				return new List<LinePoints>() { line };
 			}
 
 			if (CommandEnum == CommandList.CWArc || CommandEnum == CommandList.CCWArc)
 			{
-				var center = new PointF(0f, 0f);
-				var current = new PointF(currentPoint.X, currentPoint.Y);
+				var center = new Point3D(0f, 0f, 0f);
+				var current = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
 				center.X = current.X + this.I ?? 0;
 				center.Y = current.Y + this.J ?? 0;
 
 				minX = currentPoint.X;
 				minY = currentPoint.Y;
+				minZ = currentPoint.Z;
 
-				StartPoint = new PointF(current.X, current.Y);
+				StartPoint = new Point3D(current.X, current.Y, current.Z);
 
 				var arcPoints = RenderArc(center, pos, (CommandEnum == CommandList.CWArc), ref currentPoint);
-				EndPoint = new PointF(currentPoint.X, currentPoint.Y);
-
+				EndPoint = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
+				
 				return arcPoints;
 			}
 
@@ -545,7 +629,7 @@ namespace GCodePlotter
 			#endregion
 		}
 
-		private List<LinePoints> RenderArc(PointF center, PointF endpoint, bool clockwise, ref PointF currentPosition)
+		private List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
 		{
 			#region Code
 			// angle variables.
@@ -562,7 +646,7 @@ namespace GCodePlotter
 			double bY;
 
 			// figure out our deltas
-			var current = new PointF(currentPosition.X, currentPosition.Y);
+			var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
 			aX = current.X - center.X;
 			aY = current.Y - center.Y;
 			bX = endpoint.X - center.X;
@@ -585,9 +669,12 @@ namespace GCodePlotter
 			// and if not add 2PI so that it is (this also takes
 			// care of the special case of angleA == angleB,
 			// ie we want a complete circle)
-			if (angleB <= angleA)
+			if (angleB <= angleA) {
 				angleB += 2 * Math.PI;
+			}
+			
 			angle = angleB - angleA;
+			
 			// calculate a couple useful things.
 			radius = Math.Sqrt(aX * aX + aY * aY);
 			length = radius * angle;
@@ -602,22 +689,22 @@ namespace GCodePlotter
 			steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / CurveSection));
 
 			// this is the real draw action.
-			var newPoint = new PointF(current.X, current.Y);
-			var lastPoint = new PointF(current.X, current.Y);
+			var newPoint = new Point3D(current.X, current.Y, current.Z);
+			var lastPoint = new Point3D(current.X, current.Y, current.Z);
 			var output = new List<LinePoints>();
 			var p = clockwise ? PenColorList.CWArc : PenColorList.CCWArc;
 			for (s = 1; s <= steps; s++)
 			{
 				// Forwards for CCW, backwards for CW
-				if (!clockwise)
+				if (!clockwise) {
 					step = s;
-				else
+				} else {
 					step = steps - s;
+				}
 
 				// calculate our waypoint.
 				newPoint.X = (float)((center.X + radius * Math.Cos(angleA + angle * ((double)step / steps))));
 				newPoint.Y = (float)((center.Y + radius * Math.Sin(angleA + angle * ((double)step / steps))));
-				//newPoint.setZ(arcStartZ + (endpoint.z() - arcStartZ) * s / steps);
 				
 				maxX = Math.Max(maxX, newPoint.X);
 				maxY = Math.Max(maxY, newPoint.Y);
@@ -626,6 +713,7 @@ namespace GCodePlotter
 				minY = Math.Min(minY, newPoint.Y);
 
 				output.Add(new LinePoints(currentPosition, newPoint, p));
+				
 				// start the move
 				currentPosition.X = newPoint.X;
 				currentPosition.Y = newPoint.Y;
@@ -637,34 +725,26 @@ namespace GCodePlotter
 
 	public struct LinePoints
 	{
-		public LinePoints(PointF start, PointF end, PenColorList pen)
+		public LinePoints(Point3D start, Point3D end, PenColorList pen)
 			: this()
 		{
 			#region Code
 			X1 = start.X;
 			Y1 = start.Y;
+			Z1 = start.Z;
 			X2 = end.X;
 			Y2 = end.Y;
-			Pen = pen;
-			#endregion
-		}
-
-		public LinePoints(float x1, float y1, float x2, float y2, PenColorList pen)
-			: this()
-		{
-			#region Code
-			X1 = x1;
-			Y1 = y1;
-			X2 = x2;
-			Y2 = y2;
+			Z2 = end.Z;
 			Pen = pen;
 			#endregion
 		}
 
 		public float X1 { get; set; }
 		public float Y1 { get; set; }
+		public float Z1 { get; set; }
 		public float X2 { get; set; }
 		public float Y2 { get; set; }
+		public float Z2 { get; set; }
 		public PenColorList Pen { get; set; }
 
 		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int top = 0)
@@ -708,23 +788,27 @@ namespace GCodePlotter
 			{
 				maxX = first.maxX;
 				maxY = first.maxY;
+				maxZ = first.maxZ;
 
 				minX = first.StartPoint.X;
 				minY = first.StartPoint.Y;
+				minZ = first.StartPoint.Z;
 			}
 
 			foreach (var plot in gcodeInstructions)
 			{
 				minX = Math.Min(minX, plot.minX);
 				minY = Math.Min(minY, plot.minY);
+				minZ = Math.Min(minZ, plot.minZ);
 
 				maxX = Math.Max(maxX, plot.maxX);
 				maxY = Math.Max(maxY, plot.maxY);
+				maxZ = Math.Max(maxZ, plot.maxZ);
 			}
 		}
 
-		public float minX, minY;
-		public float maxX, maxY;
+		public float minX, minY, minZ;
+		public float maxX, maxY, maxZ;
 
 		public override string ToString()
 		{
@@ -734,7 +818,7 @@ namespace GCodePlotter
 			return sb.ToString();
 		}
 
-		public void Replot(ref PointF currentPoint)
+		public void Replot(ref Point3D currentPoint)
 		{
 			this.PlotPoints.Clear();
 			foreach (var line in this.GCodeInstructions)

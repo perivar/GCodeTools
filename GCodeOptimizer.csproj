@@ -54,6 +54,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GCode\GCodeSplitter.cs" />
     <Compile Include="GCode\QuickSettings.cs" />
     <Compile Include="GCode\SimpleGCodeParser.cs" />
     <Compile Include="GUI\frmPlotter.cs" />
