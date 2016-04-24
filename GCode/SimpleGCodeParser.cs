@@ -71,6 +71,29 @@ namespace GCodePlotter
 			this.z = 0;
 		}
 		
+		public static bool operator ==(Point3D left, Point3D right) {
+			return left.X == right.X && left.Y == right.Y && left.Z == right.Z;
+		}
+		
+		public static bool operator !=(Point3D left, Point3D right) {
+			return !(left == right);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (!(obj is Point3D)) {
+				return false;
+			}
+			var point3D = (Point3D)obj;
+			return point3D.X == this.X && point3D.Y == this.Y && point3D.Z == this.Z
+				&& point3D.GetType().Equals(base.GetType());
+		}
+
+		public override int GetHashCode()
+		{
+			return base.GetHashCode();
+		}
+		
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
@@ -286,29 +309,11 @@ namespace GCodePlotter
 					break;
 			}
 			
-			this.X = p1.X;
-			this.Y = p1.Y;
-			this.I = p3.X;
-			this.J = p3.Y;
+			this.X = p2.X;
+			this.Y = p2.Y;
+			this.I = p3.X-p1.X;
+			this.J = p3.Y-p1.Y;
 			this.F = feed;
-		}
-		
-		public Point3D CenterPoint {
-			get {
-				if (I.HasValue && J.HasValue) {
-					return new Point3D(I.Value, J.Value);
-				}
-				return Point3D.Empty;
-			}
-		}
-		
-		public Point3D Point {
-			get {
-				if (X.HasValue && Y.HasValue) {
-					return new Point3D(X.Value, Y.Value);
-				}
-				return Point3D.Empty;
-			}
 		}
 		
 		public GCodeInstruction(string line)

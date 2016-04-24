@@ -26,8 +26,6 @@ namespace GCodePlotter
 		{
 			CommandList mvtype = CommandList.Other;  // G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 
-			//GCodeInstruction passthruInstruction = null;
-
 			var app = new List<List<GCodeInstruction>>();
 			app.Add(new List<GCodeInstruction>());
 			app.Add(new List<GCodeInstruction>());
@@ -35,7 +33,7 @@ namespace GCodePlotter
 			int thisSide = -1;
 			int otherSide = -1;
 			
-			const float feed = 50.0f;
+			float currentFeedrate = 50.0f;
 			
 			var flag_side = Position.None;
 			
@@ -55,8 +53,10 @@ namespace GCodePlotter
 			Point3D currentPlot = Point3D.Empty;
 			foreach (var instruction in instructions)
 			{
+				// merge previous coordinates with newer ones to maintain correct point coordinates
 				if (instruction.CanRender() &&
-				    (instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue)) {
+				    (instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
+				     || instruction.F.HasValue)) {
 					if (instruction.X.HasValue && instruction.X.Value != currentPos.X) {
 						currentPos.X = instruction.X.Value;
 					}
@@ -66,11 +66,15 @@ namespace GCodePlotter
 					if (instruction.Z.HasValue && instruction.Z.Value != currentPos.Z) {
 						currentPos.Z = instruction.Z.Value;
 					}
+					if (instruction.F.HasValue && instruction.F.Value != currentFeedrate) {
+						currentFeedrate = instruction.F.Value;
+					}
 				}
 
 				mvtype = instruction.CommandEnum;
 				//if (previousPos.IsEmpty) continue;
 				
+				// ignore rapid moves
 				if (mvtype == CommandList.RapidMove) {
 					continue;
 				}
@@ -82,46 +86,51 @@ namespace GCodePlotter
 					//pos_last = self.coordop(POS_LAST,shift,angle)
 					//pos = instruction.StartPoint;
 					//pos_last = instruction.EndPoint;
-					center = instruction.CenterPoint;
+					
+					if (instruction.I.HasValue && instruction.J.HasValue) {
+						center = new Point3D(previousPos.X+instruction.I.Value,
+						                     previousPos.Y+instruction.J.Value);
+						
+					}
 					
 					//if (CENTER[0] !="" && CENTER[1] !="") {
 					//center = self.coordop(CENTER,shift,angle)
 					//}
 					
-					if (previousPos.X > xsplit+selfZero) {
+					if (currentPos.X > xsplit+selfZero) {
 						flag_side = Position.R;
-					} else if (previousPos.X < xsplit-selfZero) {
+					} else if (currentPos.X < xsplit-selfZero) {
 						flag_side = Position.L;
 					} else {
 						if (mvtype == CommandList.NormalMove) {
-							if (currentPos.X >= xsplit) {
+							if (previousPos.X >= xsplit) {
 								flag_side = Position.R;
 							} else {
 								flag_side = Position.L;
 							}
 						} else if (mvtype == CommandList.CWArc) {
-							if (Math.Abs(previousPos.Y-center.Y) < selfZero) {
+							if (Math.Abs(currentPos.Y-center.Y) < selfZero) {
 								if (center.X > xsplit) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							} else {
-								if (previousPos.Y >= center.Y) {
+								if (currentPos.Y >= center.Y) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							}
 						} else { //(mvtype == 3) {
-							if (Math.Abs(previousPos.Y-center.Y) < selfZero) {
+							if (Math.Abs(currentPos.Y-center.Y) < selfZero) {
 								if (center.X > xsplit) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							} else {
-								if (previousPos.Y >= center.Y) {
+								if (currentPos.Y >= center.Y) {
 									flag_side = Position.L;
 								} else {
 									flag_side = Position.R;
@@ -151,11 +160,11 @@ namespace GCodePlotter
 							//app[this] ( [mvtype,A,B,feed] )
 							//app[other]( [mvtype,B,C,feed] )
 							B = cross[0];
-							app[thisSide].Add(new GCodeInstruction(mvtype, A, B, feed));
-							app[otherSide].Add(new GCodeInstruction(mvtype, B, C, feed));
+							app[thisSide].Add(new GCodeInstruction(mvtype, A, B, currentFeedrate));
+							app[otherSide].Add(new GCodeInstruction(mvtype, B, C, currentFeedrate));
 						} else {
 							//app[this] ( [mvtype,A,C,feed] )
-							app[thisSide].Add(new GCodeInstruction(mvtype, A, C, feed));
+							app[thisSide].Add(new GCodeInstruction(mvtype, A, C, currentFeedrate));
 						}
 					}
 					
@@ -166,9 +175,9 @@ namespace GCodePlotter
 						A = previousPos;
 						C = currentPos;
 						D  = center;
-						cross = GetArcIntersect(previousPos, currentPos, xsplit, center, mvtype);
+						cross = GetArcIntersect2(previousPos, currentPos, xsplit, center, mvtype);
 
-						if (cross != null && cross.Count > 0) {
+						if (cross.Count > 0) {
 							// Arc crosses boundary at least once
 							//B = self.coordunop(cross[0]   ,shift,angle)
 							B = cross[0];
@@ -176,14 +185,14 @@ namespace GCodePlotter
 							// Check length of arc before writing
 							if (Distance(B, A) > selfAccuracy) {
 								//app[this]( [mvtype,A,B,D,feed])
-								app[thisSide].Add(new GCodeInstruction(mvtype, A, B, D, feed));
+								app[thisSide].Add(new GCodeInstruction(mvtype, A, B, D, currentFeedrate));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Distance(C, B) > selfAccuracy) {
 									//app[other]([ mvtype,B,C,D, feed] )
-									app[otherSide].Add(new GCodeInstruction(mvtype, B, C, D, feed));
+									app[otherSide].Add(new GCodeInstruction(mvtype, B, C, D, currentFeedrate));
 								}
 							}
 							
@@ -194,19 +203,19 @@ namespace GCodePlotter
 								// Check length of arc before writing
 								if (Distance(E, B) > selfAccuracy) {
 									// app[other]([ mvtype,B,E,D, feed] )
-									app[otherSide].Add(new GCodeInstruction(mvtype, B, E, D, feed));
+									app[otherSide].Add(new GCodeInstruction(mvtype, B, E, D, currentFeedrate));
 								}
 								
 								// Check length of arc before writing
 								if (Distance(C, E) > selfAccuracy) {
 									//app[this] ([ mvtype,E,C,D, feed] )
-									app[thisSide].Add(new GCodeInstruction(mvtype, E, C, D, feed));
+									app[thisSide].Add(new GCodeInstruction(mvtype, E, C, D, currentFeedrate));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
 							//app[this]([ mvtype,A,C,D, feed])
-							app[thisSide].Add(new GCodeInstruction(mvtype, A, C, D, feed));
+							app[thisSide].Add(new GCodeInstruction(mvtype, A, C, D, currentFeedrate));
 						}
 					}
 				} else {
@@ -272,6 +281,36 @@ namespace GCodePlotter
 			
 			return output;
 		}
+		public static List<Point3D> GetArcIntersect2(Point3D p1, Point3D p2, float xsplit, Point3D cent, CommandList code) {
+
+			var output = new List<Point3D>();
+
+			// find radius of circle
+			double R = Distance(p1, cent);
+			double Rt = Distance(p2, cent);
+			
+			if (Math.Abs(R-Rt) > selfAccuracy) {
+				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
+			}
+			
+			var pp1 = new PointF(10,10);
+			var pp2 = new PointF(10,20);
+			
+			var i1 = PointF.Empty;
+			var i2 = PointF.Empty;
+			int numIntersections = FindLineCircleIntersections(cent.X, cent.Y, (float) R, pp1, pp2, out i1, out i2);
+			if (numIntersections > 0) {
+				var ip1 = new Point3D() { X = i1.X, Y = i1.Y, Z = 0 };
+				output.Add(ip1);
+				
+				if (numIntersections == 2) {
+					var ip2 = new Point3D() { X = i2.X, Y = i2.Y, Z = 0 };
+					output.Add(ip2);
+				}
+			}
+			
+			return output;
+		}
 		
 		public static List<Point3D> GetArcIntersect(Point3D p1, Point3D p2, float xsplit, Point3D cent, CommandList code) {
 			
@@ -286,8 +325,8 @@ namespace GCodePlotter
 			double gamma1 = 0.0f;
 			double gamma2 = 0.0f;
 			
-			double R = Math.Sqrt( Math.Pow(cent.X-p1.X,2) + Math.Pow(cent.Y-p1.Y,2) );
-			double Rt= Math.Sqrt( Math.Pow(cent.X-p2.X,2) + Math.Pow(cent.Y-p2.Y,2) );
+			double R = Distance(p1, cent);
+			double Rt = Distance(p2, cent);
 			
 			if (Math.Abs(R-Rt) > selfAccuracy) {
 				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
@@ -446,5 +485,56 @@ namespace GCodePlotter
 			return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
 		}
 
+		
+		/// <summary>
+		/// Find the points of intersection.
+		/// </summary>
+		/// <param name="cx">x coordinate of center point of circle</param>
+		/// <param name="cy">y coordinate of center point of circle</param>
+		/// <param name="radius">radius of circle</param>
+		/// <param name="point1">line point 1</param>
+		/// <param name="point2">line point 2</param>
+		/// <param name="intersection1">output coordinate of first intersection if it exists</param>
+		/// <param name="intersection2">output coordinate of second intersection if it exists</param>
+		/// <returns>number of found intersections</returns>
+		/// <see cref="http://csharphelper.com/blog/2014/09/determine-where-a-line-intersects-a-circle-in-c/"/>
+		private static int FindLineCircleIntersections(float cx, float cy, float radius,
+		                                               PointF point1, PointF point2, out PointF intersection1, out PointF intersection2)
+		{
+			float dx, dy, A, B, C, det, t;
+
+			dx = point2.X - point1.X;
+			dy = point2.Y - point1.Y;
+
+			A = dx * dx + dy * dy;
+			B = 2 * (dx * (point1.X - cx) + dy * (point1.Y - cy));
+			C = (point1.X - cx) * (point1.X - cx) + (point1.Y - cy) * (point1.Y - cy) - radius * radius;
+
+			det = B * B - 4 * A * C;
+			if ((A <= 0.0000001) || (det < 0))
+			{
+				// No real solutions.
+				intersection1 = new PointF(float.NaN, float.NaN);
+				intersection2 = new PointF(float.NaN, float.NaN);
+				return 0;
+			}
+			else if (det == 0)
+			{
+				// One solution.
+				t = -B / (2 * A);
+				intersection1 = new PointF(point1.X + t * dx, point1.Y + t * dy);
+				intersection2 = new PointF(float.NaN, float.NaN);
+				return 1;
+			}
+			else
+			{
+				// Two solutions.
+				t = (float)((-B + Math.Sqrt(det)) / (2 * A));
+				intersection1 = new PointF(point1.X + t * dx, point1.Y + t * dy);
+				t = (float)((-B - Math.Sqrt(det)) / (2 * A));
+				intersection2 = new PointF(point1.X + t * dx, point1.Y + t * dy);
+				return 2;
+			}
+		}
 	}
 }

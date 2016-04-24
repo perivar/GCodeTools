@@ -15,6 +15,9 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
+		const int MAX_WIDTH = 1000;
+		const int MAX_HEIGHT = 1000;
+
 		public frmPlotter()
 		{
 			InitializeComponent();
@@ -243,8 +246,9 @@ namespace GCodePlotter
 			var intAbsMaxX = (int)(absMaxX + 1) / 10 + 10;
 			var intAbsMaxY = (int)(absMaxY + 1) / 10 + 10;
 			
-			intAbsMaxX = (int) Math.Min(intAbsMaxX, 1000);
-			intAbsMaxY = (int) Math.Min(intAbsMaxY, 1000);
+			// set max size in case the calculated dimensions are way off
+			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
+			intAbsMaxY = (int) Math.Min(intAbsMaxY, MAX_HEIGHT);
 
 			if (renderImage == null || intAbsMaxX != renderImage.Width || intAbsMaxY != renderImage.Height)
 			{
