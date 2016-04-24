@@ -266,8 +266,19 @@ namespace GCodePlotter
 		public static bool AbsoluteMode = true;
 		
 		public static bool Metric = true;
+
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed) {
+			
+			var output = new List<GCodeInstruction>();
+			
+			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			output.Add(new GCodeInstruction(command, p2, feed));
+			
+			return output;
+		}
 		
-		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, float feed) {
+		#region Constructors
+		public GCodeInstruction(CommandList command, Point3D point, float feed) {
 			switch (command) {
 				case CommandList.RapidMove:
 					Command = "G0";
@@ -285,12 +296,12 @@ namespace GCodePlotter
 					break;
 			}
 			
-			this.X = p2.X;
-			this.Y = p2.Y;
-			this.Z = p2.Z;
+			this.X = point.X;
+			this.Y = point.Y;
+			this.Z = point.Z;
 			this.F = feed;
 		}
-
+		
 		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed) {
 			switch (command) {
 				case CommandList.RapidMove:
@@ -358,6 +369,7 @@ namespace GCodePlotter
 				}
 			}
 		}
+		#endregion
 		
 		private string ParseComments(string line)
 		{

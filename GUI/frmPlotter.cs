@@ -170,7 +170,7 @@ namespace GCodePlotter
 			
 			txtDimension.Text = String.Format("X: {0} mm \r\nY: {1} mm \r\nZ: {2} mm", absMaxX, absMaxY, absMaxZ);
 
-			GCodeSplitter.Split(parsedPlots, 10);
+			GCodeSplitter.Split(parsedPlots, new Point3D(10, 0, 0), 0.0f);
 			
 			RenderPlots();
 			bDataLoaded = true;

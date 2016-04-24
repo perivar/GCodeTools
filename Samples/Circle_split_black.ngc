@@ -1,0 +1,53 @@
+( G-Code Modified by G-Code Ripper                        )
+( by Scorch - 2016 www.scorchworks.com                    )
+G90   (set absolute distance mode)
+G90.1 (set absolute distance mode for arc centers)
+G17   (set active plane to XY)
+G21   (set units to mm)
+(G-Code Preamble)
+(---------------------------------------------------------)
+; An opening comment
+(Another opening comment)
+(probe)
+;g38.2 x10 f1000 
+; Set units to millimeters
+; Set absolute coordinates
+;G92 E0; Reset extruder
+; Home x and y axis
+G28 
+; Center extruder above bed
+G0 Z 0.2500
+G0 X 10.0000 Y 10.0000
+G1 Z 0.0000 F 5.00
+G1 X 30.0000 Y 30.0000 F 4000.00
+; Home Z axis 
+G28 
+(speed)
+; Set feed rate  for first move
+(CIRCLE)
+G1 X 10.0000 F 3000.00
+G0 Z 0.2500
+G0 Y 50.0000
+G1 Z 0.0000 F 5.00
+G2 X 30.0000 Y 30.0000 I 20.0000 J 40.0000
+(---------- START OF CODE ----------)
+(mm)
+(Change Tool: Diameter: 1.0000 mm)
+M6 T1 
+(Start Spindle)
+M3 
+(Flood Coolant On)
+M7 
+G0 Z 0.2500
+G0 X 10.0000 Y 13.8730
+G1 Z-2.0000
+G2 Y 6.1270 I 9.0000 J 10.0000
+(Retract)
+(Coolant Off)
+M9 
+(Stop Spindle)
+M5 
+(Origin)
+(End of Program)
+M30 
+(---------- END OF CODE ----------)
