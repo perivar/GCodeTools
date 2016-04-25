@@ -328,7 +328,7 @@ namespace GCodePlotter
 				return null;
 			}
 
-			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y, code);
+			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // note no code
 
 			var betaTuple = Transform(p2.X-cent.X,p2.Y-cent.Y,DegreeToRadian(-theta));
 			double xbeta = betaTuple.Item1;
@@ -437,13 +437,14 @@ namespace GCodePlotter
 		/// <param name="x"></param>
 		/// <param name="y"></param>
 		/// <param name="code"></param>
-		public static double GetAngle(double x, double y, CommandList code) {
-			double angle = 90.0 - RadianToDegree(Math.Atan2(x,y));
+		public static double GetAngle(double x, double y, CommandList code = CommandList.Other)
+		{
+			double angle = 90.0 - RadianToDegree(Math.Atan2(x, y));
 			if (angle < 0) {
 				angle = 360 + angle;
-				if (code == CommandList.CWArc) {
-					return (360.0 - angle);
-				}
+			}
+			if (code == CommandList.CWArc) {
+				return (360.0 - angle);
 			}
 			return angle;
 		}
