@@ -202,16 +202,28 @@ namespace GCodePlotter
 
 		void BtnSplitClick(object sender, EventArgs e)
 		{
+			if (radLeft.Checked) {
+				ResetSplit(0);
+			} else {
+				ResetSplit(1);
+			}
+		}
+		
+		void ResetSplit(int index) {
 			if ("".Equals(txtSplit.Text)) {
 				MessageBox.Show("No split value entered!");
 				return;
 			}
 			float xSplit = 0.0f;
 			if (float.TryParse(txtSplit.Text, out xSplit)) {
+				
+				cmdParseData.Enabled = true;
+				cmdParseData.PerformClick();
+				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f);
 				
-				var gcodeTest = Plot.BuildGCodeOutput("noname", split[0], false);
+				var gcodeTest = Plot.BuildGCodeOutput("noname", split[index], false);
 				ParseText(gcodeTest);
 			}
 		}
@@ -446,6 +458,15 @@ namespace GCodePlotter
 				tw.Close();
 			}
 			#endregion
+		}
+		
+		void TreeViewMouseDown(object sender, MouseEventArgs e)
+		{
+			var me = (MouseEventArgs) e;
+			if (me.Button == MouseButtons.Right) {
+				treeView.SelectedNode = null;
+				RenderPlots();
+			}
 		}
 	}
 }

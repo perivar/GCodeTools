@@ -45,6 +45,8 @@ namespace GCodePlotter
 			this.treeView = new System.Windows.Forms.TreeView();
 			this.panel2 = new System.Windows.Forms.Panel();
 			this.panel4 = new System.Windows.Forms.Panel();
+			this.radRight = new System.Windows.Forms.RadioButton();
+			this.radLeft = new System.Windows.Forms.RadioButton();
 			this.txtSplit = new System.Windows.Forms.TextBox();
 			this.lblSplit = new System.Windows.Forms.Label();
 			this.btnSplit = new System.Windows.Forms.Button();
@@ -156,6 +158,7 @@ namespace GCodePlotter
 			this.treeView.Size = new System.Drawing.Size(300, 476);
 			this.treeView.TabIndex = 10;
 			this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewAfterSelect);
+			this.treeView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TreeViewMouseDown);
 			// 
 			// panel2
 			// 
@@ -168,6 +171,8 @@ namespace GCodePlotter
 			// 
 			// panel4
 			// 
+			this.panel4.Controls.Add(this.radRight);
+			this.panel4.Controls.Add(this.radLeft);
 			this.panel4.Controls.Add(this.txtSplit);
 			this.panel4.Controls.Add(this.lblSplit);
 			this.panel4.Controls.Add(this.btnSplit);
@@ -182,6 +187,27 @@ namespace GCodePlotter
 			this.panel4.Name = "panel4";
 			this.panel4.Size = new System.Drawing.Size(125, 509);
 			this.panel4.TabIndex = 11;
+			// 
+			// radRight
+			// 
+			this.radRight.Location = new System.Drawing.Point(61, 321);
+			this.radRight.Name = "radRight";
+			this.radRight.Size = new System.Drawing.Size(58, 24);
+			this.radRight.TabIndex = 16;
+			this.radRight.TabStop = true;
+			this.radRight.Text = "Right";
+			this.radRight.UseVisualStyleBackColor = true;
+			// 
+			// radLeft
+			// 
+			this.radLeft.Checked = true;
+			this.radLeft.Location = new System.Drawing.Point(10, 321);
+			this.radLeft.Name = "radLeft";
+			this.radLeft.Size = new System.Drawing.Size(45, 24);
+			this.radLeft.TabIndex = 15;
+			this.radLeft.TabStop = true;
+			this.radLeft.Text = "Left";
+			this.radLeft.UseVisualStyleBackColor = true;
 			// 
 			// txtSplit
 			// 
@@ -210,8 +236,8 @@ namespace GCodePlotter
 			// 
 			// txtDimension
 			// 
-			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+			                                                                 | System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.txtDimension.Location = new System.Drawing.Point(3, 420);
@@ -363,6 +389,8 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button btnSplit;
 		private System.Windows.Forms.TextBox txtSplit;
 		private System.Windows.Forms.Label lblSplit;
+		private System.Windows.Forms.RadioButton radRight;
+		private System.Windows.Forms.RadioButton radLeft;
 	}
 }
 

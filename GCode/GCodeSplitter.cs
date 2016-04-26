@@ -162,10 +162,10 @@ namespace GCodePlotter
 
 						if (cross.Count > 0) { // Line crosses boundary
 							B = CoordUnop(cross[0], shift, angle);
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate));
-							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift));
+							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift));
 						} else {
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift));
 						}
 					}
 					
@@ -181,13 +181,13 @@ namespace GCodePlotter
 							
 							// Check length of arc before writing
 							if (Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift));
 								}
 							}
 							
@@ -196,17 +196,17 @@ namespace GCodePlotter
 								
 								// Check length of arc before writing
 								if (Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift));
 								}
 								
 								// Check length of arc before writing
 								if (Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift));
 						}
 					}
 					
@@ -235,9 +235,70 @@ namespace GCodePlotter
 			//DumpGCode("first.gcode", app[0]);
 			//DumpGCode("second.gcode", app[1]);
 			
+			// clean up the mess with too many G0 commands
+			var app0 = CleanGCode(app[0]);
+			var app1 = CleanGCode(app[1]);
+			app.Clear();
+			
+			app.Add(app0);
+			app.Add(app1);
+			
 			return app;
 		}
 
+		private static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {
+			
+			var cleanedList = new List<GCodeInstruction>();
+			GCodeInstruction previousLine = null;
+			Point3D currentPos = Point3D.Empty;
+			float currentFeedrate = 0.0f;
+			CommandList mvtype = CommandList.Other;
+			
+			foreach (GCodeInstruction currentInstruction in instructions) {
+				
+				if (currentInstruction.Equals(previousLine)) {
+					continue;
+				}
+
+				// store move type
+				mvtype = currentInstruction.CommandEnum;
+				
+				if (mvtype == CommandList.RapidMove
+				    || mvtype == CommandList.NormalMove
+				    || mvtype == CommandList.CWArc
+				    || mvtype == CommandList.CCWArc) {
+					
+					// merge previous coordinates with newer ones to maintain correct point coordinates
+					if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
+					     || currentInstruction.F.HasValue)) {
+						if (currentInstruction.X.HasValue && currentInstruction.X.Value != currentPos.X) {
+							// X changed
+							currentPos.X = currentInstruction.X.Value;
+						}
+						if (currentInstruction.Y.HasValue && currentInstruction.Y.Value != currentPos.Y) {
+							// Y changed
+							currentPos.Y = currentInstruction.Y.Value;
+						}
+						if (currentInstruction.Z.HasValue && currentInstruction.Z.Value != currentPos.Z) {
+							// Z changed
+							currentPos.Z = currentInstruction.Z.Value;
+						}
+						if (currentInstruction.F.HasValue && currentInstruction.F.Value != currentFeedrate) {
+							// F changed
+							currentFeedrate = currentInstruction.F.Value;
+						}
+					}
+				}
+
+				cleanedList.Add(currentInstruction);
+				
+				// store current position
+				previousLine = currentInstruction;
+			}
+
+			return cleanedList;
+		}
+		
 		private static void DumpGCode(string fileName, List<GCodeInstruction> instructions) {
 			
 			// create or overwrite a file

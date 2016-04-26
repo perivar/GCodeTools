@@ -169,7 +169,7 @@ namespace GCodePlotter
 			if (list == PenColorList.NormalMove) return Color.DodgerBlue;
 			if (list == PenColorList.CWArc) return Color.Lime;
 			if (list == PenColorList.CCWArc) return Color.Yellow;
-			if (list == PenColorList.RapidMoveHilight) return Color.Salmon;
+			if (list == PenColorList.RapidMoveHilight) return Color.Pink;
 			if (list == PenColorList.LineHighlight) return Color.White;
 			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
 			if (list == PenColorList.GridLines) return Color.DimGray;
@@ -267,20 +267,22 @@ namespace GCodePlotter
 		
 		public static bool Metric = true;
 
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed) {
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift) {
 			
 			var output = new List<GCodeInstruction>();
 			
+			// TODO: never add a rapid move that extend the available space			
 			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
 			output.Add(new GCodeInstruction(command, p2, feed));
 			
 			return output;
 		}
 		
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed) {
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift) {
 			
 			var output = new List<GCodeInstruction>();
 			
+			// TODO: never add a rapid move that extend the available space
 			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
 			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
 			
@@ -309,7 +311,7 @@ namespace GCodePlotter
 			this.X = point.X;
 			this.Y = point.Y;
 			this.Z = point.Z;
-			this.F = feed;
+			if (command != CommandList.RapidMove) this.F = feed;
 		}
 		
 		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, bool absoluteMode=false) {
@@ -333,8 +335,7 @@ namespace GCodePlotter
 			
 			this.X = p2.X;
 			this.Y = p2.Y;
-			//this.Z = p2.Z;
-			this.F = feed;
+			if (command != CommandList.RapidMove) this.F = feed;
 
 			if (absoluteMode) {
 				// if G90.1 (absolute distance mode for arc centers)
@@ -754,6 +755,38 @@ namespace GCodePlotter
 			}
 			return output;
 			#endregion
+		}
+		
+		public override bool Equals(object obj)
+		{
+			var item = obj as GCodeInstruction;
+			return Equals(item);
+		}
+
+		protected bool Equals(GCodeInstruction other)
+		{
+			if (other == null) return false;
+			
+			if (X.HasValue && other.X.HasValue && X.Value == other.X.Value
+			    && Y.HasValue && other.Y.HasValue && Y.Value == other.Y.Value
+			    && Z.HasValue && other.Z.HasValue && Z.Value == other.Z.Value)
+			{
+				return true;
+			}
+			
+			return false;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				int hashCode = 0;
+				hashCode = (hashCode * 397) ^ X.GetHashCode();
+				hashCode = (hashCode * 397) ^ Y.GetHashCode();
+				hashCode = (hashCode * 397) ^ Z.GetHashCode();
+				return hashCode;
+			}
 		}
 	}
 
