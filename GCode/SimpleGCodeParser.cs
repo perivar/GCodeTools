@@ -271,7 +271,7 @@ namespace GCodePlotter
 			
 			var output = new List<GCodeInstruction>();
 			
-			// TODO: never add a rapid move that extend the available space			
+			// TODO: never add a rapid move that extend the available space
 			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
 			output.Add(new GCodeInstruction(command, p2, feed));
 			

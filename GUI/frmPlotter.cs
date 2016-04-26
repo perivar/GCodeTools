@@ -434,10 +434,10 @@ namespace GCodePlotter
 				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
 				tw.WriteLine();
 				tw.WriteLine("(Header)");
-				tw.WriteLine("(G90   (set absolute distance mode)");
-				tw.WriteLine("(G90.1 (set absolute distance mode for arc centers)");
-				tw.WriteLine("(G17   (set active plane to XY)");
-				tw.WriteLine("(G21   (set units to mm)");
+				tw.WriteLine("G90   (set absolute distance mode)");
+				tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+				tw.WriteLine("G17   (set active plane to XY)");
+				tw.WriteLine("G21   (set units to mm)");
 				tw.WriteLine("(Header end.)");
 				tw.WriteLine();
 				myPlots.ForEach(x =>
