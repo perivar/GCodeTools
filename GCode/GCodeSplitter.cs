@@ -20,10 +20,19 @@ namespace GCodePlotter
 			L = 0,
 			R = 1
 		}
-
-		// Copied from def split_code(self,code2split,shift=[0,0,0],angle=0.0)
-		// from	G-Code_Ripper-0.12 Python
-		public static void Split(List<GCodeInstruction> instructions, Point3D shift, float angle)
+		
+		/// <summary>
+		/// Split a gcode file into tiles
+		/// </summary>
+		/// <param name="instructions">list of gcode instructions</param>
+		/// <param name="shift">Point3D describing the split coordinates</param>
+		/// <param name="angle">Whether the split should happen in an angle</param>
+		/// <returns>List of tiles</returns>
+		/// <remarks>
+		/// Copied from the G-Code_Ripper-0.12 Python App
+		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
+		/// </remarks>
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle)
 		{
 			CommandList mvtype = CommandList.Other;  // G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 
@@ -37,9 +46,9 @@ namespace GCodePlotter
 			
 			float currentFeedrate = 0.0f;
 			
-			var currentPos = Point3D.Empty;	// current position as read
-			var previousPos = Point3D.Empty;// current position as read
-			var centerPos = Point3D.Empty;	// center position converted
+			var currentPos = Point3D.Empty;		// current position as read
+			var previousPos = Point3D.Empty;	// current position as read
+			var centerPos = Point3D.Empty;		// center position converted
 			
 			var A = Point3D.Empty;
 			var B = Point3D.Empty;
@@ -47,15 +56,14 @@ namespace GCodePlotter
 			var D = Point3D.Empty;
 			var E = Point3D.Empty;
 			
-			float xsplit = 0.0f;
-			var pos = Point3D.Empty;		// current position, shifted
-			var pos_last = Point3D.Empty; 	// last position, shifted
-			var center = Point3D.Empty;		// center position converteed, shifted
+			const float xsplit = 0.0f;
+			var pos = Point3D.Empty;			// current position, shifted
+			var pos_last = Point3D.Empty;		// last position, shifted
+			var center = Point3D.Empty;			// center position converteed, shifted
 			
-			var cross = new List<Point3D>();
+			var cross = new List<Point3D>();	// number of intersections found
 			
 			int numInstructions = 1;
-			Point3D currentPlot = Point3D.Empty;
 			foreach (var instruction in instructions)
 			{
 				// store move type
@@ -78,10 +86,9 @@ namespace GCodePlotter
 					}
 				}
 				
-				if (currentPos != previousPos &&
-				    (mvtype == CommandList.NormalMove
-				     || mvtype == CommandList.CWArc
-				     || mvtype == CommandList.CCWArc)) {
+				if (mvtype == CommandList.NormalMove
+				    || mvtype == CommandList.CWArc
+				    || mvtype == CommandList.CCWArc) {
 					
 					pos = CoordOp(currentPos, shift, angle);
 					pos_last = CoordOp(previousPos, shift, angle);
@@ -92,9 +99,8 @@ namespace GCodePlotter
 						                        previousPos.Y+instruction.J.Value,
 						                        currentPos.Z);
 						
+						center = CoordOp(centerPos, shift, angle);
 					}
-					
-					center = CoordOp(centerPos, shift, angle);
 					
 					// determine what side the move belongs to
 					if (pos_last.X > xsplit+SELF_ZERO) {
@@ -175,13 +181,13 @@ namespace GCodePlotter
 							
 							// Check length of arc before writing
 							if (Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].Add(new GCodeInstruction(mvtype, A, B, D, currentFeedrate));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].Add(new GCodeInstruction(mvtype, B, C, D, currentFeedrate));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate));
 								}
 							}
 							
@@ -190,32 +196,33 @@ namespace GCodePlotter
 								
 								// Check length of arc before writing
 								if (Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].Add(new GCodeInstruction(mvtype, B, E, D, currentFeedrate));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate));
 								}
 								
 								// Check length of arc before writing
 								if (Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].Add(new GCodeInstruction(mvtype, E, C, D, currentFeedrate));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].Add(new GCodeInstruction(mvtype, A, C, D, currentFeedrate));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate));
 						}
 					}
 					
 				} else {
-					// if not moves
-					// store both places
+					// if not any moves, store the instruction in both lists
 					app[0].Add(instruction);
 					app[1].Add(instruction);
 				}
 				
 				// Debug
+				/*
 				if (mvtype == CommandList.RapidMove) Console.WriteLine("{0} {1} {2}", mvtype, previousPos, currentPos);
 				if (mvtype == CommandList.NormalMove) Console.WriteLine("{0} {1} {2} {3}", mvtype, previousPos, currentPos, currentFeedrate);
 				if (mvtype == CommandList.CWArc || mvtype == CommandList.CCWArc)
 					Console.WriteLine("{0} {1} {2} {3} {4}", mvtype, previousPos, currentPos, centerPos, currentFeedrate);
+				 */
 				
 				// store current position
 				previousPos = currentPos;
@@ -227,6 +234,8 @@ namespace GCodePlotter
 			// Save
 			//DumpGCode("first.gcode", app[0]);
 			//DumpGCode("second.gcode", app[1]);
+			
+			return app;
 		}
 
 		private static void DumpGCode(string fileName, List<GCodeInstruction> instructions) {
@@ -325,10 +334,10 @@ namespace GCodePlotter
 				ycross1 = (float) (cent.Y - root);
 				ycross2 = (float) (cent.Y + root);
 			} else {
-				return null;
+				return output;
 			}
 
-			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // note no code
+			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // Note! no code
 
 			var betaTuple = Transform(p2.X-cent.X,p2.Y-cent.Y,DegreeToRadian(-theta));
 			double xbeta = betaTuple.Item1;
@@ -421,7 +430,7 @@ namespace GCodePlotter
 		}
 
 		/// <summary>
-		/// routine takes an x and a y coords and does a cordinate transformation
+		/// Routine takes an x and a y coords and does a cordinate transformation
 		/// to a new coordinate system at angle from the initial coordinate system
 		/// Returns new x,y tuple
 		/// </summary>
@@ -432,12 +441,12 @@ namespace GCodePlotter
 		}
 
 		/// <summary>
-		/// routine takes an sin and cos and returns the angle (between 0 and 360)
+		/// Routine takes an sin and cos and returns the angle (between 0 and 360)
 		/// </summary>
 		/// <param name="x"></param>
 		/// <param name="y"></param>
-		/// <param name="code"></param>
-		public static double GetAngle(double x, double y, CommandList code = CommandList.Other)
+		/// <param name="code">CommandList, type of arc</param>
+		public static double GetAngle(double x, double y, CommandList code = CommandList.CCWArc)
 		{
 			double angle = 90.0 - RadianToDegree(Math.Atan2(x, y));
 			if (angle < 0) {

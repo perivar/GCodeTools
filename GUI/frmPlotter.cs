@@ -15,8 +15,10 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		const int MAX_WIDTH = 1000;
-		const int MAX_HEIGHT = 1000;
+		const int MAX_WIDTH = 10000;
+		const int MAX_HEIGHT = 10000;
+		
+		List<GCodeInstruction> parsedPlots = null;
 
 		public frmPlotter()
 		{
@@ -80,10 +82,10 @@ namespace GCodePlotter
 		public void ParseText(string text)
 		{
 			#region Code
-			var parsedPlots = SimpleGCodeParser.ParseText(text);
+			parsedPlots = SimpleGCodeParser.ParseText(text);
 			var sb = new StringBuilder();
 
-			lstPlots.Items.Clear();
+			treeView.Nodes.Clear();
 
 			var currentPoint = new Point3D(0, 0, 0);
 
@@ -153,24 +155,37 @@ namespace GCodePlotter
 				myPlots.Remove(footer);
 			}
 
-			//myPlots.ForEach(x => { x.FinalizePlot(); lstPlots.Items.Add(x); });
-			
+			// calculate max values for X, Y and Z
+			// while finalizing the plots and adding them to the lstPlot
 			float absMaxX = 0.0f;
 			float absMaxY = 0.0f;
 			float absMaxZ = 0.0f;
+			float absMinX = 0.0f;
+			float absMinY = 0.0f;
+			float absMinZ = 0.0f;
+			
 			foreach (Plot plotItem in myPlots)
 			{
 				plotItem.FinalizePlot();
-				lstPlots.Items.Add(plotItem);
+				
+				// build node tree
+				var node = new TreeNode(plotItem.ToString());
+				foreach (var instruction in plotItem.GCodeInstructions) {
+					node.Nodes.Add(instruction.ToString());
+				}
+				treeView.Nodes.Add(node);
 				
 				absMaxX = Math.Max(absMaxX, plotItem.maxX);
 				absMaxY = Math.Max(absMaxY, plotItem.maxY);
 				absMaxZ = Math.Max(absMaxZ, plotItem.maxZ);
+
+				absMinX = Math.Min(absMinX, plotItem.minX);
+				absMinY = Math.Min(absMinY, plotItem.minY);
+				absMinZ = Math.Min(absMinZ, plotItem.minZ);
 			}
 			
-			txtDimension.Text = String.Format("X: {0} mm \r\nY: {1} mm \r\nZ: {2} mm", absMaxX, absMaxY, absMaxZ);
-
-			GCodeSplitter.Split(parsedPlots, new Point3D(10, 0, 0), 0.0f);
+			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
+			                                  absMaxX, absMinX, absMaxY, absMinY, absMaxZ, absMinZ);
 			
 			RenderPlots();
 			bDataLoaded = true;
@@ -184,11 +199,26 @@ namespace GCodePlotter
 			#endregion
 		}
 
+		void BtnSplitClick(object sender, EventArgs e)
+		{
+			if ("".Equals(txtSplit.Text)) {
+				MessageBox.Show("No split value entered!");
+				return;
+			}
+			float xSplit = 0.0f;
+			if (float.TryParse(txtSplit.Text, out xSplit)) {
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f);
+				
+				var gcodeTest = Plot.BuildGCodeOutput("noname", split[0], false);
+				ParseText(gcodeTest);
+			}
+		}
+		
 		private void checkBox1_CheckedChanged(object sender, EventArgs e)
 		{
 			#region Code
-			if (renderImage == null)
-			{
+			if (renderImage == null) {
 				return;
 			}
 
@@ -196,22 +226,12 @@ namespace GCodePlotter
 			#endregion
 		}
 
-		private void lstPlots_SelectedIndexChanged(object sender, EventArgs e)
+		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
 		{
-			#region Code
-			SelectPlot(lstPlots);
-			#endregion
-		}
-
-		private void SelectPlot(ListBox box)
-		{
-			#region Code
 			RenderPlots();
-
 			pictureBox1.Refresh();
-			#endregion
 		}
-
+		
 		private void RenderPlots()
 		{
 			#region Code
@@ -282,7 +302,7 @@ namespace GCodePlotter
 				{
 					foreach (var data in plotItem.PlotPoints)
 					{
-						if (lstPlots.SelectedItems.Contains(plotItem))
+						if (treeView.SelectedNode != null && treeView.SelectedNode.Text.Equals(plotItem.ToString()))
 						{
 							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, highlight: true);
 						}

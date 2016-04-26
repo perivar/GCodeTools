@@ -36,15 +36,18 @@ namespace GCodePlotter
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.cmdParseData = new System.Windows.Forms.Button();
 			this.cmdRedraw = new System.Windows.Forms.Button();
-			this.lstPlots = new System.Windows.Forms.ListBox();
 			this.checkBox1 = new System.Windows.Forms.CheckBox();
 			this.cmdLoad = new System.Windows.Forms.Button();
 			this.cmdSave = new System.Windows.Forms.Button();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
 			this.panel1 = new System.Windows.Forms.Panel();
+			this.treeView = new System.Windows.Forms.TreeView();
 			this.panel2 = new System.Windows.Forms.Panel();
 			this.panel4 = new System.Windows.Forms.Panel();
+			this.txtSplit = new System.Windows.Forms.TextBox();
+			this.lblSplit = new System.Windows.Forms.Label();
+			this.btnSplit = new System.Windows.Forms.Button();
 			this.txtDimension = new System.Windows.Forms.TextBox();
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.txtFile = new System.Windows.Forms.TextBox();
@@ -92,17 +95,6 @@ namespace GCodePlotter
 			this.cmdRedraw.UseVisualStyleBackColor = true;
 			this.cmdRedraw.Click += new System.EventHandler(this.cmdRedraw_Click);
 			// 
-			// lstPlots
-			// 
-			this.lstPlots.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.lstPlots.FormattingEnabled = true;
-			this.lstPlots.Location = new System.Drawing.Point(0, 0);
-			this.lstPlots.Name = "lstPlots";
-			this.lstPlots.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
-			this.lstPlots.Size = new System.Drawing.Size(240, 476);
-			this.lstPlots.TabIndex = 4;
-			this.lstPlots.SelectedIndexChanged += new System.EventHandler(this.lstPlots_SelectedIndexChanged);
-			// 
 			// checkBox1
 			// 
 			this.checkBox1.AutoSize = true;
@@ -148,13 +140,22 @@ namespace GCodePlotter
 			// 
 			// panel1
 			// 
-			this.panel1.Controls.Add(this.lstPlots);
+			this.panel1.Controls.Add(this.treeView);
 			this.panel1.Controls.Add(this.panel2);
 			this.panel1.Dock = System.Windows.Forms.DockStyle.Right;
-			this.panel1.Location = new System.Drawing.Point(578, 5);
+			this.panel1.Location = new System.Drawing.Point(518, 5);
 			this.panel1.Name = "panel1";
-			this.panel1.Size = new System.Drawing.Size(240, 509);
+			this.panel1.Size = new System.Drawing.Size(300, 509);
 			this.panel1.TabIndex = 10;
+			// 
+			// treeView
+			// 
+			this.treeView.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.treeView.Location = new System.Drawing.Point(0, 0);
+			this.treeView.Name = "treeView";
+			this.treeView.Size = new System.Drawing.Size(300, 476);
+			this.treeView.TabIndex = 10;
+			this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewAfterSelect);
 			// 
 			// panel2
 			// 
@@ -162,11 +163,14 @@ namespace GCodePlotter
 			this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panel2.Location = new System.Drawing.Point(0, 476);
 			this.panel2.Name = "panel2";
-			this.panel2.Size = new System.Drawing.Size(240, 33);
+			this.panel2.Size = new System.Drawing.Size(300, 33);
 			this.panel2.TabIndex = 9;
 			// 
 			// panel4
 			// 
+			this.panel4.Controls.Add(this.txtSplit);
+			this.panel4.Controls.Add(this.lblSplit);
+			this.panel4.Controls.Add(this.btnSplit);
 			this.panel4.Controls.Add(this.txtDimension);
 			this.panel4.Controls.Add(this.cmdSaveLayers);
 			this.panel4.Controls.Add(this.cmdSave);
@@ -174,10 +178,35 @@ namespace GCodePlotter
 			this.panel4.Controls.Add(this.cmdRedraw);
 			this.panel4.Controls.Add(this.cmdParseData);
 			this.panel4.Dock = System.Windows.Forms.DockStyle.Right;
-			this.panel4.Location = new System.Drawing.Point(458, 5);
+			this.panel4.Location = new System.Drawing.Point(393, 5);
 			this.panel4.Name = "panel4";
-			this.panel4.Size = new System.Drawing.Size(120, 509);
+			this.panel4.Size = new System.Drawing.Size(125, 509);
 			this.panel4.TabIndex = 11;
+			// 
+			// txtSplit
+			// 
+			this.txtSplit.Location = new System.Drawing.Point(10, 257);
+			this.txtSplit.Name = "txtSplit";
+			this.txtSplit.Size = new System.Drawing.Size(100, 20);
+			this.txtSplit.TabIndex = 14;
+			// 
+			// lblSplit
+			// 
+			this.lblSplit.Location = new System.Drawing.Point(10, 238);
+			this.lblSplit.Name = "lblSplit";
+			this.lblSplit.Size = new System.Drawing.Size(100, 16);
+			this.lblSplit.TabIndex = 13;
+			this.lblSplit.Text = "Split:";
+			// 
+			// btnSplit
+			// 
+			this.btnSplit.Location = new System.Drawing.Point(10, 283);
+			this.btnSplit.Name = "btnSplit";
+			this.btnSplit.Size = new System.Drawing.Size(102, 32);
+			this.btnSplit.TabIndex = 12;
+			this.btnSplit.Text = "Split";
+			this.btnSplit.UseVisualStyleBackColor = true;
+			this.btnSplit.Click += new System.EventHandler(this.BtnSplitClick);
 			// 
 			// txtDimension
 			// 
@@ -185,11 +214,11 @@ namespace GCodePlotter
 			| System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtDimension.Location = new System.Drawing.Point(10, 455);
+			this.txtDimension.Location = new System.Drawing.Point(3, 420);
 			this.txtDimension.Multiline = true;
 			this.txtDimension.Name = "txtDimension";
 			this.txtDimension.ReadOnly = true;
-			this.txtDimension.Size = new System.Drawing.Size(102, 45);
+			this.txtDimension.Size = new System.Drawing.Size(119, 86);
 			this.txtDimension.TabIndex = 11;
 			// 
 			// cmdSaveLayers
@@ -209,7 +238,7 @@ namespace GCodePlotter
 			this.txtFile.Location = new System.Drawing.Point(191, 11);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(225, 20);
+			this.txtFile.Size = new System.Drawing.Size(0, 20);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panel5
@@ -222,7 +251,7 @@ namespace GCodePlotter
 			this.panel5.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panel5.Location = new System.Drawing.Point(5, 476);
 			this.panel5.Name = "panel5";
-			this.panel5.Size = new System.Drawing.Size(453, 38);
+			this.panel5.Size = new System.Drawing.Size(388, 38);
 			this.panel5.TabIndex = 12;
 			// 
 			// radZoomSixteen
@@ -278,7 +307,7 @@ namespace GCodePlotter
 			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panel6.Location = new System.Drawing.Point(5, 5);
 			this.panel6.Name = "panel6";
-			this.panel6.Size = new System.Drawing.Size(453, 471);
+			this.panel6.Size = new System.Drawing.Size(388, 471);
 			this.panel6.TabIndex = 13;
 			// 
 			// frmPlotter
@@ -313,7 +342,6 @@ namespace GCodePlotter
 		private System.Windows.Forms.PictureBox pictureBox1;
 		private System.Windows.Forms.Button cmdParseData;
 		private System.Windows.Forms.Button cmdRedraw;
-		private System.Windows.Forms.ListBox lstPlots;
 		private System.Windows.Forms.CheckBox checkBox1;
 		private System.Windows.Forms.Button cmdLoad;
 		private System.Windows.Forms.Button cmdSave;
@@ -331,6 +359,10 @@ namespace GCodePlotter
 		private System.Windows.Forms.RadioButton radZoomSixteen;
 		private System.Windows.Forms.Panel panel6;
 		private System.Windows.Forms.TextBox txtDimension;
+		private System.Windows.Forms.TreeView treeView;
+		private System.Windows.Forms.Button btnSplit;
+		private System.Windows.Forms.TextBox txtSplit;
+		private System.Windows.Forms.Label lblSplit;
 	}
 }
 

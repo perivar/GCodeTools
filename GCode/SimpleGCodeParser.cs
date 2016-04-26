@@ -277,6 +277,16 @@ namespace GCodePlotter
 			return output;
 		}
 		
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed) {
+			
+			var output = new List<GCodeInstruction>();
+			
+			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
+			
+			return output;
+		}
+		
 		#region Constructors
 		public GCodeInstruction(CommandList command, Point3D point, float feed) {
 			switch (command) {
@@ -302,7 +312,7 @@ namespace GCodePlotter
 			this.F = feed;
 		}
 		
-		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed) {
+		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, bool absoluteMode=false) {
 			switch (command) {
 				case CommandList.RapidMove:
 					Command = "G0";
@@ -320,11 +330,21 @@ namespace GCodePlotter
 					break;
 			}
 			
+			
 			this.X = p2.X;
 			this.Y = p2.Y;
-			this.I = p3.X-p1.X;
-			this.J = p3.Y-p1.Y;
+			//this.Z = p2.Z;
 			this.F = feed;
+
+			if (absoluteMode) {
+				// if G90.1 (absolute distance mode for arc centers)
+				this.I = p3.X;
+				this.J = p3.Y;
+			} else {
+				// relative mode for arc centers
+				this.I = p3.X-p1.X;
+				this.J = p3.Y-p1.Y;
+			}
 		}
 		
 		public GCodeInstruction(string line)
@@ -850,11 +870,15 @@ namespace GCodePlotter
 			this.FinalizePlot();
 		}
 
-		public string BuildGCodeOutput(bool doMultiLayers)
+		public string BuildGCodeOutput(bool doMultiLayers) {
+			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doMultiLayers);
+		}
+		
+		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doMultiLayers)
 		{
 			var sb = new StringBuilder();
 
-			sb.AppendFormat("(Start cutting path id: {0})", this.Name).AppendLine();
+			sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
 
 			if (doMultiLayers) {
 				var data = QuickSettings.Get["ZDepths"];
@@ -874,19 +898,19 @@ namespace GCodePlotter
 					float f;
 					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
 						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start layer: {0:0.####})", f).AppendLine();
-						foreach (var gCodeLine in this.GCodeInstructions) {
+						foreach (var gCodeLine in gCodeInstructions) {
 							sb.AppendLine(gCodeLine.ToString(true, zOverride: f));
 						}
 						sb.AppendFormat(CultureInfo.InvariantCulture, "(End layer: {0:0.####})", f).AppendLine();
 					}
 				}
 			} else {
-				foreach (var line in this.GCodeInstructions) {
+				foreach (var line in gCodeInstructions) {
 					sb.AppendLine(line.ToString(false));
 				}
 			}
 
-			sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", this.Name).AppendLine();
+			sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", name).AppendLine();
 
 			return sb.ToString();
 		}
