@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Drawing.Drawing2D;
 
 namespace GCodePlotter
 {
@@ -234,6 +235,9 @@ namespace GCodePlotter
 		
 		private void RenderPlots()
 		{
+			const int leftMargin = 20;
+			const int bottomMargin = 20;
+			
 			#region Code
 			var multiplier = 4f;
 			if (radZoomTwo.Checked) {
@@ -263,8 +267,9 @@ namespace GCodePlotter
 			absMaxX *= scale;
 			absMaxY *= scale;
 
-			var intAbsMaxX = (int)(absMaxX + 1) / 10 + 10;
-			var intAbsMaxY = (int)(absMaxY + 1) / 10 + 10;
+			// 10 mm per grid
+			var intAbsMaxX = (int)(absMaxX + 1) / 10 + (int) (multiplier*leftMargin);
+			var intAbsMaxY = (int)(absMaxY + 1) / 10 + (int) (multiplier*bottomMargin);
 			
 			// set max size in case the calculated dimensions are way off
 			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
@@ -272,8 +277,7 @@ namespace GCodePlotter
 
 			if (renderImage == null || intAbsMaxX != renderImage.Width || intAbsMaxY != renderImage.Height)
 			{
-				if (renderImage != null)
-				{
+				if (renderImage != null) {
 					renderImage.Dispose();
 				}
 
@@ -285,17 +289,35 @@ namespace GCodePlotter
 
 			var graphics = Graphics.FromImage(renderImage);
 			graphics.Clear(ColorHelper.GetColor(PenColorList.Background));
-
+			
+			// draw grid
 			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines);
-			for (var x = 1; x < pictureBox1.Width / scale; x++)
+			for (var x = 0; x < pictureBox1.Width / scale; x++)
 			{
-				for (var y = 1; y < pictureBox1.Height / scale; y++)
+				for (var y = 0; y < pictureBox1.Height / scale; y++)
 				{
-					graphics.DrawLine(gridPen, x * scale, 0, x * scale, pictureBox1.Height);
-					graphics.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale), pictureBox1.Width, pictureBox1.Height - (y * scale));
+					graphics.DrawLine(gridPen, x * scale + leftMargin, 0, x * scale + leftMargin, pictureBox1.Height);
+					graphics.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - bottomMargin, pictureBox1.Width, pictureBox1.Height - (y * scale) - bottomMargin);
 				}
 			}
 
+			// draw arrow grid
+			using (var penZero = new Pen(Color.WhiteSmoke, 1)) {
+				graphics.DrawLine(penZero, leftMargin, pictureBox1.Height-bottomMargin, pictureBox1.Width, pictureBox1.Height-bottomMargin);
+				graphics.DrawLine(penZero, leftMargin, 0, leftMargin, pictureBox1.Height-bottomMargin);
+			}
+			using (var penX = new Pen(Color.Green, 3)) {
+				penX.StartCap= LineCap.Flat;
+				penX.EndCap = LineCap.ArrowAnchor;
+				graphics.DrawLine(penX, leftMargin, pictureBox1.Height-bottomMargin, 100, pictureBox1.Height-bottomMargin);
+			}
+			using (var penY = new Pen(Color.Red, 3)) {
+				penY.StartCap = LineCap.ArrowAnchor;
+				penY.EndCap = LineCap.Flat;
+				graphics.DrawLine(penY, leftMargin, pictureBox1.Height-100, leftMargin, pictureBox1.Height-bottomMargin);
+			}
+
+			// draw gcode
 			if (myPlots != null && myPlots.Count > 0)
 			{
 				foreach (Plot plotItem in myPlots)
@@ -304,11 +326,11 @@ namespace GCodePlotter
 					{
 						if (treeView.SelectedNode != null && treeView.SelectedNode.Text.Equals(plotItem.ToString()))
 						{
-							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, highlight: true);
+							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
 						}
 						else
 						{
-							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked);
+							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, left: leftMargin, bottom: bottomMargin);
 						}
 					}
 				}
@@ -400,8 +422,10 @@ namespace GCodePlotter
 				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
 				tw.WriteLine();
 				tw.WriteLine("(Header)");
-				tw.WriteLine("G90");
-				tw.WriteLine("G21 (All units in mm)");
+				tw.WriteLine("(G90   (set absolute distance mode)");
+				tw.WriteLine("(G90.1 (set absolute distance mode for arc centers)");
+				tw.WriteLine("(G17   (set active plane to XY)");
+				tw.WriteLine("(G21   (set units to mm)");
 				tw.WriteLine("(Header end.)");
 				tw.WriteLine();
 				myPlots.ForEach(x =>

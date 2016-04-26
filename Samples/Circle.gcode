@@ -1,9 +1,9 @@
 ; An opening comment
 (Another opening comment)
-;g38.2 x10 f1000 (probe)
+g38.2 x10 f1000 (probe)
 G21; Set units to millimeters
 G90; Set absolute coordinates
-;G92 E0; Reset extruder
+G92 E0; Reset extruder
 G28 X0 Y0; Home x and y axis
 G1 X30 Y30 F4000; Center extruder above bed
 G28 Z0; Home Z axis 

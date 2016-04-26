@@ -376,7 +376,6 @@ namespace GCodePlotter
 								case "X": X = value; break;
 								case "Y": Y = value; break;
 								case "Z": Z = value; break;
-								case "E": E = value; break;
 								case "F": F = value; break;
 								case "I": I = value; break;
 								case "J": J = value; break;
@@ -427,15 +426,14 @@ namespace GCodePlotter
 		
 		public string Comment { get; set; }
 		public string Command { get; set; }
-		public float? X { get; set; }
-		public float? Y { get; set; }
-		public float? Z { get; set; }
-		public float? E { get; set; }
-		public float? F { get; set; }
-		public float? I { get; set; }
-		public float? J { get; set; }
+		public float? X { get; set; }	// x coordinate
+		public float? Y { get; set; }	// y coordinate
+		public float? Z { get; set; }	// z coordinate
+		public float? F { get; set; } 	// feedrate
+		public float? I { get; set; }	// arc coordinate
+		public float? J { get; set; }	// arc coordinate
 		public float? P { get; set; }
-		public int? T { get; set; }
+		public int? T { get; set; }		// tool change
 
 		internal float minX, minY, minZ;
 		internal float maxX, maxY, maxZ;
@@ -542,7 +540,6 @@ namespace GCodePlotter
 			}
 			if (I.HasValue) sb.AppendFormat(" I{0:0.####}", this.I);
 			if (J.HasValue) sb.AppendFormat(" J{0:0.####}", this.J);
-			if (E.HasValue) sb.AppendFormat(" E{0:0.####}", this.E);
 			if (F.HasValue) sb.AppendFormat(" F{0:0.####}", this.F);
 			if (P.HasValue) sb.AppendFormat(" P{0:0.####}", this.P);
 			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
@@ -784,26 +781,27 @@ namespace GCodePlotter
 		public float Z2 { get; set; }
 		public PenColorList Pen { get; set; }
 
-		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int top = 0)
+		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
 		{
 			#region Code
 			if (Pen == PenColorList.RapidMove && !renderG0)
 			{
 				return;
 			}
-			else if (Pen == PenColorList.RapidMove && highlight)
+			
+			if (Pen == PenColorList.RapidMove && highlight)
 			{
-				g.DrawLine(ColorHelper.GetPen(PenColorList.RapidMoveHilight), (X1 - left) * Multiplier, height - ((Y1 - top) * Multiplier), (X2 - left) * Multiplier, height - ((Y2 - top) * Multiplier));
+				g.DrawLine(ColorHelper.GetPen(PenColorList.RapidMoveHilight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 				return;
 			}
 
 			if (highlight)
 			{
-				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), (X1 - left) * Multiplier, height - ((Y1 - top) * Multiplier), (X2 - left) * Multiplier, height - ((Y2 - top) * Multiplier));
+				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 			}
 			else
 			{
-				g.DrawLine(ColorHelper.GetPen(Pen), (X1 - left) * Multiplier, height - ((Y1 - top) * Multiplier), (X2 - left) * Multiplier, height - ((Y2 - top) * Multiplier));
+				g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 			}
 			#endregion
 		}
@@ -857,17 +855,17 @@ namespace GCodePlotter
 
 		public void Replot(ref Point3D currentPoint)
 		{
-			this.PlotPoints.Clear();
+			PlotPoints.Clear();
 			foreach (var line in this.GCodeInstructions)
 			{
 				if (line.CanRender())
 				{
 					line.CachedLinePoints = line.RenderCode(ref currentPoint);
-					this.PlotPoints.AddRange(line.CachedLinePoints);
+					PlotPoints.AddRange(line.CachedLinePoints);
 				}
 			}
 
-			this.FinalizePlot();
+			FinalizePlot();
 		}
 
 		public string BuildGCodeOutput(bool doMultiLayers) {
@@ -913,21 +911,6 @@ namespace GCodePlotter
 			sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", name).AppendLine();
 
 			return sb.ToString();
-		}
-	}
-
-	public class ParsingException : Exception
-	{
-		public ParsingException(string message)
-			: base(message)
-		{
-
-		}
-
-		public ParsingException(string message, Exception inner)
-			: base(message, inner)
-		{
-
 		}
 	}
 }
