@@ -162,10 +162,10 @@ namespace GCodePlotter
 
 						if (cross.Count > 0) { // Line crosses boundary
 							B = CoordUnop(cross[0], shift, angle);
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift));
-							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift, thisSide, app));
+							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, app));
 						} else {
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, app));
 						}
 					}
 					
@@ -181,13 +181,13 @@ namespace GCodePlotter
 							
 							// Check length of arc before writing
 							if (Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift, thisSide, app));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift, otherSide, app));
 								}
 							}
 							
@@ -196,24 +196,27 @@ namespace GCodePlotter
 								
 								// Check length of arc before writing
 								if (Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift, otherSide, app));
 								}
 								
 								// Check length of arc before writing
 								if (Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift, thisSide, app));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift, thisSide, app));
 						}
 					}
 					
 				} else {
-					// if not any moves, store the instruction in both lists
-					app[0].Add(instruction);
-					app[1].Add(instruction);
+					// if not any normal or arc moves, store the instruction in both lists
+					// rapid moves are also handled here
+					if (instruction.CommandEnum != CommandList.RapidMove) {
+						app[0].Add(instruction);
+						app[1].Add(instruction);
+					}
 				}
 				
 				// Debug
@@ -236,12 +239,12 @@ namespace GCodePlotter
 			//DumpGCode("second.gcode", app[1]);
 			
 			// clean up the mess with too many G0 commands
-			var app0 = CleanGCode(app[0]);
-			var app1 = CleanGCode(app[1]);
-			app.Clear();
+			//var app0 = CleanGCode(app[0]);
+			//var app1 = CleanGCode(app[1]);
+			//app.Clear();
 			
-			app.Add(app0);
-			app.Add(app1);
+			//app.Add(app0);
+			//app.Add(app1);
 			
 			return app;
 		}

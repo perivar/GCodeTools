@@ -267,23 +267,60 @@ namespace GCodePlotter
 		
 		public static bool Metric = true;
 
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift) {
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, List<List<GCodeInstruction>> app) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			// TODO: never add a rapid move that extend the available space
-			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			/*
+			// get last item
+			var previousInstruction = app[side][app[side].Count - 2];
+			
+			bool skip = false;
+			if (previousInstruction != null
+			    && previousInstruction.X.HasValue
+			    && previousInstruction.Y.HasValue
+			    && previousInstruction.X.Value != p1.X
+			    && previousInstruction.Y.Value != p1.Y) {
+				skip = true;
+			}
+			 */
+			
+			if (p1 != p2) {
+				
+				// never add a rapid move that extend the available space
+				if (side == 0) {
+					// ensure X is less than shift.X
+					if (p1.X > shift.X) p1.X = shift.X;
+				} else {
+					// side 1
+					// ensure X is equal or more than shift.X
+					if (p1.X < shift.X) p1.X = shift.X;
+				}
+				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			}
 			output.Add(new GCodeInstruction(command, p2, feed));
 			
 			return output;
 		}
 		
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift) {
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, List<List<GCodeInstruction>> app) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			// TODO: never add a rapid move that extend the available space
-			output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			// add only if the x y z coordinates are different
+			if (p1 != p2) {
+
+				// never add a rapid move that extend the available space
+				if (side == 0) {
+					// ensure X is less than shift.X
+					if (p1.X > shift.X) p1.X = shift.X;
+				} else {
+					// side 1
+					// ensure X is equal or more than shift.X
+					if (p1.X < shift.X) p1.X = shift.X;
+				}
+				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+			}
 			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
 			
 			return output;
