@@ -21,12 +21,17 @@ namespace GCodePlotter
 		
 		List<GCodeInstruction> parsedPlots = null;
 
+		bool bDataLoaded = false;
+		
+		List<Plot> myPlots;
+
+		Image renderImage = null;
+
 		public frmPlotter()
 		{
 			InitializeComponent();
 		}
-
-		bool bDataLoaded = false;
+		
 		private void frmPlotter_Load(object sender, EventArgs e)
 		{
 			#region Code
@@ -49,8 +54,6 @@ namespace GCodePlotter
 			#endregion
 		}
 
-		List<Plot> myPlots;
-		Image renderImage = null;
 		private void cmdParseData_Click(object sender, EventArgs e)
 		{
 			#region Code
@@ -223,6 +226,7 @@ namespace GCodePlotter
 				MessageBox.Show("No split value entered!");
 				return;
 			}
+
 			float xSplit = 0.0f;
 			if (float.TryParse(txtSplit.Text, out xSplit)) {
 				
@@ -238,8 +242,8 @@ namespace GCodePlotter
 				
 				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
 				
-				var gcodeTest = Plot.BuildGCodeOutput("noname", split[index], false);
-				ParseText(gcodeTest);
+				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed", split[index], false);
+				ParseText(gcodeSplitted);
 			}
 		}
 		
@@ -481,6 +485,42 @@ namespace GCodePlotter
 			if (me.Button == MouseButtons.Right) {
 				treeView.SelectedNode = null;
 				RenderPlots();
+			}
+		}
+		
+		void BtnSaveSplitClick(object sender, EventArgs e)
+		{
+			if (parsedPlots == null) {
+				MessageBox.Show("No file loaded!");
+				return;
+			}
+			
+			if ("".Equals(txtSplit.Text)) {
+				MessageBox.Show("No split value entered!");
+				return;
+			}
+
+			float xSplit = 0.0f;
+			if (float.TryParse(txtSplit.Text, out xSplit)) {
+				
+				cmdParseData.Enabled = true;
+				cmdParseData.PerformClick();
+				
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				
+				float zClearance = 2.0f;
+				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
+					txtZClearance.Text = "2.0";
+				}
+				
+				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
+				
+				//var gcodeLeft = Plot.BuildGCodeOutput("Unnamed", split[0], false);
+				//var gcodeRight = Plot.BuildGCodeOutput("Unnamed", split[1], false);
+				
+				GCodeSplitter.DumpGCode(txtFile.Text+"_left.gcode", split[0]);
+				GCodeSplitter.DumpGCode(txtFile.Text+"_right.gcode", split[1]);
+				
 			}
 		}
 	}

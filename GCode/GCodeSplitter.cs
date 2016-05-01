@@ -354,7 +354,7 @@ namespace GCodePlotter
 			return cleanedList;
 		}
 		
-		private static void DumpGCode(string fileName, List<GCodeInstruction> instructions) {
+		public static void DumpGCode(string fileName, List<GCodeInstruction> instructions) {
 			
 			// create or overwrite a file
 			using (FileStream f = File.Create(fileName)) {
