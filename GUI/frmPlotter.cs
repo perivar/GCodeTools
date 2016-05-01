@@ -63,12 +63,13 @@ namespace GCodePlotter
 				}
 			}
 
-			var file = new FileInfo(txtFile.Tag.ToString());
-			StreamReader tr = file.OpenText();
-			string data = tr.ReadToEnd();
-			tr.Close();
+			if (txtFile.Tag != null) {
+				var file = new FileInfo(txtFile.Tag.ToString());
+				StreamReader tr = file.OpenText();
+				string data = tr.ReadToEnd();
+				tr.Close();
 
-			ParseText(data);
+				ParseText(data);}
 			#endregion
 		}
 
@@ -210,6 +211,12 @@ namespace GCodePlotter
 		}
 		
 		void ResetSplit(int index) {
+			
+			if (parsedPlots == null) {
+				MessageBox.Show("No file loaded!");
+				return;
+			}
+			
 			if ("".Equals(txtSplit.Text)) {
 				MessageBox.Show("No split value entered!");
 				return;
@@ -441,7 +448,7 @@ namespace GCodePlotter
 				tw.WriteLine();
 				tw.WriteLine("(Header)");
 				tw.WriteLine("G90   (set absolute distance mode)");
-				tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+				//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
 				tw.WriteLine("G17   (set active plane to XY)");
 				tw.WriteLine("G21   (set units to mm)");
 				tw.WriteLine("(Header end.)");
