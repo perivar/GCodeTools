@@ -96,68 +96,54 @@ namespace GCodePlotter
 
 			myPlots = new List<Plot>();
 			var currentPlot = new Plot();
+			currentPlot.Name = "Unnamed Plot";
 			foreach (var line in parsedPlots)
 			{
 				sb.Append(line).AppendLine();
-				if (line.IsOnlyComment)
-				{
-					if (line.Comment.StartsWith("Start cutting path id:") || line.Comment == "Footer")
-					{
-						if (currentPlot.PlotPoints.Count > 0)
-						{
-							var point = currentPlot.PlotPoints[currentPlot.PlotPoints.Count - 1];
-							myPlots.Add(currentPlot);
-							// New plot!
-							currentPlot = new Plot();
-						}
+				if (line.IsOnlyComment) {
+					
+					if (line.Comment.StartsWith("Start cutting path id:") || line.Comment == "Footer") {
 
-						if (line.Comment == "Footer")
-						{
+						if (line.Comment == "Footer") {
 							currentPlot.Name = line.Comment;
-						}
-						else
-						{
+						} else {
 							if (line.Comment.Length > 23) {
 								currentPlot.Name = line.Comment.Substring(23);
 							}
 						}
-					}
-
-					if (line.Comment.StartsWith("End cutting path id:"))
-					{
-						if (currentPlot.PlotPoints.Count > 0)
-						{
-							var point = currentPlot.PlotPoints[currentPlot.PlotPoints.Count - 1];
+					} else if (line.Comment.StartsWith("End cutting path id:")) {
+						if (currentPlot.PlotPoints.Count > 0) {
+							
 							myPlots.Add(currentPlot);
-							// New plot!
+							
+							// Reset plot, meaning add new
 							currentPlot = new Plot();
+							currentPlot.Name = "Unnamed Plot";
 						}
+					} else {
+						// ignore all comments up to first "Start Cutting", i.e. header
 					}
-				}
-				else if (line.CanRender())
-				{
+					
+				} else if (line.CanRender()) {
 					var data = line.RenderCode(ref currentPoint);
-					if (data != null)
-					{
+					if (data != null) {
 						currentPlot.PlotPoints.AddRange(data);
 					}
 
 					currentPlot.GCodeInstructions.Add(line);
 				} else {
-					// non renderable plot
+					// not a comment and cannot be rendered
 				}
 			}
 
-			if (currentPlot.PlotPoints.Count > 0)
-			{
-				var point = currentPlot.PlotPoints[currentPlot.PlotPoints.Count - 1];
+			if (currentPlot.PlotPoints.Count > 0) {
 				myPlots.Add(currentPlot);
 			}
 
+			// remove footer if it exists
 			if (myPlots.Count > 0) {
 				var footer = myPlots.Last();
-				if (footer.Name == "Footer")
-				{
+				if (footer.Name == "Footer") {
 					myPlots.Remove(footer);
 				}
 			}
@@ -242,7 +228,7 @@ namespace GCodePlotter
 				
 				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
 				
-				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed", split[index], false);
+				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", split[index], false);
 				ParseText(gcodeSplitted);
 			}
 		}
