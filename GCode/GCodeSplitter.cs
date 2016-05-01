@@ -27,6 +27,7 @@ namespace GCodePlotter
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <param name="shift">Point3D describing the split coordinates</param>
 		/// <param name="angle">Whether the split should happen in an angle</param>
+		/// <param name="zClearance">z-height (clearance) to use in added rapid moves</param>
 		/// <returns>List of tiles</returns>
 		/// <remarks>
 		/// Copied from the G-Code_Ripper-0.12 Python App
@@ -34,7 +35,8 @@ namespace GCodePlotter
 		/// </remarks>
 		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
 		{
-			CommandList mvtype = CommandList.Other;  // G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
+			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
+			CommandList mvtype = CommandList.Other;
 
 			var app = new List<List<GCodeInstruction>>();
 			app.Add(new List<GCodeInstruction>());
@@ -56,7 +58,6 @@ namespace GCodePlotter
 			var D = Point3D.Empty;
 			var E = Point3D.Empty;
 			
-			const float xsplit = 0.0f;
 			var pos = Point3D.Empty;			// current position, shifted
 			var pos_last = Point3D.Empty;		// last position, shifted
 			var center = Point3D.Empty;			// center position converteed, shifted
@@ -90,8 +91,8 @@ namespace GCodePlotter
 				    || mvtype == CommandList.CWArc
 				    || mvtype == CommandList.CCWArc) {
 					
-					pos = CoordOp(currentPos, shift, angle);
-					pos_last = CoordOp(previousPos, shift, angle);
+					pos = SetOffsetAndRotation(currentPos, shift, angle);
+					pos_last = SetOffsetAndRotation(previousPos, shift, angle);
 					
 					// store center point
 					if (instruction.I.HasValue && instruction.J.HasValue) {
@@ -99,24 +100,24 @@ namespace GCodePlotter
 						                        previousPos.Y+instruction.J.Value,
 						                        currentPos.Z);
 						
-						center = CoordOp(centerPos, shift, angle);
+						center = SetOffsetAndRotation(centerPos, shift, angle);
 					}
 					
 					// determine what side the move belongs to
-					if (pos_last.X > xsplit+SELF_ZERO) {
+					if (pos_last.X > SELF_ZERO) {
 						flag_side = Position.R;
-					} else if (pos_last.X < xsplit-SELF_ZERO) {
+					} else if (pos_last.X < SELF_ZERO) {
 						flag_side = Position.L;
 					} else {
 						if (mvtype == CommandList.NormalMove) {
-							if (pos.X >= xsplit) {
+							if (pos.X >= 0) {
 								flag_side = Position.R;
 							} else {
 								flag_side = Position.L;
 							}
 						} else if (mvtype == CommandList.CWArc) {
 							if (Math.Abs(pos_last.Y-center.Y) < SELF_ZERO) {
-								if (center.X > xsplit) {
+								if (center.X > 0) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
@@ -130,7 +131,7 @@ namespace GCodePlotter
 							}
 						} else { //(mvtype == 3) {
 							if (Math.Abs(pos_last.Y-center.Y) < SELF_ZERO) {
-								if (center.X > xsplit) {
+								if (center.X > 0) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
@@ -153,17 +154,16 @@ namespace GCodePlotter
 						otherSide = 1;
 					}
 					
-					// Ignore rapid moves
-					if (mvtype == CommandList.RapidMove) continue;
-					
+					// Handle normal moves
 					if (mvtype == CommandList.NormalMove) {
-						A = CoordUnop(pos_last, shift, angle);
-						C = CoordUnop(pos, shift, angle);
-						cross = GetLineIntersect(pos_last, pos, xsplit);
+						A = UnsetOffsetAndRotation(pos_last, shift, angle);
+						C = UnsetOffsetAndRotation(pos, shift, angle);
+						cross = GetLineIntersect(pos_last, pos);
+						//cross = GetLineIntersect2(pos_last, pos);
 
 						if (cross.Count > 0) {
 							// Line crosses boundary
-							B = CoordUnop(cross[0], shift, angle);
+							B = UnsetOffsetAndRotation(cross[0], shift, angle);
 							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						} else {
@@ -172,15 +172,17 @@ namespace GCodePlotter
 						}
 					}
 					
+					// Handle Arc moves
 					if (mvtype == CommandList.CWArc || mvtype == CommandList.CCWArc ) {
-						A = CoordUnop(pos_last, shift, angle);
-						C = CoordUnop(pos, shift, angle);
-						D  = CoordUnop(center, shift, angle);
-						cross = GetArcIntersects(pos_last, pos, xsplit, center, mvtype);
+						A = UnsetOffsetAndRotation(pos_last, shift, angle);
+						C = UnsetOffsetAndRotation(pos, shift, angle);
+						D  = UnsetOffsetAndRotation(center, shift, angle);
+						cross = GetArcIntersects(pos_last, pos, center, mvtype);
+						//cross = GetArcIntersects2(pos_last, pos, center, mvtype);
 
 						if (cross.Count > 0) {
 							// Arc crosses boundary at least once
-							B = CoordUnop(cross[0], shift, angle);
+							B = UnsetOffsetAndRotation(cross[0], shift, angle);
 							
 							// Check length of arc before writing
 							if (Distance(B, A) > SELF_ACCURACY) {
@@ -195,7 +197,7 @@ namespace GCodePlotter
 							}
 							
 							if (cross.Count == 2) { // Arc crosses boundary twice
-								E = CoordUnop(cross[1], shift, angle);
+								E = UnsetOffsetAndRotation(cross[1], shift, angle);
 								
 								// Check length of arc before writing
 								if (Distance(E, B) > SELF_ACCURACY) {
@@ -214,6 +216,7 @@ namespace GCodePlotter
 					}
 					
 				} else {
+					
 					// if not any normal or arc moves, store the instruction in both lists
 					// rapid moves are also handled here
 					if (instruction.CommandEnum != CommandList.RapidMove) {
@@ -363,7 +366,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2, float xsplit) {
+		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2) {
 			
 			var output = new List<Point3D>();
 			
@@ -371,14 +374,15 @@ namespace GCodePlotter
 			float dy = p2.Y - p1.Y;
 			float dz = p2.Z - p1.Z;
 			
-			float xcross = xsplit;
+			// the coordinate system is shifted so that X is 0
+			float xcross = 0.0f;
 			float ycross = 0.0f;
 			float zcross = 0.0f;
 			
 			try {
 				float my = dy/dx;
-				float by = p1.Y- my * p1.X;
-				ycross = my*xsplit + by;
+				float by = p1.Y - my * p1.X;
+				ycross = by;
 			} catch (Exception) {
 				ycross = p1.Y;
 			}
@@ -386,7 +390,7 @@ namespace GCodePlotter
 			try {
 				float mz = dz/dx;
 				float bz = p1.Z - mz * p1.X;
-				zcross = mz*xsplit + bz;
+				zcross = bz;
 			} catch (Exception) {
 				zcross = p1.Z;
 			}
@@ -401,12 +405,13 @@ namespace GCodePlotter
 			return output;
 		}
 		
-		public static List<Point3D> GetLineIntersect2(Point3D p1, Point3D p2, float xsplit) {
+		public static List<Point3D> GetLineIntersect2(Point3D p1, Point3D p2) {
 			
 			var output = new List<Point3D>();
 
-			var ps1 = new PointF(xsplit,10);
-			var pe1 = new PointF(xsplit,20);
+			// the coordinate system is shifted so that X is 0
+			var ps1 = new PointF(0,10);
+			var pe1 = new PointF(0,20);
 			
 			var ps2 = new PointF(p1.X, p1.Y);
 			var pe2 = new PointF(p2.X, p2.Y);
@@ -420,12 +425,13 @@ namespace GCodePlotter
 			return output;
 		}
 		
-		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, float xsplit, Point3D cent, CommandList code) {
+		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, CommandList code) {
 			
 			var output = new List<Point3D>();
 			
-			float xcross1 = xsplit;
-			float xcross2 = xsplit;
+			// the coordinate system is shifted so that X is 0
+			float xcross1 = 0.0f;
+			float xcross2 = 0.0f;
 			float ycross1 = 0.0f;
 			float ycross2 = 0.0f;
 			float zcross1 = 0.0f;
@@ -440,7 +446,7 @@ namespace GCodePlotter
 				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
 			}
 
-			double val =  Math.Pow(R,2) - Math.Pow(xsplit - cent.X,2);
+			double val =  Math.Pow(R,2) - Math.Pow(-cent.X,2);
 			
 			if (val >= 0.0) {
 				double root = Math.Sqrt( val );
@@ -461,12 +467,12 @@ namespace GCodePlotter
 				beta = 360.0;
 			}
 
-			var xyTransTuple = Transform(xsplit-cent.X,ycross1-cent.Y,DegreeToRadian(-theta));
+			var xyTransTuple = Transform(-cent.X,ycross1-cent.Y,DegreeToRadian(-theta));
 			double xt = xyTransTuple.Item1;
 			double yt = xyTransTuple.Item2;
 			double gt1 = GetAngle(xt,yt,code);
 			
-			var xyTransTuple2 = Transform(xsplit-cent.X,ycross2-cent.Y,DegreeToRadian(-theta));
+			var xyTransTuple2 = Transform(-cent.X,ycross2-cent.Y,DegreeToRadian(-theta));
 			double xt2 = xyTransTuple2.Item1;
 			double yt2 = xyTransTuple2.Item2;
 			double gt2 = GetAngle(xt2,yt2,code);
@@ -511,7 +517,7 @@ namespace GCodePlotter
 			return output;
 		}
 
-		public static List<Point3D> GetArcIntersects2(Point3D p1, Point3D p2, float xsplit, Point3D cent, CommandList code) {
+		public static List<Point3D> GetArcIntersects2(Point3D p1, Point3D p2, Point3D cent, CommandList code) {
 
 			var output = new List<Point3D>();
 
@@ -523,19 +529,20 @@ namespace GCodePlotter
 				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
 			}
 			
-			var pp1 = new PointF(xsplit,10);
-			var pp2 = new PointF(xsplit,20);
+			// the coordinate system is shifted so that X is 0
+			var pp1 = new PointF(0,10);
+			var pp2 = new PointF(0,20);
 			
 			var i1 = PointF.Empty;
 			var i2 = PointF.Empty;
 			int numIntersections = FindLineCircleIntersections(cent.X, cent.Y, (float) R, pp1, pp2, out i1, out i2);
 			if (numIntersections > 0) {
-				var ip1 = new Point3D() { X = i1.X, Y = i1.Y, Z = 0 };
-				output.Add(ip1);
+				var ip1 = new Point3D() { X = i1.X, Y = i1.Y, Z = p1.Z };
+				if (ip1 != p1) output.Add(ip1);
 				
 				if (numIntersections == 2) {
-					var ip2 = new Point3D() { X = i2.X, Y = i2.Y, Z = 0 };
-					output.Add(ip2);
+					var ip2 = new Point3D() { X = i2.X, Y = i2.Y, Z = p1.Z };
+					if (ip2 != p1) output.Add(ip2);
 				}
 			}
 			
@@ -571,7 +578,7 @@ namespace GCodePlotter
 			return angle;
 		}
 		
-		private static Point3D CoordOp(Point3D coords, Point3D offset, double rotate) {
+		private static Point3D SetOffsetAndRotation(Point3D coords, Point3D offset, double rotate) {
 			float x = coords.X;
 			float y = coords.Y;
 			float z = coords.Z;
@@ -582,7 +589,7 @@ namespace GCodePlotter
 			return new Point3D() { X=(float)xy.Item1, Y=(float)xy.Item2, Z=z };
 		}
 
-		private static Point3D CoordUnop(Point3D coords, Point3D offset, double rotate) {
+		private static Point3D UnsetOffsetAndRotation(Point3D coords, Point3D offset, double rotate) {
 			float x = coords.X;
 			float y = coords.Y;
 			float z = coords.Z;

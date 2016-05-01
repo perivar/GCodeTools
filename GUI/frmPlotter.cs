@@ -151,12 +151,14 @@ namespace GCodePlotter
 				myPlots.Add(currentPlot);
 			}
 
-			var footer = myPlots.Last();
-			if (footer.Name == "Footer")
-			{
-				myPlots.Remove(footer);
+			if (myPlots.Count > 0) {
+				var footer = myPlots.Last();
+				if (footer.Name == "Footer")
+				{
+					myPlots.Remove(footer);
+				}
 			}
-
+			
 			// calculate max values for X, Y and Z
 			// while finalizing the plots and adding them to the lstPlot
 			float absMaxX = 0.0f;
