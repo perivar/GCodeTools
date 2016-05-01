@@ -45,6 +45,8 @@ namespace GCodePlotter
 			this.treeView = new System.Windows.Forms.TreeView();
 			this.panel2 = new System.Windows.Forms.Panel();
 			this.panel4 = new System.Windows.Forms.Panel();
+			this.lblZClearance = new System.Windows.Forms.Label();
+			this.txtZClearance = new System.Windows.Forms.TextBox();
 			this.radRight = new System.Windows.Forms.RadioButton();
 			this.radLeft = new System.Windows.Forms.RadioButton();
 			this.txtSplit = new System.Windows.Forms.TextBox();
@@ -171,6 +173,8 @@ namespace GCodePlotter
 			// 
 			// panel4
 			// 
+			this.panel4.Controls.Add(this.lblZClearance);
+			this.panel4.Controls.Add(this.txtZClearance);
 			this.panel4.Controls.Add(this.radRight);
 			this.panel4.Controls.Add(this.radLeft);
 			this.panel4.Controls.Add(this.txtSplit);
@@ -188,9 +192,25 @@ namespace GCodePlotter
 			this.panel4.Size = new System.Drawing.Size(125, 509);
 			this.panel4.TabIndex = 11;
 			// 
+			// lblZClearance
+			// 
+			this.lblZClearance.Location = new System.Drawing.Point(10, 261);
+			this.lblZClearance.Name = "lblZClearance";
+			this.lblZClearance.Size = new System.Drawing.Size(68, 19);
+			this.lblZClearance.TabIndex = 18;
+			this.lblZClearance.Text = "Z-Clearance:";
+			// 
+			// txtZClearance
+			// 
+			this.txtZClearance.Location = new System.Drawing.Point(80, 258);
+			this.txtZClearance.Name = "txtZClearance";
+			this.txtZClearance.Size = new System.Drawing.Size(29, 20);
+			this.txtZClearance.TabIndex = 17;
+			this.txtZClearance.Text = "2.0";
+			// 
 			// radRight
 			// 
-			this.radRight.Location = new System.Drawing.Point(61, 321);
+			this.radRight.Location = new System.Drawing.Point(61, 283);
 			this.radRight.Name = "radRight";
 			this.radRight.Size = new System.Drawing.Size(58, 24);
 			this.radRight.TabIndex = 16;
@@ -201,7 +221,7 @@ namespace GCodePlotter
 			// radLeft
 			// 
 			this.radLeft.Checked = true;
-			this.radLeft.Location = new System.Drawing.Point(10, 321);
+			this.radLeft.Location = new System.Drawing.Point(10, 283);
 			this.radLeft.Name = "radLeft";
 			this.radLeft.Size = new System.Drawing.Size(45, 24);
 			this.radLeft.TabIndex = 15;
@@ -211,9 +231,9 @@ namespace GCodePlotter
 			// 
 			// txtSplit
 			// 
-			this.txtSplit.Location = new System.Drawing.Point(10, 257);
+			this.txtSplit.Location = new System.Drawing.Point(45, 235);
 			this.txtSplit.Name = "txtSplit";
-			this.txtSplit.Size = new System.Drawing.Size(100, 20);
+			this.txtSplit.Size = new System.Drawing.Size(64, 20);
 			this.txtSplit.TabIndex = 14;
 			// 
 			// lblSplit
@@ -226,7 +246,7 @@ namespace GCodePlotter
 			// 
 			// btnSplit
 			// 
-			this.btnSplit.Location = new System.Drawing.Point(10, 283);
+			this.btnSplit.Location = new System.Drawing.Point(10, 313);
 			this.btnSplit.Name = "btnSplit";
 			this.btnSplit.Size = new System.Drawing.Size(102, 32);
 			this.btnSplit.TabIndex = 12;
@@ -236,8 +256,8 @@ namespace GCodePlotter
 			// 
 			// txtDimension
 			// 
-			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-			                                                                 | System.Windows.Forms.AnchorStyles.Right)));
+			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.txtDimension.Location = new System.Drawing.Point(3, 420);
@@ -391,6 +411,8 @@ namespace GCodePlotter
 		private System.Windows.Forms.Label lblSplit;
 		private System.Windows.Forms.RadioButton radRight;
 		private System.Windows.Forms.RadioButton radLeft;
+		private System.Windows.Forms.Label lblZClearance;
+		private System.Windows.Forms.TextBox txtZClearance;
 	}
 }
 

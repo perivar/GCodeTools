@@ -221,7 +221,13 @@ namespace GCodePlotter
 				cmdParseData.PerformClick();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
-				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f);
+				
+				float zClearance = 2.0f;
+				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
+					txtZClearance.Text = "2.0";
+				}
+				
+				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
 				
 				var gcodeTest = Plot.BuildGCodeOutput("noname", split[index], false);
 				ParseText(gcodeTest);

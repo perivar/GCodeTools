@@ -32,7 +32,7 @@ namespace GCodePlotter
 		/// Copied from the G-Code_Ripper-0.12 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle)
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
 		{
 			CommandList mvtype = CommandList.Other;  // G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 
@@ -153,6 +153,7 @@ namespace GCodePlotter
 						otherSide = 1;
 					}
 					
+					// Ignore rapid moves
 					if (mvtype == CommandList.RapidMove) continue;
 					
 					if (mvtype == CommandList.NormalMove) {
@@ -160,12 +161,14 @@ namespace GCodePlotter
 						C = CoordUnop(pos, shift, angle);
 						cross = GetLineIntersect(pos_last, pos, xsplit);
 
-						if (cross.Count > 0) { // Line crosses boundary
+						if (cross.Count > 0) {
+							// Line crosses boundary
 							B = CoordUnop(cross[0], shift, angle);
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift, thisSide, app));
-							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, app));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						} else {
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, app));
+							// Lines doesn't intersect
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 						}
 					}
 					
@@ -181,13 +184,13 @@ namespace GCodePlotter
 							
 							// Check length of arc before writing
 							if (Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift, thisSide, app));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift, otherSide, app));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 							}
 							
@@ -196,17 +199,17 @@ namespace GCodePlotter
 								
 								// Check length of arc before writing
 								if (Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift, otherSide, app));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 								
 								// Check length of arc before writing
 								if (Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift, thisSide, app));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift, thisSide, app));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 						}
 					}
 					
@@ -247,6 +250,52 @@ namespace GCodePlotter
 			//app.Add(app1);
 			
 			return app;
+		}
+		
+		/// <summary>
+		/// traverse the instructions backwards until a movement is found,
+		/// return as Point3D
+		/// </summary>
+		/// <param name="instructions">a list of gcode instructions</param>
+		/// <returns>a point 3D or empty</returns>
+		private static Point3D GetPreviousPoint(IList<GCodeInstruction> instructions) {
+			var prevPoint = Point3D.Empty;
+			
+			GCodeInstruction prevInstruction = null;
+			bool foundLastMovement = false;
+			int index = 1;
+			while (!foundLastMovement) {
+				prevInstruction = instructions[instructions.Count - index];
+				
+				if (prevInstruction.CommandEnum == CommandList.CWArc
+				    || prevInstruction.CommandEnum == CommandList.CCWArc
+				    || prevInstruction.CommandEnum == CommandList.NormalMove
+				    || prevInstruction.CommandEnum == CommandList.RapidMove) {
+					foundLastMovement = true;
+				}
+				
+				if (index == instructions.Count) {
+					// warning, no previous movements found
+					break;
+				}
+				
+				index++;
+			}
+			
+			// merge previous coordinates with newer ones to maintain correct point coordinates
+			if (prevInstruction.X.HasValue || prevInstruction.Y.HasValue || prevInstruction.Z.HasValue) {
+				if (prevInstruction.X.HasValue) {
+					prevPoint.X = prevInstruction.X.Value;
+				}
+				if (prevInstruction.Y.HasValue) {
+					prevPoint.Y = prevInstruction.Y.Value;
+				}
+				if (prevInstruction.Z.HasValue) {
+					prevPoint.Z = prevInstruction.Z.Value;
+				}
+			}
+
+			return prevPoint;
 		}
 
 		private static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {

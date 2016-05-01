@@ -266,26 +266,21 @@ namespace GCodePlotter
 		public static bool AbsoluteMode = true;
 		
 		public static bool Metric = true;
-
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, List<List<GCodeInstruction>> app) {
+		
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			/*
-			// get last item
-			var previousInstruction = app[side][app[side].Count - 2];
-			
 			bool skip = false;
-			if (previousInstruction != null
-			    && previousInstruction.X.HasValue
-			    && previousInstruction.Y.HasValue
-			    && previousInstruction.X.Value != p1.X
-			    && previousInstruction.Y.Value != p1.Y) {
+			// if the command is a line and the previous X Y Z and the p1 X Y Z is the same
+			if (prevPoint == p1) {
+				skip = true;
+			} else if (p1 == p2) {
 				skip = true;
 			}
-			 */
 			
-			if (p1 != p2) {
+			// add only if the x y (and z?) coordinates are different
+			if (!skip) {
 				
 				// never add a rapid move that extend the available space
 				if (side == 0) {
@@ -296,6 +291,10 @@ namespace GCodePlotter
 					// ensure X is equal or more than shift.X
 					if (p1.X < shift.X) p1.X = shift.X;
 				}
+				
+				// make sure to add Z clearance
+				p1.Z = zClearance;
+				
 				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
 			}
 			output.Add(new GCodeInstruction(command, p2, feed));
@@ -303,12 +302,20 @@ namespace GCodePlotter
 			return output;
 		}
 		
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, List<List<GCodeInstruction>> app) {
+		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			// add only if the x y z coordinates are different
-			if (p1 != p2) {
+			bool skip = false;
+			// if the command is an arc and the previous X Y and the p1 X Y is the same
+			if (prevPoint.X == p1.X && prevPoint.Y == p1.Y) {
+				skip = true;
+			} else if (p1 == p2) {
+				skip = true;
+			}
+			
+			// add only if the x y (and z?) coordinates are different
+			if (!skip) {
 
 				// never add a rapid move that extend the available space
 				if (side == 0) {
@@ -319,6 +326,10 @@ namespace GCodePlotter
 					// ensure X is equal or more than shift.X
 					if (p1.X < shift.X) p1.X = shift.X;
 				}
+				
+				// make sure to add Z clearance
+				p1.Z = zClearance;
+				
 				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
 			}
 			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
@@ -793,14 +804,8 @@ namespace GCodePlotter
 			return output;
 			#endregion
 		}
-		
-		public override bool Equals(object obj)
-		{
-			var item = obj as GCodeInstruction;
-			return Equals(item);
-		}
 
-		protected bool Equals(GCodeInstruction other)
+		protected bool EqualsXYZ(GCodeInstruction other)
 		{
 			if (other == null) return false;
 			
@@ -813,18 +818,27 @@ namespace GCodePlotter
 			
 			return false;
 		}
+		
+		/*
+		public override bool Equals(object obj)
+		{
+			var item = obj as GCodeInstruction;
+			return Equals(item);
+		}
 
 		public override int GetHashCode()
 		{
-			unchecked
+			// see http://stackoverflow.com/questions/263400/what-is-the-best-algorithm-for-an-overridden-system-object-gethashcode
+			unchecked // Overflow is fine, just wrap
 			{
-				int hashCode = 0;
-				hashCode = (hashCode * 397) ^ X.GetHashCode();
-				hashCode = (hashCode * 397) ^ Y.GetHashCode();
-				hashCode = (hashCode * 397) ^ Z.GetHashCode();
+				int hashCode = (int) 2166136261;
+				hashCode = (hashCode * 16777619) ^ X.GetHashCode();
+				hashCode = (hashCode * 16777619) ^ Y.GetHashCode();
+				hashCode = (hashCode * 16777619) ^ Z.GetHashCode();
 				return hashCode;
 			}
 		}
+		 */
 	}
 
 	public struct LinePoints
