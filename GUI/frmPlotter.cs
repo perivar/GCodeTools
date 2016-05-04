@@ -20,6 +20,9 @@ namespace GCodePlotter
 		const int MAX_WIDTH = 10000;
 		const int MAX_HEIGHT = 10000;
 		
+		const int leftMargin = 20;
+		const int bottomMargin = 20;
+		
 		List<GCodeInstruction> parsedInstructions = null;
 
 		bool bDataLoaded = false;
@@ -27,13 +30,25 @@ namespace GCodePlotter
 		List<Plot> myPlots;
 
 		Image renderImage = null;
+		
+		float scale;
+		float multiplier = 4.0f;
+
+		private Point MouseDownLocation;
 
 		public frmPlotter()
 		{
 			InitializeComponent();
 		}
 		
-		private void frmPlotter_Load(object sender, EventArgs e)
+		DialogResult AskToLoadData()
+		{
+			//return MessageBox.Show("Doing this will load/reload data, are you sure you want to load this data deleting your old data?", "Question!", MessageBoxButtons.YesNo);
+			return DialogResult.OK;
+		}
+
+		#region Events
+		void frmPlotterLoad(object sender, EventArgs e)
 		{
 			bDataLoaded = false;
 
@@ -47,13 +62,71 @@ namespace GCodePlotter
 					txtFile.Text = fileInfo.Name;
 					txtFile.Tag = fileInfo.FullName;
 					Application.DoEvents();
-					cmdParseData.Enabled = true;
-					cmdParseData.PerformClick();
+					btnParseData.Enabled = true;
+					btnParseData.PerformClick();
 				}
+			}
+			
+			this.pictureBox1.MouseWheel += OnMouseWheel;
+		}
+
+		void frmPlotterResizeEnd(object sender, EventArgs e)
+		{
+			if (this.WindowState == FormWindowState.Minimized)
+			{
+				return;
+			}
+			
+			RenderPlots();
+		}
+
+		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
+		{
+			RenderPlots();
+			pictureBox1.Refresh();
+		}
+
+		void TreeViewMouseDown(object sender, MouseEventArgs e)
+		{
+			var me = (MouseEventArgs) e;
+			if (me.Button == MouseButtons.Right) {
+				treeView.SelectedNode = null;
+				RenderPlots();
 			}
 		}
 
-		private void cmdParseData_Click(object sender, EventArgs e)
+		void btnLoadClick(object sender, EventArgs e)
+		{
+			if (AskToLoadData() == DialogResult.No)
+			{
+				return;
+			}
+
+			var result = ofdLoadDialog.ShowDialog();
+			if (result == System.Windows.Forms.DialogResult.OK)
+			{
+				var file = new FileInfo(ofdLoadDialog.FileName);
+				if (!file.Exists)
+				{
+					MessageBox.Show("Selected file does not exist, please select an existing file!");
+					return;
+				}
+
+				QuickSettings.Get["LastOpenedFile"] = file.FullName;
+
+				StreamReader tr = file.OpenText();
+
+				txtFile.Text = file.Name;
+				txtFile.Tag = file.FullName;
+
+				string data = tr.ReadToEnd();
+				tr.Close();
+				
+				ParseText(data);
+			}
+		}
+
+		void btnParseDataClick(object sender, EventArgs e)
 		{
 			if (bDataLoaded)
 			{
@@ -68,17 +141,120 @@ namespace GCodePlotter
 				StreamReader tr = file.OpenText();
 				string data = tr.ReadToEnd();
 				tr.Close();
-
+				
 				ParseText(data);}
 		}
 
-		private DialogResult AskToLoadData()
+		void btnRedrawClick(object sender, EventArgs e)
 		{
-			//return MessageBox.Show("Doing this will load/reload data, are you sure you want to load this data deleting your old data?", "Question!", MessageBoxButtons.YesNo);
-			return DialogResult.OK;
+			// reset multiplier
+			multiplier = 4.0f;
+			
+			pictureBox1.Left = 0;
+			pictureBox1.Top = 0;
+			
+			RenderPlots();
 		}
 
-		public void ParseText(string text)
+		void btnSplitClick(object sender, EventArgs e)
+		{
+			if (radLeft.Checked) {
+				ResetSplit(0);
+			} else {
+				ResetSplit(1);
+			}
+		}
+		
+		void btnSaveClick(object sender, EventArgs e)
+		{
+			SaveGCodes(false);
+		}
+
+		void btnSaveLayersClick(object sender, EventArgs e)
+		{
+			SaveGCodes(true);
+		}
+		
+		void btnSaveSplitClick(object sender, EventArgs e)
+		{
+			if (parsedInstructions == null) {
+				MessageBox.Show("No file loaded!");
+				return;
+			}
+			
+			if ("".Equals(txtSplit.Text)) {
+				MessageBox.Show("No split value entered!");
+				return;
+			}
+
+			float xSplit = 0.0f;
+			if (float.TryParse(txtSplit.Text, out xSplit)) {
+				
+				btnParseData.Enabled = true;
+				btnParseData.PerformClick();
+				
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				
+				float zClearance = 2.0f;
+				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
+					txtZClearance.Text = "2.0";
+					zClearance = 2.0f;
+				}
+				
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
+				
+				//var gcodeLeft = Plot.BuildGCodeOutput("Unnamed", split[0], false);
+				//var gcodeRight = Plot.BuildGCodeOutput("Unnamed", split[1], false);
+				
+				GCodeSplitter.DumpGCode(txtFile.Text+"_left.gcode", split[0]);
+				GCodeSplitter.DumpGCode(txtFile.Text+"_right.gcode", split[1]);
+				
+			}
+		}
+		
+		void radScaleChange(object sender, EventArgs e)
+		{
+			RenderPlots();
+		}
+
+		void cbRenderG0CheckedChanged(object sender, EventArgs e)
+		{
+			if (renderImage == null) {
+				return;
+			}
+
+			RenderPlots();
+		}
+		
+		void cbSoloSelectCheckedChanged(object sender, EventArgs e)
+		{
+			if (renderImage == null) {
+				return;
+			}
+
+			RenderPlots();
+		}
+		
+		void PictureBox1MouseDown(object sender, MouseEventArgs e)
+		{
+			if (e.Button == System.Windows.Forms.MouseButtons.Right)
+			{
+				MouseDownLocation = e.Location;
+			}
+		}
+		
+		void PictureBox1MouseMove(object sender, MouseEventArgs e)
+		{
+			if (e.Button == System.Windows.Forms.MouseButtons.Right)
+			{
+				pictureBox1.Left = e.X + pictureBox1.Left - MouseDownLocation.X;
+				pictureBox1.Top = e.Y + pictureBox1.Top - MouseDownLocation.Y;
+			}
+		}
+		#endregion
+		
+		#region Private Methods
+		void ParseText(string text)
 		{
 			parsedInstructions = SimpleGCodeParser.ParseText(text);
 
@@ -183,20 +359,6 @@ namespace GCodePlotter
 			RenderPlots();
 			bDataLoaded = true;
 		}
-
-		private void cmdRedraw_Click(object sender, EventArgs e)
-		{
-			RenderPlots();
-		}
-
-		void BtnSplitClick(object sender, EventArgs e)
-		{
-			if (radLeft.Checked) {
-				ResetSplit(0);
-			} else {
-				ResetSplit(1);
-			}
-		}
 		
 		void ResetSplit(int index) {
 			
@@ -213,14 +375,15 @@ namespace GCodePlotter
 			float xSplit = 0.0f;
 			if (float.TryParse(txtSplit.Text, out xSplit)) {
 				
-				cmdParseData.Enabled = true;
-				cmdParseData.PerformClick();
+				btnParseData.Enabled = true;
+				btnParseData.PerformClick();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				
 				float zClearance = 2.0f;
 				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
 					txtZClearance.Text = "2.0";
+					zClearance = 2.0f;
 				}
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
@@ -230,18 +393,9 @@ namespace GCodePlotter
 			}
 		}
 		
-		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
-		{
-			RenderPlots();
-			pictureBox1.Refresh();
-		}
-		
-		private void RenderPlots()
-		{
-			const int leftMargin = 20;
-			const int bottomMargin = 20;
+		Size GetDimensionsFromRadioButtons() {
 			
-			var multiplier = 4f;
+			// set multiplier variable
 			if (radZoomTwo.Checked) {
 				multiplier = 2;
 			} else if (radZoomFour.Checked) {
@@ -252,7 +406,8 @@ namespace GCodePlotter
 				multiplier = 16;
 			}
 
-			var scale = (10 * multiplier);
+			// set scale variable
+			scale = (10 * multiplier);
 
 			// determine the x and y sizes based on the maxX and Y from all the plots
 			var absMaxX = 0f;
@@ -266,6 +421,7 @@ namespace GCodePlotter
 				}
 			}
 
+			// scale it up
 			absMaxX *= scale;
 			absMaxY *= scale;
 
@@ -276,7 +432,50 @@ namespace GCodePlotter
 			// set max size in case the calculated dimensions are way off
 			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
 			intAbsMaxY = (int) Math.Min(intAbsMaxY, MAX_HEIGHT);
+			
+			return new Size(intAbsMaxX, intAbsMaxY);
+		}
+		
+		Size GetDimensionsFromZoom() {
 
+			// set scale variable
+			scale = (10 * multiplier);
+
+			// determine the x and y sizes based on the maxX and Y from all the plots
+			var absMaxX = 0f;
+			var absMaxY = 0f;
+			if (myPlots != null && myPlots.Count > 0)
+			{
+				foreach (Plot plotItem in myPlots)
+				{
+					absMaxX = Math.Max(absMaxX, plotItem.MaxX);
+					absMaxY = Math.Max(absMaxY, plotItem.MaxY);
+				}
+			}
+
+			// scale it up
+			absMaxX *= scale;
+			absMaxY *= scale;
+
+			// 10 mm per grid
+			var intAbsMaxX = (int)(absMaxX + 1) / 10 + (int) (multiplier*leftMargin);
+			var intAbsMaxY = (int)(absMaxY + 1) / 10 + (int) (multiplier*bottomMargin);
+			
+			// set max size in case the calculated dimensions are way off
+			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
+			intAbsMaxY = (int) Math.Min(intAbsMaxY, MAX_HEIGHT);
+			
+			return new Size(intAbsMaxX, intAbsMaxY);
+
+		}
+		
+		void ResetEmptyImage() {
+			
+			var imageDimension = GetDimensionsFromZoom();
+			int intAbsMaxX = imageDimension.Width;
+			int intAbsMaxY = imageDimension.Height;
+			
+			// if anything has changed, reset image
 			if (renderImage == null || intAbsMaxX != renderImage.Width || intAbsMaxY != renderImage.Height)
 			{
 				if (renderImage != null) {
@@ -288,7 +487,12 @@ namespace GCodePlotter
 				pictureBox1.Height = intAbsMaxY;
 				pictureBox1.Image = renderImage;
 			}
+		}
 
+		void RenderPlots()
+		{
+			ResetEmptyImage();
+			
 			var graphics = Graphics.FromImage(renderImage);
 			graphics.Clear(ColorHelper.GetColor(PenColorList.Background));
 			
@@ -369,64 +573,8 @@ namespace GCodePlotter
 
 			pictureBox1.Refresh();
 		}
-
-		private void cmdLoad_Click(object sender, EventArgs e)
-		{
-			if (AskToLoadData() == DialogResult.No)
-			{
-				return;
-			}
-
-			var result = ofdLoadDialog.ShowDialog();
-			if (result == System.Windows.Forms.DialogResult.OK)
-			{
-				var file = new FileInfo(ofdLoadDialog.FileName);
-				if (!file.Exists)
-				{
-					MessageBox.Show("Selected file does not exist, please select an existing file!");
-					return;
-				}
-
-				QuickSettings.Get["LastOpenedFile"] = file.FullName;
-
-				StreamReader tr = file.OpenText();
-
-				txtFile.Text = file.Name;
-				txtFile.Tag = file.FullName;
-
-				string data = tr.ReadToEnd();
-				tr.Close();
-
-				ParseText(data);
-			}
-		}
-
-		private void frmPlotter_ResizeEnd(object sender, EventArgs e)
-		{
-			if (this.WindowState == FormWindowState.Minimized)
-			{
-				return;
-			}
-
-			RenderPlots();
-		}
-
-		private void radScaleChange(object sender, EventArgs e)
-		{
-			RenderPlots();
-		}
-
-		private void cmdSave_Click(object sender, EventArgs e)
-		{
-			SaveGCodes(false);
-		}
-
-		private void cmdSaveLayers_Click(object sender, EventArgs e)
-		{
-			SaveGCodes(true);
-		}
-
-		private void SaveGCodes(bool doMultiLayer)
+		
+		void SaveGCodes(bool doMultiLayer)
 		{
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == System.Windows.Forms.DialogResult.OK)
@@ -471,68 +619,59 @@ namespace GCodePlotter
 				tw.Close();
 			}
 		}
+		#endregion
 		
-		void TreeViewMouseDown(object sender, MouseEventArgs e)
+		void OnMouseWheel(object sender, MouseEventArgs mea)
 		{
-			var me = (MouseEventArgs) e;
-			if (me.Button == MouseButtons.Right) {
-				treeView.SelectedNode = null;
-				RenderPlots();
-			}
-		}
-		
-		void BtnSaveSplitClick(object sender, EventArgs e)
-		{
-			if (parsedInstructions == null) {
-				MessageBox.Show("No file loaded!");
-				return;
-			}
-			
-			if ("".Equals(txtSplit.Text)) {
-				MessageBox.Show("No split value entered!");
-				return;
-			}
+			// Override OnMouseWheel event, for zooming in/out with the scroll wheel
+			if (pictureBox1.Image != null)
+			{
+				// If the mouse wheel is moved forward (Zoom in)
+				if (mea.Delta > 0)
+				{
+					// Check if the pictureBox dimensions are in range (15 is the minimum and maximum zoom level)
+					if ((pictureBox1.Width < (15 * this.Width)) && (pictureBox1.Height < (15 * this.Height)))
+					{
+						// Change the size of the picturebox, multiply it by the ZOOMFACTOR
+						//pictureBox1.Width = (int)(pictureBox1.Width * 1.25);
+						//pictureBox1.Height = (int)(pictureBox1.Height * 1.25);
+						
+						if (multiplier < 40) {
+							multiplier *= 1.25f;
 
-			float xSplit = 0.0f;
-			if (float.TryParse(txtSplit.Text, out xSplit)) {
-				
-				cmdParseData.Enabled = true;
-				cmdParseData.PerformClick();
-				
-				var splitPoint = new Point3D(xSplit, 0, 0);
-				
-				float zClearance = 2.0f;
-				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
-					txtZClearance.Text = "2.0";
+							// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
+							//pictureBox1.Top = (int)(mea.Y - 1.25 * (mea.Y - pictureBox1.Top));
+							//pictureBox1.Left = (int)(mea.X - 1.25 * (mea.X - pictureBox1.Left));
+							
+							pictureBox1.Top = (int)(mea.Y - 1.15 * (mea.Y - pictureBox1.Top));
+							pictureBox1.Left = (int)(mea.X - 1.15 * (mea.X - pictureBox1.Left));
+						}
+					}
+				}
+				else
+				{
+					// Check if the pictureBox dimensions are in range (15 is the minimum and maximum zoom level)
+					if ((pictureBox1.Width > (this.Width / 15)) && (pictureBox1.Height > (this.Height / 15)))
+					{
+						// Change the size of the picturebox, divide it by the ZOOMFACTOR
+						//pictureBox1.Width = (int)(pictureBox1.Width / 1.25);
+						//pictureBox1.Height = (int)(pictureBox1.Height / 1.25);
+						
+						if (multiplier > 1) {
+							multiplier /= 1.25f;
+							
+							// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
+							//pictureBox1.Top = (int)(mea.Y - 0.80 * (mea.Y - pictureBox1.Top));
+							//pictureBox1.Left = (int)(mea.X - 0.80 * (mea.X - pictureBox1.Left));
+							
+							pictureBox1.Top = (int)(mea.Y - 0.82 * (mea.Y - pictureBox1.Top));
+							pictureBox1.Left = (int)(mea.X - 0.82 * (mea.X - pictureBox1.Left));
+						}
+					}
 				}
 				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
-				
-				//var gcodeLeft = Plot.BuildGCodeOutput("Unnamed", split[0], false);
-				//var gcodeRight = Plot.BuildGCodeOutput("Unnamed", split[1], false);
-				
-				GCodeSplitter.DumpGCode(txtFile.Text+"_left.gcode", split[0]);
-				GCodeSplitter.DumpGCode(txtFile.Text+"_right.gcode", split[1]);
-				
+				RenderPlots();
 			}
-		}
-		
-		void cbRenderG0_CheckedChanged(object sender, EventArgs e)
-		{
-			if (renderImage == null) {
-				return;
-			}
-
-			RenderPlots();
-		}
-		
-		void CbSoloSelectCheckedChanged(object sender, EventArgs e)
-		{
-			if (renderImage == null) {
-				return;
-			}
-
-			RenderPlots();
 		}
 	}
 }

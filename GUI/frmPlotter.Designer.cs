@@ -34,11 +34,11 @@ namespace GCodePlotter
 		private void InitializeComponent()
 		{
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
-			this.cmdParseData = new System.Windows.Forms.Button();
-			this.cmdRedraw = new System.Windows.Forms.Button();
+			this.btnParseData = new System.Windows.Forms.Button();
+			this.btnRedraw = new System.Windows.Forms.Button();
 			this.cbRenderG0 = new System.Windows.Forms.CheckBox();
-			this.cmdLoad = new System.Windows.Forms.Button();
-			this.cmdSave = new System.Windows.Forms.Button();
+			this.btnLoad = new System.Windows.Forms.Button();
+			this.btnSave = new System.Windows.Forms.Button();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
 			this.panel1 = new System.Windows.Forms.Panel();
@@ -79,27 +79,29 @@ namespace GCodePlotter
 			this.pictureBox1.Size = new System.Drawing.Size(363, 465);
 			this.pictureBox1.TabIndex = 0;
 			this.pictureBox1.TabStop = false;
+			this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PictureBox1MouseDown);
+			this.pictureBox1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.PictureBox1MouseMove);
 			// 
-			// cmdParseData
+			// btnParseData
 			// 
-			this.cmdParseData.Enabled = false;
-			this.cmdParseData.Location = new System.Drawing.Point(10, 47);
-			this.cmdParseData.Name = "cmdParseData";
-			this.cmdParseData.Size = new System.Drawing.Size(102, 32);
-			this.cmdParseData.TabIndex = 2;
-			this.cmdParseData.Text = "Parse";
-			this.cmdParseData.UseVisualStyleBackColor = true;
-			this.cmdParseData.Click += new System.EventHandler(this.cmdParseData_Click);
+			this.btnParseData.Enabled = false;
+			this.btnParseData.Location = new System.Drawing.Point(10, 47);
+			this.btnParseData.Name = "btnParseData";
+			this.btnParseData.Size = new System.Drawing.Size(102, 32);
+			this.btnParseData.TabIndex = 2;
+			this.btnParseData.Text = "Parse";
+			this.btnParseData.UseVisualStyleBackColor = true;
+			this.btnParseData.Click += new System.EventHandler(this.btnParseDataClick);
 			// 
-			// cmdRedraw
+			// btnRedraw
 			// 
-			this.cmdRedraw.Location = new System.Drawing.Point(10, 176);
-			this.cmdRedraw.Name = "cmdRedraw";
-			this.cmdRedraw.Size = new System.Drawing.Size(102, 32);
-			this.cmdRedraw.TabIndex = 2;
-			this.cmdRedraw.Text = "Redraw";
-			this.cmdRedraw.UseVisualStyleBackColor = true;
-			this.cmdRedraw.Click += new System.EventHandler(this.cmdRedraw_Click);
+			this.btnRedraw.Location = new System.Drawing.Point(10, 176);
+			this.btnRedraw.Name = "btnRedraw";
+			this.btnRedraw.Size = new System.Drawing.Size(102, 32);
+			this.btnRedraw.TabIndex = 2;
+			this.btnRedraw.Text = "Redraw";
+			this.btnRedraw.UseVisualStyleBackColor = true;
+			this.btnRedraw.Click += new System.EventHandler(this.btnRedrawClick);
 			// 
 			// cbRenderG0
 			// 
@@ -112,27 +114,27 @@ namespace GCodePlotter
 			this.cbRenderG0.TabIndex = 5;
 			this.cbRenderG0.Text = "Render G0s";
 			this.cbRenderG0.UseVisualStyleBackColor = true;
-			this.cbRenderG0.CheckedChanged += new System.EventHandler(this.cbRenderG0_CheckedChanged);
+			this.cbRenderG0.CheckedChanged += new System.EventHandler(this.cbRenderG0CheckedChanged);
 			// 
-			// cmdLoad
+			// btnLoad
 			// 
-			this.cmdLoad.Location = new System.Drawing.Point(10, 9);
-			this.cmdLoad.Name = "cmdLoad";
-			this.cmdLoad.Size = new System.Drawing.Size(102, 32);
-			this.cmdLoad.TabIndex = 9;
-			this.cmdLoad.Text = "Load Data";
-			this.cmdLoad.UseVisualStyleBackColor = true;
-			this.cmdLoad.Click += new System.EventHandler(this.cmdLoad_Click);
+			this.btnLoad.Location = new System.Drawing.Point(10, 9);
+			this.btnLoad.Name = "btnLoad";
+			this.btnLoad.Size = new System.Drawing.Size(102, 32);
+			this.btnLoad.TabIndex = 9;
+			this.btnLoad.Text = "Load Data";
+			this.btnLoad.UseVisualStyleBackColor = true;
+			this.btnLoad.Click += new System.EventHandler(this.btnLoadClick);
 			// 
-			// cmdSave
+			// btnSave
 			// 
-			this.cmdSave.Location = new System.Drawing.Point(10, 92);
-			this.cmdSave.Name = "cmdSave";
-			this.cmdSave.Size = new System.Drawing.Size(102, 32);
-			this.cmdSave.TabIndex = 9;
-			this.cmdSave.Text = "Save Data";
-			this.cmdSave.UseVisualStyleBackColor = true;
-			this.cmdSave.Click += new System.EventHandler(this.cmdSave_Click);
+			this.btnSave.Location = new System.Drawing.Point(10, 92);
+			this.btnSave.Name = "btnSave";
+			this.btnSave.Size = new System.Drawing.Size(102, 32);
+			this.btnSave.TabIndex = 9;
+			this.btnSave.Text = "Save Data";
+			this.btnSave.UseVisualStyleBackColor = true;
+			this.btnSave.Click += new System.EventHandler(this.btnSaveClick);
 			// 
 			// sfdSaveDialog
 			// 
@@ -184,7 +186,7 @@ namespace GCodePlotter
 			this.cbSoloSelect.TabIndex = 6;
 			this.cbSoloSelect.Text = "Solo Select";
 			this.cbSoloSelect.UseVisualStyleBackColor = true;
-			this.cbSoloSelect.CheckedChanged += new System.EventHandler(this.CbSoloSelectCheckedChanged);
+			this.cbSoloSelect.CheckedChanged += new System.EventHandler(this.cbSoloSelectCheckedChanged);
 			// 
 			// panel4
 			// 
@@ -198,10 +200,10 @@ namespace GCodePlotter
 			this.panel4.Controls.Add(this.btnSplit);
 			this.panel4.Controls.Add(this.txtDimension);
 			this.panel4.Controls.Add(this.cmdSaveLayers);
-			this.panel4.Controls.Add(this.cmdSave);
-			this.panel4.Controls.Add(this.cmdLoad);
-			this.panel4.Controls.Add(this.cmdRedraw);
-			this.panel4.Controls.Add(this.cmdParseData);
+			this.panel4.Controls.Add(this.btnSave);
+			this.panel4.Controls.Add(this.btnLoad);
+			this.panel4.Controls.Add(this.btnRedraw);
+			this.panel4.Controls.Add(this.btnParseData);
 			this.panel4.Dock = System.Windows.Forms.DockStyle.Right;
 			this.panel4.Location = new System.Drawing.Point(417, 5);
 			this.panel4.Name = "panel4";
@@ -216,7 +218,7 @@ namespace GCodePlotter
 			this.btnSaveSplit.TabIndex = 19;
 			this.btnSaveSplit.Text = "Save Both";
 			this.btnSaveSplit.UseVisualStyleBackColor = true;
-			this.btnSaveSplit.Click += new System.EventHandler(this.BtnSaveSplitClick);
+			this.btnSaveSplit.Click += new System.EventHandler(this.btnSaveSplitClick);
 			// 
 			// lblZClearance
 			// 
@@ -278,7 +280,7 @@ namespace GCodePlotter
 			this.btnSplit.TabIndex = 12;
 			this.btnSplit.Text = "Split";
 			this.btnSplit.UseVisualStyleBackColor = true;
-			this.btnSplit.Click += new System.EventHandler(this.BtnSplitClick);
+			this.btnSplit.Click += new System.EventHandler(this.btnSplitClick);
 			// 
 			// txtDimension
 			// 
@@ -301,7 +303,7 @@ namespace GCodePlotter
 			this.cmdSaveLayers.TabIndex = 9;
 			this.cmdSaveLayers.Text = "Save Data (layers)";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
-			this.cmdSaveLayers.Click += new System.EventHandler(this.cmdSaveLayers_Click);
+			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSaveLayersClick);
 			// 
 			// txtFile
 			// 
@@ -374,7 +376,7 @@ namespace GCodePlotter
 			// 
 			// panel6
 			// 
-			this.panel6.AutoScroll = true;
+			this.panel6.AutoScroll = false;
 			this.panel6.Controls.Add(this.pictureBox1);
 			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panel6.Location = new System.Drawing.Point(5, 5);
@@ -394,9 +396,9 @@ namespace GCodePlotter
 			this.Name = "frmPlotter";
 			this.Padding = new System.Windows.Forms.Padding(5);
 			this.Text = "GCode Viewer";
-			this.Load += new System.EventHandler(this.frmPlotter_Load);
-			this.ResizeEnd += new System.EventHandler(this.frmPlotter_ResizeEnd);
-			this.ClientSizeChanged += new System.EventHandler(this.frmPlotter_ResizeEnd);
+			this.Load += new System.EventHandler(this.frmPlotterLoad);
+			this.ResizeEnd += new System.EventHandler(this.frmPlotterResizeEnd);
+			this.ClientSizeChanged += new System.EventHandler(this.frmPlotterResizeEnd);
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.panel1.ResumeLayout(false);
 			this.panel2.ResumeLayout(false);
@@ -412,11 +414,11 @@ namespace GCodePlotter
 		#endregion
 
 		private System.Windows.Forms.PictureBox pictureBox1;
-		private System.Windows.Forms.Button cmdParseData;
-		private System.Windows.Forms.Button cmdRedraw;
+		private System.Windows.Forms.Button btnParseData;
+		private System.Windows.Forms.Button btnRedraw;
 		private System.Windows.Forms.CheckBox cbRenderG0;
-		private System.Windows.Forms.Button cmdLoad;
-		private System.Windows.Forms.Button cmdSave;
+		private System.Windows.Forms.Button btnLoad;
+		private System.Windows.Forms.Button btnSave;
 		private System.Windows.Forms.Button cmdSaveLayers;
 		private System.Windows.Forms.SaveFileDialog sfdSaveDialog;
 		private System.Windows.Forms.OpenFileDialog ofdLoadDialog;
