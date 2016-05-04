@@ -388,7 +388,15 @@ namespace GCodePlotter
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
-				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", split[index], false);
+				
+				// Save
+				//DumpGCode("first.gcode", app[0]);
+				//DumpGCode("second.gcode", app[1]);
+				
+				// clean up the mess with too many G0 commands
+				var cleaned = GCodeSplitter.CleanGCode(split[index]);
+								
+				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", cleaned, false);
 				ParseText(gcodeSplitted);
 			}
 		}

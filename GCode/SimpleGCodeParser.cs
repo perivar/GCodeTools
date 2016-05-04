@@ -98,7 +98,10 @@ namespace GCode
 			
 			bool skipRapidMove = false;
 			// if the command is a line and the previous X Y Z and the p1 X Y Z is the same
-			if (prevPoint == p1) {
+			//if (prevPoint == p1) {
+			// if last command didn't include a Z-coordinate, like a G2 or G3 arc mode
+			// only check whether X and Y are similar between prevPoint and p1
+			if (prevPoint.X == p1.X && prevPoint.Y == p1.Y) {
 				skipRapidMove = true;
 			} else if (p1 == p2) {
 				skipRapidMove = true;
@@ -205,7 +208,6 @@ namespace GCode
 				case CommandList.Other:
 					break;
 			}
-			
 			
 			this.X = p2.X;
 			this.Y = p2.Y;

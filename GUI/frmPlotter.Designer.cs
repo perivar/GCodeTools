@@ -95,11 +95,11 @@ namespace GCodePlotter
 			// 
 			// btnRedraw
 			// 
-			this.btnRedraw.Location = new System.Drawing.Point(10, 176);
+			this.btnRedraw.Location = new System.Drawing.Point(10, 161);
 			this.btnRedraw.Name = "btnRedraw";
 			this.btnRedraw.Size = new System.Drawing.Size(102, 32);
 			this.btnRedraw.TabIndex = 2;
-			this.btnRedraw.Text = "Redraw";
+			this.btnRedraw.Text = "Reset (redraw)";
 			this.btnRedraw.UseVisualStyleBackColor = true;
 			this.btnRedraw.Click += new System.EventHandler(this.btnRedrawClick);
 			// 
@@ -128,7 +128,7 @@ namespace GCodePlotter
 			// 
 			// btnSave
 			// 
-			this.btnSave.Location = new System.Drawing.Point(10, 92);
+			this.btnSave.Location = new System.Drawing.Point(10, 85);
 			this.btnSave.Name = "btnSave";
 			this.btnSave.Size = new System.Drawing.Size(102, 32);
 			this.btnSave.TabIndex = 9;
@@ -297,7 +297,7 @@ namespace GCodePlotter
 			// 
 			// cmdSaveLayers
 			// 
-			this.cmdSaveLayers.Location = new System.Drawing.Point(10, 130);
+			this.cmdSaveLayers.Location = new System.Drawing.Point(10, 123);
 			this.cmdSaveLayers.Name = "cmdSaveLayers";
 			this.cmdSaveLayers.Size = new System.Drawing.Size(102, 32);
 			this.cmdSaveLayers.TabIndex = 9;
@@ -309,10 +309,10 @@ namespace GCodePlotter
 			// 
 			this.txtFile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
 			this.txtFile.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtFile.Location = new System.Drawing.Point(191, 11);
+			this.txtFile.Location = new System.Drawing.Point(14, 11);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(203, 20);
+			this.txtFile.Size = new System.Drawing.Size(380, 20);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panel5
@@ -337,6 +337,7 @@ namespace GCodePlotter
 			this.radZoomSixteen.TabIndex = 0;
 			this.radZoomSixteen.Text = "x4";
 			this.radZoomSixteen.UseVisualStyleBackColor = true;
+			this.radZoomSixteen.Visible = false;
 			this.radZoomSixteen.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
 			// radZoomEight
@@ -348,6 +349,7 @@ namespace GCodePlotter
 			this.radZoomEight.TabIndex = 0;
 			this.radZoomEight.Text = "x2";
 			this.radZoomEight.UseVisualStyleBackColor = true;
+			this.radZoomEight.Visible = false;
 			this.radZoomEight.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
 			// radZoomFour
@@ -361,6 +363,7 @@ namespace GCodePlotter
 			this.radZoomFour.TabStop = true;
 			this.radZoomFour.Text = "x1";
 			this.radZoomFour.UseVisualStyleBackColor = true;
+			this.radZoomFour.Visible = false;
 			this.radZoomFour.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
 			// radZoomTwo
@@ -372,11 +375,11 @@ namespace GCodePlotter
 			this.radZoomTwo.TabIndex = 0;
 			this.radZoomTwo.Text = "x0.5";
 			this.radZoomTwo.UseVisualStyleBackColor = true;
+			this.radZoomTwo.Visible = false;
 			this.radZoomTwo.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
 			// panel6
 			// 
-			this.panel6.AutoScroll = false;
 			this.panel6.Controls.Add(this.pictureBox1);
 			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panel6.Location = new System.Drawing.Point(5, 5);

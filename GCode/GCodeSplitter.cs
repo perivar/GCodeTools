@@ -238,18 +238,6 @@ namespace GCode
 				// count number of instructions processed
 				numInstructions++;
 			}
-
-			// Save
-			//DumpGCode("first.gcode", app[0]);
-			//DumpGCode("second.gcode", app[1]);
-			
-			// clean up the mess with too many G0 commands
-			//var app0 = CleanGCode(app[0]);
-			//var app1 = CleanGCode(app[1]);
-			//app.Clear();
-			
-			//app.Add(app0);
-			//app.Add(app1);
 			
 			return app;
 		}
@@ -300,17 +288,21 @@ namespace GCode
 			return prevPoint;
 		}
 
-		private static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {
+		public static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {
 			
 			var cleanedList = new List<GCodeInstruction>();
-			GCodeInstruction previousLine = null;
-			Point3D currentPos = Point3D.Empty;
-			float currentFeedrate = 0.0f;
+			var prevInstruction = new GCodeInstruction(CommandList.RapidMove, Point3D.Empty, 0);
+			
 			CommandList mvtype = CommandList.Other;
+			
+			float lastX = 0.0f;
+			float lastY = 0.0f;
+			float lastZ = 0.0f;
+			float lastF = 0.0f;
 			
 			foreach (GCodeInstruction currentInstruction in instructions) {
 				
-				if (currentInstruction.Equals(previousLine)) {
+				if (currentInstruction.Equals(prevInstruction)) {
 					continue;
 				}
 
@@ -325,29 +317,43 @@ namespace GCode
 					// merge previous coordinates with newer ones to maintain correct point coordinates
 					if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
 					     || currentInstruction.F.HasValue)) {
-						if (currentInstruction.X.HasValue && currentInstruction.X.Value != currentPos.X) {
-							// X changed
-							currentPos.X = currentInstruction.X.Value;
+						
+						if ((currentInstruction.X.HasValue && prevInstruction.X.HasValue
+						     && currentInstruction.X.Value == prevInstruction.X.Value)
+						    || currentInstruction.X.HasValue && currentInstruction.X.Value == lastX) {
+							// X is similar
+							currentInstruction.X = (float?) null;
 						}
-						if (currentInstruction.Y.HasValue && currentInstruction.Y.Value != currentPos.Y) {
-							// Y changed
-							currentPos.Y = currentInstruction.Y.Value;
+						if ((currentInstruction.Y.HasValue && prevInstruction.Y.HasValue
+						     && currentInstruction.Y.Value == prevInstruction.Y.Value)
+						    || currentInstruction.Y.HasValue && currentInstruction.Y.Value == lastY) {
+							// Y is similar
+							currentInstruction.Y = (float?) null;
 						}
-						if (currentInstruction.Z.HasValue && currentInstruction.Z.Value != currentPos.Z) {
-							// Z changed
-							currentPos.Z = currentInstruction.Z.Value;
+						if ((currentInstruction.Z.HasValue && prevInstruction.Z.HasValue
+						     && currentInstruction.Z.Value == prevInstruction.Z.Value)
+						    || currentInstruction.Z.HasValue && currentInstruction.Z.Value == lastZ) {
+							// Z is similar
+							currentInstruction.Z = (float?) null;
 						}
-						if (currentInstruction.F.HasValue && currentInstruction.F.Value != currentFeedrate) {
-							// F changed
-							currentFeedrate = currentInstruction.F.Value;
+						if ((currentInstruction.F.HasValue && prevInstruction.F.HasValue
+						     && currentInstruction.F.Value == prevInstruction.F.Value)
+						    || currentInstruction.F.HasValue && currentInstruction.F.Value == lastF) {
+							// F is similar
+							currentInstruction.F = (float?) null;
 						}
 					}
+					
+					// only care about movement instructions
+					prevInstruction = currentInstruction;
+					
+					if (currentInstruction.X.HasValue) lastX = currentInstruction.X.Value;
+					if (currentInstruction.Y.HasValue) lastY = currentInstruction.Y.Value;
+					if (currentInstruction.Z.HasValue) lastZ = currentInstruction.Z.Value;
+					if (currentInstruction.F.HasValue) lastF = currentInstruction.F.Value;
 				}
-
-				cleanedList.Add(currentInstruction);
 				
-				// store current position
-				previousLine = currentInstruction;
+				cleanedList.Add(currentInstruction);
 			}
 
 			return cleanedList;
