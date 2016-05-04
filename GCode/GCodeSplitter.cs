@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
 using System.IO;
-using System.Windows.Forms;
 
-namespace GCodePlotter
+namespace GCode
 {
 	/// <summary>
 	/// Description of GCodeSplitter.
+	/// Most of it ported and copied from the G-Code_Ripper-0.12 Python App
 	/// </summary>
 	public static class GCodeSplitter
 	{

@@ -1,4 +1,5 @@
 ﻿/**
+ * Copied from the SimpleGcodeParser file
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  *
  * See LICENCE in the project directory for licence information
@@ -6,111 +7,17 @@
  **/
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-
 using System.Text.RegularExpressions;
 
-namespace GCodePlotter
+namespace GCode
 {
-	#region Point 3D
-	public struct Point3D {
-		
-		private float x;
-		private float y;
-		private float z;
-		
-		public static readonly Point3D Empty;
-		
-		public bool IsEmpty {
-			get {
-				return this.x == 0f && this.y == 0f && this.z == 0f;
-			}
-		}
-
-		public float X {
-			get {
-				return this.x;
-			}
-			set {
-				this.x = value;
-			}
-		}
-
-		public float Y {
-			get {
-				return this.y;
-			}
-			set {
-				this.y = value;
-			}
-		}
-
-		public float Z {
-			get {
-				return this.z;
-			}
-			set {
-				this.z = value;
-			}
-		}
-
-		public Point3D(float x, float y, float z)
-		{
-			this.x = x;
-			this.y = y;
-			this.z = z;
-		}
-
-		public Point3D(float x, float y)
-		{
-			this.x = x;
-			this.y = y;
-			this.z = 0;
-		}
-		
-		public static bool operator ==(Point3D left, Point3D right) {
-			return left.X == right.X && left.Y == right.Y && left.Z == right.Z;
-		}
-		
-		public static bool operator !=(Point3D left, Point3D right) {
-			return !(left == right);
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (!(obj is Point3D)) {
-				return false;
-			}
-			var point3D = (Point3D)obj;
-			return point3D.X == this.X && point3D.Y == this.Y && point3D.Z == this.Z
-				&& point3D.GetType().Equals(base.GetType());
-		}
-
-		public override int GetHashCode()
-		{
-			return base.GetHashCode();
-		}
-		
-		public override string ToString()
-		{
-			return string.Format(CultureInfo.CurrentCulture,
-			                     "{{X={0}, Y={1}, Z={2}}}", new object[] {
-			                     	this.x,
-			                     	this.y,
-			                     	this.z
-			                     });
-		}
-	}
-	#endregion
-	
 	public static class SimpleGCodeParser
 	{
 		public static List<GCodeInstruction> ParseText(string text)
 		{
-			#region Code
 			text = text.Replace("\r\n", "\n");
 			text = text.Replace("\r", "\n");
 
@@ -124,15 +31,12 @@ namespace GCodePlotter
 			}
 
 			return parsed;
-			#endregion
 		}
 
 		private static GCodeInstruction ParseLine(string line)
 		{
-			#region Code
 			line = line.Trim(' ', '\t', '\n');
 			return new GCodeInstruction(line);
-			#endregion
 		}
 	}
 
@@ -144,110 +48,6 @@ namespace GCodePlotter
 		CCWArc = 3,
 		Dwell = 4,
 		Other = 99
-	}
-
-	public enum PenColorList
-	{
-		RapidMove,
-		NormalMove,
-		CWArc,
-		CCWArc,
-		RapidMoveHilight,
-		LineHighlight,
-		Background,
-		GridLines
-	}
-
-	public static class ColorHelper
-	{
-		private static IDictionary<PenColorList, Pen> _penList = new Dictionary<PenColorList, Pen>();
-		private static IDictionary<PenColorList, Color> _colorList = new Dictionary<PenColorList, Color>();
-
-		private static Color GetDefaultColor(PenColorList list)
-		{
-			if (list == PenColorList.RapidMove) return Color.Red;
-			if (list == PenColorList.NormalMove) return Color.DodgerBlue;
-			if (list == PenColorList.CWArc) return Color.Lime;
-			if (list == PenColorList.CCWArc) return Color.Yellow;
-			if (list == PenColorList.RapidMoveHilight) return Color.Pink;
-			if (list == PenColorList.LineHighlight) return Color.White;
-			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
-			if (list == PenColorList.GridLines) return Color.DimGray;
-			return Color.White;
-		}
-
-		public static Color GetColor(PenColorList type)
-		{
-			#region Code
-			if (!_colorList.ContainsKey(type))
-			{
-				var value = QuickSettings.Get[string.Format("Color{0}", type)];
-				if (string.IsNullOrWhiteSpace(value))
-				{
-					_colorList[type] = GetDefaultColor(type);
-				}
-				else
-				{
-					try
-					{
-						if (value.Contains(','))
-						{
-							var bits = value.Split(',');
-							var r = int.Parse(bits[0]);
-							var g = int.Parse(bits[1]);
-							var b = int.Parse(bits[2]);
-							_colorList[type] = Color.FromArgb(r, g, b);
-						}
-						else
-						{
-							_colorList[type] = Color.FromName(value);
-						}
-					}
-					catch (Exception)
-					{
-						_colorList[type] = GetDefaultColor(type);
-					}
-				}
-			}
-
-			return _colorList[type];
-			#endregion
-		}
-
-		public static void SetColor(PenColorList type, Color newColor)
-		{
-			#region Code
-			var value = Convert.ToString(newColor);
-			if (_colorList.ContainsKey(type))
-			{
-				_colorList[type] = newColor;
-				if (_penList.ContainsKey(type)) _penList[type] = new Pen(newColor, 1);
-				else _penList.Add(type, new Pen(newColor, 1));
-			}
-			else
-			{
-				_colorList.Add(type, newColor);
-				_penList.Add(type, new Pen(newColor, 1));
-			}
-
-			QuickSettings.Get[string.Format("Color{0}", type)] = string.Format("{0},{1},{2}", newColor.R, newColor.G, newColor.B);
-			#endregion
-		}
-
-		public static Pen GetPen(PenColorList type)
-		{
-			#region Code
-			if (!_penList.ContainsKey(type))
-			{
-				if (type == PenColorList.LineHighlight)
-					_penList[type] = new Pen(GetColor(type), 2f);
-				else
-					_penList[type] = new Pen(GetColor(type), 1f);
-			}
-
-			return _penList[type];
-			#endregion
-		}
 	}
 
 	public class GCodeInstruction
@@ -291,20 +91,21 @@ namespace GCodePlotter
 
 		internal bool IsOnlyComment { get; private set; }
 		
+		// Lines
 		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			bool skip = false;
+			bool skipRapidMove = false;
 			// if the command is a line and the previous X Y Z and the p1 X Y Z is the same
 			if (prevPoint == p1) {
-				skip = true;
+				skipRapidMove = true;
 			} else if (p1 == p2) {
-				skip = true;
+				skipRapidMove = true;
 			}
 			
 			// add only if the x y (and z?) coordinates are different
-			if (!skip) {
+			if (!skipRapidMove) {
 				
 				// never add a rapid move that extend the available space
 				if (side == 0) {
@@ -326,20 +127,21 @@ namespace GCodePlotter
 			return output;
 		}
 		
+		// Arcs
 		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
-			bool skip = false;
+			bool skipRapidMove = false;
 			// if the command is an arc and the previous X Y and the p1 X Y is the same
 			if (prevPoint.X == p1.X && prevPoint.Y == p1.Y) {
-				skip = true;
+				skipRapidMove = true;
 			} else if (p1 == p2) {
-				skip = true;
+				skipRapidMove = true;
 			}
 			
 			// add only if the x y (and z?) coordinates are different
-			if (!skip) {
+			if (!skipRapidMove) {
 
 				// never add a rapid move that extend the available space
 				if (side == 0) {
@@ -466,6 +268,12 @@ namespace GCodePlotter
 		}
 		#endregion
 		
+		/// <summary>
+		/// Parse the comments out from the passed line
+		/// and store the Comments, return the remaining command if it exists or the full line
+		/// </summary>
+		/// <param name="line">gcode line</param>
+		/// <returns>return the remaining command or the full line</returns>
 		private string ParseComments(string line)
 		{
 			string comment = "";
@@ -504,7 +312,6 @@ namespace GCodePlotter
 		{
 			get
 			{
-				#region Code
 				switch (Command)
 				{
 					case "G0":
@@ -532,7 +339,6 @@ namespace GCodePlotter
 						return "Set Units to Millimeters";
 				}
 				return "Unknown " + Command;
-				#endregion
 			}
 		}
 
@@ -540,7 +346,6 @@ namespace GCodePlotter
 		{
 			get
 			{
-				#region Code
 				switch (Command)
 				{
 					case "G0":
@@ -560,7 +365,6 @@ namespace GCodePlotter
 						return CommandList.Dwell;
 				}
 				return CommandList.Other;
-				#endregion
 			}
 		}
 
@@ -571,7 +375,6 @@ namespace GCodePlotter
 
 		public string ToString(bool doMultiLayer, float? zOverride = null)
 		{
-			#region Code
 			if (string.IsNullOrWhiteSpace(Command))
 			{
 				if (!string.IsNullOrWhiteSpace(Comment)) {
@@ -609,17 +412,10 @@ namespace GCodePlotter
 			}
 
 			return sb.ToString();
-			#endregion
-		}
-
-		public StringBuilder GetXY(StringBuilder sb)
-		{
-			return sb.AppendFormat(" ({0:0.####},{1:0.####} - {2:0.####},{3:0.####})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
 		}
 
 		internal bool CanRender()
 		{
-			#region Code
 			if (CommandEnum == CommandList.NormalMove ||
 			    CommandEnum == CommandList.RapidMove ||
 			    CommandEnum == CommandList.CWArc ||
@@ -632,12 +428,10 @@ namespace GCodePlotter
 				return true;
 			}
 			return false;
-			#endregion
 		}
 
 		internal List<LinePoints> RenderCode(ref Point3D currentPoint)
 		{
-			#region Code
 			if (CommandEnum == CommandList.Other)
 			{
 				if (Command == "G90") { AbsoluteMode = true; }
@@ -648,22 +442,21 @@ namespace GCodePlotter
 				if (Command == "G20") { Metric = false; }
 				return null;
 			}
-			if (CommandEnum == CommandList.Dwell)
+			if (CommandEnum == CommandList.Dwell) {
+				// ignore
 				return null;
+			}
 
 			var pos = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
-			if (AbsoluteMode)
-			{
+			if (AbsoluteMode) {
 				if (X.HasValue)
 					pos.X = X.Value;
 				if (Y.HasValue)
 					pos.Y = Y.Value;
 				if (Z.HasValue)
 					pos.Z = Z.Value;
-			}
-			// relative specifies a delta
-			else
-			{
+			} else {
+				// relative specifies a delta
 				if (X.HasValue)
 					pos.X += X.Value;
 				if (Y.HasValue)
@@ -724,12 +517,10 @@ namespace GCodePlotter
 			}
 
 			return null;
-			#endregion
 		}
 
 		private List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
 		{
-			#region Code
 			// angle variables.
 			double angleA;
 			double angleB;
@@ -817,10 +608,14 @@ namespace GCodePlotter
 				currentPosition.Y = newPoint.Y;
 			}
 			return output;
-			#endregion
 		}
 
-		protected bool EqualsXYZ(GCodeInstruction other)
+		public StringBuilder GetXY(StringBuilder sb)
+		{
+			return sb.AppendFormat(" ({0:0.####},{1:0.####} - {2:0.####},{3:0.####})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
+		}
+
+		public bool EqualsXYZ(GCodeInstruction other)
 		{
 			if (other == null) return false;
 			
@@ -832,184 +627,6 @@ namespace GCodePlotter
 			}
 			
 			return false;
-		}
-		
-		/*
-		public override bool Equals(object obj)
-		{
-			var item = obj as GCodeInstruction;
-			return Equals(item);
-		}
-
-		public override int GetHashCode()
-		{
-			// see http://stackoverflow.com/questions/263400/what-is-the-best-algorithm-for-an-overridden-system-object-gethashcode
-			unchecked // Overflow is fine, just wrap
-			{
-				int hashCode = (int) 2166136261;
-				hashCode = (hashCode * 16777619) ^ X.GetHashCode();
-				hashCode = (hashCode * 16777619) ^ Y.GetHashCode();
-				hashCode = (hashCode * 16777619) ^ Z.GetHashCode();
-				return hashCode;
-			}
-		}
-		 */
-	}
-
-	public struct LinePoints
-	{
-		public float X1 { get; set; }
-		public float Y1 { get; set; }
-		public float Z1 { get; set; }
-		public float X2 { get; set; }
-		public float Y2 { get; set; }
-		public float Z2 { get; set; }
-		public PenColorList Pen { get; set; }
-		
-		public LinePoints(Point3D start, Point3D end, PenColorList pen)
-			: this()
-		{
-			#region Code
-			X1 = start.X;
-			Y1 = start.Y;
-			Z1 = start.Z;
-			X2 = end.X;
-			Y2 = end.Y;
-			Z2 = end.Z;
-			Pen = pen;
-			#endregion
-		}
-
-		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
-		{
-			#region Code
-			if (Pen == PenColorList.RapidMove && !renderG0)
-			{
-				return;
-			}
-			
-			if (Pen == PenColorList.RapidMove && highlight)
-			{
-				g.DrawLine(ColorHelper.GetPen(PenColorList.RapidMoveHilight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
-				return;
-			}
-
-			if (highlight)
-			{
-				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
-			}
-			else
-			{
-				g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
-			}
-			#endregion
-		}
-	}
-
-	public class Plot
-	{
-		public float minX, minY, minZ;
-		public float maxX, maxY, maxZ;
-
-		public string Name { get; set; }
-		private List<LinePoints> plotPoints = new List<LinePoints>();
-		public List<LinePoints> PlotPoints { get { return plotPoints; } }
-
-		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
-		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
-		
-		public void FinalizePlot()
-		{
-			var first = gcodeInstructions.First();
-			if (first != null)
-			{
-				maxX = first.maxX;
-				maxY = first.maxY;
-				maxZ = first.maxZ;
-
-				minX = first.StartPoint.X;
-				minY = first.StartPoint.Y;
-				minZ = first.StartPoint.Z;
-			}
-
-			foreach (var plot in gcodeInstructions)
-			{
-				minX = Math.Min(minX, plot.minX);
-				minY = Math.Min(minY, plot.minY);
-				minZ = Math.Min(minZ, plot.minZ);
-
-				maxX = Math.Max(maxX, plot.maxX);
-				maxY = Math.Max(maxY, plot.maxY);
-				maxZ = Math.Max(maxZ, plot.maxZ);
-			}
-		}
-
-		public override string ToString()
-		{
-			var sb = new StringBuilder();
-			sb.AppendFormat("{0}   --   {1} lines -- {2},{3}", Name, PlotPoints != null ? PlotPoints.Count : 0, maxX, maxY);
-
-			return sb.ToString();
-		}
-
-		public void Replot(ref Point3D currentPoint)
-		{
-			PlotPoints.Clear();
-			foreach (var line in this.GCodeInstructions)
-			{
-				if (line.CanRender())
-				{
-					line.CachedLinePoints = line.RenderCode(ref currentPoint);
-					PlotPoints.AddRange(line.CachedLinePoints);
-				}
-			}
-
-			FinalizePlot();
-		}
-
-		public string BuildGCodeOutput(bool doMultiLayers) {
-			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doMultiLayers);
-		}
-		
-		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doMultiLayers)
-		{
-			var sb = new StringBuilder();
-
-			sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
-
-			if (doMultiLayers) {
-				var data = QuickSettings.Get["ZDepths"];
-				if (string.IsNullOrEmpty(data))
-				{
-					data = "-0.1,-0.15,-0.2";
-				}
-
-				string [] bits = null;
-				if (data.Contains(',')) {
-					bits = data.Split(',');
-				} else {
-					bits = new string[] { data };
-				}
-
-				foreach(var line in bits) {
-					float f;
-					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start layer: {0:0.####})", f).AppendLine();
-						foreach (var gCodeLine in gCodeInstructions) {
-							sb.AppendLine(gCodeLine.ToString(true, zOverride: f));
-						}
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(End layer: {0:0.####})", f).AppendLine();
-					}
-				}
-			} else {
-				foreach (var line in gCodeInstructions) {
-					sb.AppendLine(line.ToString(false));
-				}
-			}
-
-			sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", name).AppendLine();
-
-			return sb.ToString();
 		}
 	}
 }

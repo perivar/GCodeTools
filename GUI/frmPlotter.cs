@@ -2,15 +2,16 @@
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  *
  * See LICENCE in the project directory for licence information
+ * Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using GCode;
 
 namespace GCodePlotter
 {
@@ -19,7 +20,7 @@ namespace GCodePlotter
 		const int MAX_WIDTH = 10000;
 		const int MAX_HEIGHT = 10000;
 		
-		List<GCodeInstruction> parsedPlots = null;
+		List<GCodeInstruction> parsedInstructions = null;
 
 		bool bDataLoaded = false;
 		
@@ -34,7 +35,6 @@ namespace GCodePlotter
 		
 		private void frmPlotter_Load(object sender, EventArgs e)
 		{
-			#region Code
 			bDataLoaded = false;
 
 			var lastFile = QuickSettings.Get["LastOpenedFile"];
@@ -51,13 +51,10 @@ namespace GCodePlotter
 					cmdParseData.PerformClick();
 				}
 			}
-			#endregion
 		}
 
 		private void cmdParseData_Click(object sender, EventArgs e)
 		{
-			#region Code
-
 			if (bDataLoaded)
 			{
 				if (AskToLoadData() == DialogResult.No)
@@ -73,45 +70,40 @@ namespace GCodePlotter
 				tr.Close();
 
 				ParseText(data);}
-			#endregion
 		}
 
 		private DialogResult AskToLoadData()
 		{
-			#region Code
 			//return MessageBox.Show("Doing this will load/reload data, are you sure you want to load this data deleting your old data?", "Question!", MessageBoxButtons.YesNo);
 			return DialogResult.OK;
-			#endregion
 		}
 
 		public void ParseText(string text)
 		{
-			#region Code
-			parsedPlots = SimpleGCodeParser.ParseText(text);
-			var sb = new StringBuilder();
+			parsedInstructions = SimpleGCodeParser.ParseText(text);
 
 			treeView.Nodes.Clear();
 
-			var currentPoint = new Point3D(0, 0, 0);
+			var currentPoint = Point3D.Empty;
 
 			myPlots = new List<Plot>();
 			var currentPlot = new Plot();
 			currentPlot.Name = "Unnamed Plot";
-			foreach (var line in parsedPlots)
+			foreach (var currentInstruction in parsedInstructions)
 			{
-				sb.Append(line).AppendLine();
-				if (line.IsOnlyComment) {
+				if (currentInstruction.IsOnlyComment) {
 					
-					if (line.Comment.StartsWith("Start cutting path id:") || line.Comment == "Footer") {
+					if (currentInstruction.Comment.StartsWith("Start cutting path id:")
+					    || currentInstruction.Comment == "Footer") {
 
-						if (line.Comment == "Footer") {
-							currentPlot.Name = line.Comment;
+						if (currentInstruction.Comment == "Footer") {
+							currentPlot.Name = currentInstruction.Comment;
 						} else {
-							if (line.Comment.Length > 23) {
-								currentPlot.Name = line.Comment.Substring(23);
+							if (currentInstruction.Comment.Length > 23) {
+								currentPlot.Name = currentInstruction.Comment.Substring(23);
 							}
 						}
-					} else if (line.Comment.StartsWith("End cutting path id:")) {
+					} else if (currentInstruction.Comment.StartsWith("End cutting path id:")) {
 						if (currentPlot.PlotPoints.Count > 0) {
 							
 							myPlots.Add(currentPlot);
@@ -122,17 +114,21 @@ namespace GCodePlotter
 						}
 					} else {
 						// ignore all comments up to first "Start Cutting", i.e. header
+						// TODO: Handle headers like (Circles) and (Square)
 					}
 					
-				} else if (line.CanRender()) {
-					var data = line.RenderCode(ref currentPoint);
-					if (data != null) {
-						currentPlot.PlotPoints.AddRange(data);
+				} else if (currentInstruction.CanRender()) {
+					// this is where the plot is put together and where the linepoints is added
+					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
+					if (linePointsCollection != null) {
+						currentInstruction.CachedLinePoints = linePointsCollection;
+						currentPlot.PlotPoints.AddRange(linePointsCollection);
 					}
 
-					currentPlot.GCodeInstructions.Add(line);
+					// make sure to store the actual instruction as well
+					currentPlot.GCodeInstructions.Add(currentInstruction);
 				} else {
-					// not a comment and cannot be rendered
+					// ignore everything that isn't a comment and or cannot be rendered
 				}
 			}
 
@@ -159,22 +155,26 @@ namespace GCodePlotter
 			
 			foreach (Plot plotItem in myPlots)
 			{
-				plotItem.FinalizePlot();
+				plotItem.CalculateMinAndMax();
+				
+				absMaxX = Math.Max(absMaxX, plotItem.MaxX);
+				absMaxY = Math.Max(absMaxY, plotItem.MaxY);
+				absMaxZ = Math.Max(absMaxZ, plotItem.MaxZ);
+
+				absMinX = Math.Min(absMinX, plotItem.MinX);
+				absMinY = Math.Min(absMinY, plotItem.MinY);
+				absMinZ = Math.Min(absMinZ, plotItem.MinZ);
 				
 				// build node tree
 				var node = new TreeNode(plotItem.ToString());
+				node.Tag = plotItem;
 				foreach (var instruction in plotItem.GCodeInstructions) {
-					node.Nodes.Add(instruction.ToString());
+					var childNode = new TreeNode();
+					childNode.Text = instruction.ToString();
+					childNode.Tag = instruction;
+					node.Nodes.Add(childNode);
 				}
 				treeView.Nodes.Add(node);
-				
-				absMaxX = Math.Max(absMaxX, plotItem.maxX);
-				absMaxY = Math.Max(absMaxY, plotItem.maxY);
-				absMaxZ = Math.Max(absMaxZ, plotItem.maxZ);
-
-				absMinX = Math.Min(absMinX, plotItem.minX);
-				absMinY = Math.Min(absMinY, plotItem.minY);
-				absMinZ = Math.Min(absMinZ, plotItem.minZ);
 			}
 			
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
@@ -182,14 +182,11 @@ namespace GCodePlotter
 			
 			RenderPlots();
 			bDataLoaded = true;
-			#endregion
 		}
 
 		private void cmdRedraw_Click(object sender, EventArgs e)
 		{
-			#region Code
 			RenderPlots();
-			#endregion
 		}
 
 		void BtnSplitClick(object sender, EventArgs e)
@@ -203,7 +200,7 @@ namespace GCodePlotter
 		
 		void ResetSplit(int index) {
 			
-			if (parsedPlots == null) {
+			if (parsedInstructions == null) {
 				MessageBox.Show("No file loaded!");
 				return;
 			}
@@ -226,24 +223,13 @@ namespace GCodePlotter
 					txtZClearance.Text = "2.0";
 				}
 				
-				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
 				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", split[index], false);
 				ParseText(gcodeSplitted);
 			}
 		}
 		
-		private void checkBox1_CheckedChanged(object sender, EventArgs e)
-		{
-			#region Code
-			if (renderImage == null) {
-				return;
-			}
-
-			RenderPlots();
-			#endregion
-		}
-
 		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
 		{
 			RenderPlots();
@@ -255,7 +241,6 @@ namespace GCodePlotter
 			const int leftMargin = 20;
 			const int bottomMargin = 20;
 			
-			#region Code
 			var multiplier = 4f;
 			if (radZoomTwo.Checked) {
 				multiplier = 2;
@@ -269,15 +254,15 @@ namespace GCodePlotter
 
 			var scale = (10 * multiplier);
 
+			// determine the x and y sizes based on the maxX and Y from all the plots
 			var absMaxX = 0f;
 			var absMaxY = 0f;
-
 			if (myPlots != null && myPlots.Count > 0)
 			{
 				foreach (Plot plotItem in myPlots)
 				{
-					absMaxX = Math.Max(absMaxX, plotItem.maxX);
-					absMaxY = Math.Max(absMaxY, plotItem.maxY);
+					absMaxX = Math.Max(absMaxX, plotItem.MaxX);
+					absMaxY = Math.Max(absMaxY, plotItem.MaxY);
 				}
 			}
 
@@ -337,29 +322,56 @@ namespace GCodePlotter
 			// draw gcode
 			if (myPlots != null && myPlots.Count > 0)
 			{
-				foreach (Plot plotItem in myPlots)
-				{
-					foreach (var data in plotItem.PlotPoints)
-					{
-						if (treeView.SelectedNode != null && treeView.SelectedNode.Text.Equals(plotItem.ToString()))
-						{
-							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
+				if (treeView.SelectedNode != null
+				    && treeView.SelectedNode.Level == 1) {
+					// sub-level, i.e. the instruction level
+
+					var selectedInstruction = (GCodeInstruction) treeView.SelectedNode.Tag;
+					
+					// find what plot this instruction is a part of
+					var parentPlot = (Plot) treeView.SelectedNode.Parent.Tag;
+					
+					foreach (var instruction in parentPlot.GCodeInstructions) {
+						
+						if (instruction == selectedInstruction) {
+							foreach (var subLinePlots in instruction.CachedLinePoints) {
+								// draw correct instruction as selected
+								subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
+							}
+						} else {
+							foreach (var subLinePlots in instruction.CachedLinePoints) {
+								subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: leftMargin, bottom: bottomMargin);
+							}
 						}
-						else
-						{
-							data.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: checkBox1.Checked, left: leftMargin, bottom: bottomMargin);
+					}
+				} else {
+					// top level, i.e. the plot level or if nothing is selected
+					foreach (Plot plotItem in myPlots) {
+						foreach (var linePlots in plotItem.PlotPoints) {
+							
+							// check level first
+							if (treeView.SelectedNode != null
+							    && treeView.SelectedNode.Text.Equals(plotItem.ToString())) {
+
+								// draw correct segment as selected
+								linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
+								
+							} else {
+								// nothing is selected, draw segment as normal
+								if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
+									linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: leftMargin, bottom: bottomMargin);
+								}
+							}
 						}
 					}
 				}
 			}
 
 			pictureBox1.Refresh();
-			#endregion
 		}
 
 		private void cmdLoad_Click(object sender, EventArgs e)
 		{
-			#region Code
 			if (AskToLoadData() == DialogResult.No)
 			{
 				return;
@@ -387,19 +399,16 @@ namespace GCodePlotter
 
 				ParseText(data);
 			}
-			#endregion
 		}
 
 		private void frmPlotter_ResizeEnd(object sender, EventArgs e)
 		{
-			#region Code
 			if (this.WindowState == FormWindowState.Minimized)
 			{
 				return;
 			}
 
 			RenderPlots();
-			#endregion
 		}
 
 		private void radScaleChange(object sender, EventArgs e)
@@ -419,7 +428,6 @@ namespace GCodePlotter
 
 		private void SaveGCodes(bool doMultiLayer)
 		{
-			#region Code
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == System.Windows.Forms.DialogResult.OK)
 			{
@@ -462,7 +470,6 @@ namespace GCodePlotter
 				tw.Flush();
 				tw.Close();
 			}
-			#endregion
 		}
 		
 		void TreeViewMouseDown(object sender, MouseEventArgs e)
@@ -476,7 +483,7 @@ namespace GCodePlotter
 		
 		void BtnSaveSplitClick(object sender, EventArgs e)
 		{
-			if (parsedPlots == null) {
+			if (parsedInstructions == null) {
 				MessageBox.Show("No file loaded!");
 				return;
 			}
@@ -499,7 +506,7 @@ namespace GCodePlotter
 					txtZClearance.Text = "2.0";
 				}
 				
-				var split = GCodeSplitter.Split(parsedPlots, splitPoint, 0.0f, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
 				//var gcodeLeft = Plot.BuildGCodeOutput("Unnamed", split[0], false);
 				//var gcodeRight = Plot.BuildGCodeOutput("Unnamed", split[1], false);
@@ -508,6 +515,24 @@ namespace GCodePlotter
 				GCodeSplitter.DumpGCode(txtFile.Text+"_right.gcode", split[1]);
 				
 			}
+		}
+		
+		void cbRenderG0_CheckedChanged(object sender, EventArgs e)
+		{
+			if (renderImage == null) {
+				return;
+			}
+
+			RenderPlots();
+		}
+		
+		void CbSoloSelectCheckedChanged(object sender, EventArgs e)
+		{
+			if (renderImage == null) {
+				return;
+			}
+
+			RenderPlots();
 		}
 	}
 }

@@ -1,7 +1,9 @@
 ﻿/**
+ * Copied from the SimpleGcodeParser file
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  *
  * See LICENCE in the project directory for licence information
+ * Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
@@ -10,7 +12,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
-namespace GCodePlotter
+namespace GCode
 {
 	public class QuickSettings
 	{

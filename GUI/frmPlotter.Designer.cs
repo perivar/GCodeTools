@@ -36,7 +36,7 @@ namespace GCodePlotter
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.cmdParseData = new System.Windows.Forms.Button();
 			this.cmdRedraw = new System.Windows.Forms.Button();
-			this.checkBox1 = new System.Windows.Forms.CheckBox();
+			this.cbRenderG0 = new System.Windows.Forms.CheckBox();
 			this.cmdLoad = new System.Windows.Forms.Button();
 			this.cmdSave = new System.Windows.Forms.Button();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
@@ -44,6 +44,7 @@ namespace GCodePlotter
 			this.panel1 = new System.Windows.Forms.Panel();
 			this.treeView = new System.Windows.Forms.TreeView();
 			this.panel2 = new System.Windows.Forms.Panel();
+			this.cbSoloSelect = new System.Windows.Forms.CheckBox();
 			this.panel4 = new System.Windows.Forms.Panel();
 			this.btnSaveSplit = new System.Windows.Forms.Button();
 			this.lblZClearance = new System.Windows.Forms.Label();
@@ -100,18 +101,18 @@ namespace GCodePlotter
 			this.cmdRedraw.UseVisualStyleBackColor = true;
 			this.cmdRedraw.Click += new System.EventHandler(this.cmdRedraw_Click);
 			// 
-			// checkBox1
+			// cbRenderG0
 			// 
-			this.checkBox1.AutoSize = true;
-			this.checkBox1.Checked = true;
-			this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.checkBox1.Location = new System.Drawing.Point(7, 8);
-			this.checkBox1.Name = "checkBox1";
-			this.checkBox1.Size = new System.Drawing.Size(83, 17);
-			this.checkBox1.TabIndex = 5;
-			this.checkBox1.Text = "Render G0s";
-			this.checkBox1.UseVisualStyleBackColor = true;
-			this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+			this.cbRenderG0.AutoSize = true;
+			this.cbRenderG0.Checked = true;
+			this.cbRenderG0.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.cbRenderG0.Location = new System.Drawing.Point(7, 8);
+			this.cbRenderG0.Name = "cbRenderG0";
+			this.cbRenderG0.Size = new System.Drawing.Size(83, 17);
+			this.cbRenderG0.TabIndex = 5;
+			this.cbRenderG0.Text = "Render G0s";
+			this.cbRenderG0.UseVisualStyleBackColor = true;
+			this.cbRenderG0.CheckedChanged += new System.EventHandler(this.cbRenderG0_CheckedChanged);
 			// 
 			// cmdLoad
 			// 
@@ -156,6 +157,7 @@ namespace GCodePlotter
 			// treeView
 			// 
 			this.treeView.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.treeView.HideSelection = false;
 			this.treeView.Location = new System.Drawing.Point(0, 0);
 			this.treeView.Name = "treeView";
 			this.treeView.Size = new System.Drawing.Size(300, 477);
@@ -165,12 +167,24 @@ namespace GCodePlotter
 			// 
 			// panel2
 			// 
-			this.panel2.Controls.Add(this.checkBox1);
+			this.panel2.Controls.Add(this.cbSoloSelect);
+			this.panel2.Controls.Add(this.cbRenderG0);
 			this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panel2.Location = new System.Drawing.Point(0, 477);
 			this.panel2.Name = "panel2";
 			this.panel2.Size = new System.Drawing.Size(300, 33);
 			this.panel2.TabIndex = 9;
+			// 
+			// cbSoloSelect
+			// 
+			this.cbSoloSelect.AutoSize = true;
+			this.cbSoloSelect.Location = new System.Drawing.Point(205, 8);
+			this.cbSoloSelect.Name = "cbSoloSelect";
+			this.cbSoloSelect.Size = new System.Drawing.Size(80, 17);
+			this.cbSoloSelect.TabIndex = 6;
+			this.cbSoloSelect.Text = "Solo Select";
+			this.cbSoloSelect.UseVisualStyleBackColor = true;
+			this.cbSoloSelect.CheckedChanged += new System.EventHandler(this.CbSoloSelectCheckedChanged);
 			// 
 			// panel4
 			// 
@@ -400,7 +414,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.PictureBox pictureBox1;
 		private System.Windows.Forms.Button cmdParseData;
 		private System.Windows.Forms.Button cmdRedraw;
-		private System.Windows.Forms.CheckBox checkBox1;
+		private System.Windows.Forms.CheckBox cbRenderG0;
 		private System.Windows.Forms.Button cmdLoad;
 		private System.Windows.Forms.Button cmdSave;
 		private System.Windows.Forms.Button cmdSaveLayers;
@@ -426,6 +440,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.Label lblZClearance;
 		private System.Windows.Forms.TextBox txtZClearance;
 		private System.Windows.Forms.Button btnSaveSplit;
+		private System.Windows.Forms.CheckBox cbSoloSelect;
 	}
 }
 
