@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 
 namespace GCode
@@ -101,10 +102,15 @@ namespace GCode
 		{
 			if (!_penList.ContainsKey(type))
 			{
-				if (type == PenColorList.LineHighlight)
+				if (type == PenColorList.LineHighlight) {
 					_penList[type] = new Pen(GetColor(type), 2f);
-				else
+
+				} else {
 					_penList[type] = new Pen(GetColor(type), 1f);
+				}
+
+				//_penList[type].StartCap = LineCap.Flat;
+				//_penList[type].EndCap = LineCap.ArrowAnchor;
 			}
 
 			return _penList[type];

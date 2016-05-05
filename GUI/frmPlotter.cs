@@ -420,13 +420,9 @@ namespace GCodePlotter
 			// set scale variable
 			scale = (10 * multiplier);
 
-			// scale it up
-			var scaledMaxX = (maxX + LEFT_MARGIN) * scale;
-			var scaledMaxY = (maxY + BOTTOM_MARGIN) * scale;
-
 			// 10 mm per grid
-			var width = (int)(scaledMaxX + 1) / 10;
-			var height = (int)(scaledMaxY + 1) / 10;
+			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
+			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
 			
 			// set max size in case the calculated dimensions are way off
 			width = (int) Math.Min(width, MAX_WIDTH);
@@ -440,13 +436,9 @@ namespace GCodePlotter
 			// set scale variable
 			scale = (10 * multiplier);
 
-			// scale it up
-			var scaledMaxX = (maxX + LEFT_MARGIN) * scale;
-			var scaledMaxY = (maxY + BOTTOM_MARGIN) * scale;
-
 			// 10 mm per grid
-			var width = (int)(scaledMaxX + 1) / 10;
-			var height = (int)(scaledMaxY + 1) / 10;
+			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
+			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
 			
 			// set max size in case the calculated dimensions are way off
 			width = (int) Math.Min(width, MAX_WIDTH);
@@ -455,7 +447,7 @@ namespace GCodePlotter
 			return new Size(width, height);
 		}
 		
-		void ResetEmptyImage() {
+		void GetEmptyImage() {
 			
 			var imageDimension = GetDimensionsFromZoom();
 			int width = imageDimension.Width;
@@ -477,7 +469,7 @@ namespace GCodePlotter
 
 		void RenderPlots()
 		{
-			ResetEmptyImage();
+			GetEmptyImage();
 			
 			var graphics = Graphics.FromImage(renderImage);
 			graphics.Clear(ColorHelper.GetColor(PenColorList.Background));
@@ -526,12 +518,10 @@ namespace GCodePlotter
 						if (instruction == selectedInstruction) {
 							foreach (var subLinePlots in instruction.CachedLinePoints) {
 								// draw correct instruction as selected
-								//subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
 								subLinePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 							}
 						} else {
 							foreach (var subLinePlots in instruction.CachedLinePoints) {
-								//subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
 								subLinePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 							}
 						}
@@ -546,13 +536,11 @@ namespace GCodePlotter
 							    && treeView.SelectedNode.Text.Equals(plotItem.ToString())) {
 
 								// draw correct segment as selected
-								//linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
 								linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								
 							} else {
 								// nothing is selected, draw segment as normal
 								if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
-									//linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
 									linePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								}
 							}
