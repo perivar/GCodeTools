@@ -41,11 +41,11 @@ namespace GCodePlotter
 			this.btnSave = new System.Windows.Forms.Button();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
-			this.panel1 = new System.Windows.Forms.Panel();
+			this.panelCode = new System.Windows.Forms.Panel();
 			this.treeView = new System.Windows.Forms.TreeView();
-			this.panel2 = new System.Windows.Forms.Panel();
+			this.panelCheckboxes = new System.Windows.Forms.Panel();
 			this.cbSoloSelect = new System.Windows.Forms.CheckBox();
-			this.panel4 = new System.Windows.Forms.Panel();
+			this.panelCommands = new System.Windows.Forms.Panel();
 			this.btnSaveSplit = new System.Windows.Forms.Button();
 			this.lblZClearance = new System.Windows.Forms.Label();
 			this.txtZClearance = new System.Windows.Forms.TextBox();
@@ -57,18 +57,18 @@ namespace GCodePlotter
 			this.txtDimension = new System.Windows.Forms.TextBox();
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.txtFile = new System.Windows.Forms.TextBox();
-			this.panel5 = new System.Windows.Forms.Panel();
+			this.panelZoomFilename = new System.Windows.Forms.Panel();
 			this.radZoomSixteen = new System.Windows.Forms.RadioButton();
 			this.radZoomEight = new System.Windows.Forms.RadioButton();
 			this.radZoomFour = new System.Windows.Forms.RadioButton();
 			this.radZoomTwo = new System.Windows.Forms.RadioButton();
-			this.panel6 = new System.Windows.Forms.Panel();
+			this.panelViewer = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
-			this.panel1.SuspendLayout();
-			this.panel2.SuspendLayout();
-			this.panel4.SuspendLayout();
-			this.panel5.SuspendLayout();
-			this.panel6.SuspendLayout();
+			this.panelCode.SuspendLayout();
+			this.panelCheckboxes.SuspendLayout();
+			this.panelCommands.SuspendLayout();
+			this.panelZoomFilename.SuspendLayout();
+			this.panelViewer.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// pictureBox1
@@ -146,15 +146,15 @@ namespace GCodePlotter
 			this.ofdLoadDialog.DefaultExt = "gcode";
 			this.ofdLoadDialog.Filter = "GCode Files|*.gcode;*.nc;*.ngc|All Files|*.*";
 			// 
-			// panel1
+			// panelCode
 			// 
-			this.panel1.Controls.Add(this.treeView);
-			this.panel1.Controls.Add(this.panel2);
-			this.panel1.Dock = System.Windows.Forms.DockStyle.Right;
-			this.panel1.Location = new System.Drawing.Point(542, 5);
-			this.panel1.Name = "panel1";
-			this.panel1.Size = new System.Drawing.Size(300, 510);
-			this.panel1.TabIndex = 10;
+			this.panelCode.Controls.Add(this.treeView);
+			this.panelCode.Controls.Add(this.panelCheckboxes);
+			this.panelCode.Dock = System.Windows.Forms.DockStyle.Right;
+			this.panelCode.Location = new System.Drawing.Point(542, 5);
+			this.panelCode.Name = "panelCode";
+			this.panelCode.Size = new System.Drawing.Size(300, 510);
+			this.panelCode.TabIndex = 10;
 			// 
 			// treeView
 			// 
@@ -167,15 +167,15 @@ namespace GCodePlotter
 			this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewAfterSelect);
 			this.treeView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TreeViewMouseDown);
 			// 
-			// panel2
+			// panelCheckboxes
 			// 
-			this.panel2.Controls.Add(this.cbSoloSelect);
-			this.panel2.Controls.Add(this.cbRenderG0);
-			this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.panel2.Location = new System.Drawing.Point(0, 477);
-			this.panel2.Name = "panel2";
-			this.panel2.Size = new System.Drawing.Size(300, 33);
-			this.panel2.TabIndex = 9;
+			this.panelCheckboxes.Controls.Add(this.cbSoloSelect);
+			this.panelCheckboxes.Controls.Add(this.cbRenderG0);
+			this.panelCheckboxes.Dock = System.Windows.Forms.DockStyle.Bottom;
+			this.panelCheckboxes.Location = new System.Drawing.Point(0, 477);
+			this.panelCheckboxes.Name = "panelCheckboxes";
+			this.panelCheckboxes.Size = new System.Drawing.Size(300, 33);
+			this.panelCheckboxes.TabIndex = 9;
 			// 
 			// cbSoloSelect
 			// 
@@ -188,27 +188,27 @@ namespace GCodePlotter
 			this.cbSoloSelect.UseVisualStyleBackColor = true;
 			this.cbSoloSelect.CheckedChanged += new System.EventHandler(this.cbSoloSelectCheckedChanged);
 			// 
-			// panel4
+			// panelCommands
 			// 
-			this.panel4.Controls.Add(this.btnSaveSplit);
-			this.panel4.Controls.Add(this.lblZClearance);
-			this.panel4.Controls.Add(this.txtZClearance);
-			this.panel4.Controls.Add(this.radRight);
-			this.panel4.Controls.Add(this.radLeft);
-			this.panel4.Controls.Add(this.txtSplit);
-			this.panel4.Controls.Add(this.lblSplit);
-			this.panel4.Controls.Add(this.btnSplit);
-			this.panel4.Controls.Add(this.txtDimension);
-			this.panel4.Controls.Add(this.cmdSaveLayers);
-			this.panel4.Controls.Add(this.btnSave);
-			this.panel4.Controls.Add(this.btnLoad);
-			this.panel4.Controls.Add(this.btnRedraw);
-			this.panel4.Controls.Add(this.btnParseData);
-			this.panel4.Dock = System.Windows.Forms.DockStyle.Right;
-			this.panel4.Location = new System.Drawing.Point(417, 5);
-			this.panel4.Name = "panel4";
-			this.panel4.Size = new System.Drawing.Size(125, 510);
-			this.panel4.TabIndex = 11;
+			this.panelCommands.Controls.Add(this.btnSaveSplit);
+			this.panelCommands.Controls.Add(this.lblZClearance);
+			this.panelCommands.Controls.Add(this.txtZClearance);
+			this.panelCommands.Controls.Add(this.radRight);
+			this.panelCommands.Controls.Add(this.radLeft);
+			this.panelCommands.Controls.Add(this.txtSplit);
+			this.panelCommands.Controls.Add(this.lblSplit);
+			this.panelCommands.Controls.Add(this.btnSplit);
+			this.panelCommands.Controls.Add(this.txtDimension);
+			this.panelCommands.Controls.Add(this.cmdSaveLayers);
+			this.panelCommands.Controls.Add(this.btnSave);
+			this.panelCommands.Controls.Add(this.btnLoad);
+			this.panelCommands.Controls.Add(this.btnRedraw);
+			this.panelCommands.Controls.Add(this.btnParseData);
+			this.panelCommands.Dock = System.Windows.Forms.DockStyle.Right;
+			this.panelCommands.Location = new System.Drawing.Point(417, 5);
+			this.panelCommands.Name = "panelCommands";
+			this.panelCommands.Size = new System.Drawing.Size(125, 510);
+			this.panelCommands.TabIndex = 11;
 			// 
 			// btnSaveSplit
 			// 
@@ -315,18 +315,18 @@ namespace GCodePlotter
 			this.txtFile.Size = new System.Drawing.Size(380, 20);
 			this.txtFile.TabIndex = 10;
 			// 
-			// panel5
+			// panelZoomFilename
 			// 
-			this.panel5.Controls.Add(this.radZoomSixteen);
-			this.panel5.Controls.Add(this.txtFile);
-			this.panel5.Controls.Add(this.radZoomEight);
-			this.panel5.Controls.Add(this.radZoomFour);
-			this.panel5.Controls.Add(this.radZoomTwo);
-			this.panel5.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.panel5.Location = new System.Drawing.Point(5, 477);
-			this.panel5.Name = "panel5";
-			this.panel5.Size = new System.Drawing.Size(412, 38);
-			this.panel5.TabIndex = 12;
+			this.panelZoomFilename.Controls.Add(this.radZoomSixteen);
+			this.panelZoomFilename.Controls.Add(this.txtFile);
+			this.panelZoomFilename.Controls.Add(this.radZoomEight);
+			this.panelZoomFilename.Controls.Add(this.radZoomFour);
+			this.panelZoomFilename.Controls.Add(this.radZoomTwo);
+			this.panelZoomFilename.Dock = System.Windows.Forms.DockStyle.Bottom;
+			this.panelZoomFilename.Location = new System.Drawing.Point(5, 477);
+			this.panelZoomFilename.Name = "panelZoomFilename";
+			this.panelZoomFilename.Size = new System.Drawing.Size(412, 38);
+			this.panelZoomFilename.TabIndex = 12;
 			// 
 			// radZoomSixteen
 			// 
@@ -378,24 +378,25 @@ namespace GCodePlotter
 			this.radZoomTwo.Visible = false;
 			this.radZoomTwo.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
-			// panel6
+			// panelViewer
 			// 
-			this.panel6.Controls.Add(this.pictureBox1);
-			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel6.Location = new System.Drawing.Point(5, 5);
-			this.panel6.Name = "panel6";
-			this.panel6.Size = new System.Drawing.Size(412, 472);
-			this.panel6.TabIndex = 13;
+			this.panelViewer.AutoScroll = true;
+			this.panelViewer.Controls.Add(this.pictureBox1);
+			this.panelViewer.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panelViewer.Location = new System.Drawing.Point(5, 5);
+			this.panelViewer.Name = "panelViewer";
+			this.panelViewer.Size = new System.Drawing.Size(412, 472);
+			this.panelViewer.TabIndex = 13;
 			// 
 			// frmPlotter
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(847, 520);
-			this.Controls.Add(this.panel6);
-			this.Controls.Add(this.panel5);
-			this.Controls.Add(this.panel4);
-			this.Controls.Add(this.panel1);
+			this.Controls.Add(this.panelViewer);
+			this.Controls.Add(this.panelZoomFilename);
+			this.Controls.Add(this.panelCommands);
+			this.Controls.Add(this.panelCode);
 			this.Name = "frmPlotter";
 			this.Padding = new System.Windows.Forms.Padding(5);
 			this.Text = "GCode Viewer";
@@ -403,14 +404,14 @@ namespace GCodePlotter
 			this.ResizeEnd += new System.EventHandler(this.frmPlotterResizeEnd);
 			this.ClientSizeChanged += new System.EventHandler(this.frmPlotterResizeEnd);
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
-			this.panel1.ResumeLayout(false);
-			this.panel2.ResumeLayout(false);
-			this.panel2.PerformLayout();
-			this.panel4.ResumeLayout(false);
-			this.panel4.PerformLayout();
-			this.panel5.ResumeLayout(false);
-			this.panel5.PerformLayout();
-			this.panel6.ResumeLayout(false);
+			this.panelCode.ResumeLayout(false);
+			this.panelCheckboxes.ResumeLayout(false);
+			this.panelCheckboxes.PerformLayout();
+			this.panelCommands.ResumeLayout(false);
+			this.panelCommands.PerformLayout();
+			this.panelZoomFilename.ResumeLayout(false);
+			this.panelZoomFilename.PerformLayout();
+			this.panelViewer.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -425,16 +426,16 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button cmdSaveLayers;
 		private System.Windows.Forms.SaveFileDialog sfdSaveDialog;
 		private System.Windows.Forms.OpenFileDialog ofdLoadDialog;
-		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.Panel panel2;
-		private System.Windows.Forms.Panel panel4;
+		private System.Windows.Forms.Panel panelCode;
+		private System.Windows.Forms.Panel panelCheckboxes;
+		private System.Windows.Forms.Panel panelCommands;
 		private System.Windows.Forms.TextBox txtFile;
-		private System.Windows.Forms.Panel panel5;
+		private System.Windows.Forms.Panel panelZoomFilename;
 		private System.Windows.Forms.RadioButton radZoomFour;
 		private System.Windows.Forms.RadioButton radZoomTwo;
 		private System.Windows.Forms.RadioButton radZoomEight;
 		private System.Windows.Forms.RadioButton radZoomSixteen;
-		private System.Windows.Forms.Panel panel6;
+		private System.Windows.Forms.Panel panelViewer;
 		private System.Windows.Forms.TextBox txtDimension;
 		private System.Windows.Forms.TreeView treeView;
 		private System.Windows.Forms.Button btnSplit;

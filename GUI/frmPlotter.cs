@@ -17,6 +17,9 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
+		private float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
+		private int MINMAX = 5;             // 5 times bigger or smaller than the ctrl
+
 		const int MAX_WIDTH = 8000;
 		const int MAX_HEIGHT = 8000;
 
@@ -248,6 +251,8 @@ namespace GCodePlotter
 		{
 			if (e.Button == System.Windows.Forms.MouseButtons.Right)
 			{
+				// store mouse down for mouse drag support
+				// i.e. change scroll bar position based when dragging
 				MouseDownLocation = e.Location;
 			}
 		}
@@ -256,9 +261,65 @@ namespace GCodePlotter
 		{
 			if (e.Button == System.Windows.Forms.MouseButtons.Right)
 			{
-				pictureBox1.Left = e.X + pictureBox1.Left - MouseDownLocation.X;
-				pictureBox1.Top = e.Y + pictureBox1.Top - MouseDownLocation.Y;
+				// change scroll bar position based when dragging
+				var changePoint = new Point(e.Location.X - MouseDownLocation.X,
+				                            e.Location.Y - MouseDownLocation.Y);
+				
+				panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
+				                                           -panelViewer.AutoScrollPosition.Y - changePoint.Y);
 			}
+		}
+
+		void OnMouseWheel(object sender, MouseEventArgs mea) {
+			
+			// http://stackoverflow.com/questions/10694397/how-to-zoom-in-using-mouse-position-on-that-image
+			
+			if (mea.Delta < 0) {
+				ZoomIn(mea.Location);
+			} else {
+				ZoomOut(mea.Location);
+			}
+		}
+		
+		void ZoomIn(Point clickPoint) {
+
+			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
+			    (pictureBox1.Height < (MINMAX * panelViewer.Height)))
+			{
+				multiplier *= ZOOMFACTOR;
+				
+				// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
+				//pictureBox1.Top = (int)(clickPoint.Y - 1.25 * (clickPoint.Y - pictureBox1.Top));
+				//pictureBox1.Left = (int)(clickPoint.X - 1.25 * (clickPoint.X - pictureBox1.Left));
+
+				var x = (int)(clickPoint.X - 1.25 * (clickPoint.X - panelViewer.AutoScrollPosition.X));
+				var y = (int)(clickPoint.Y - 1.25 * (clickPoint.Y - panelViewer.AutoScrollPosition.Y));
+				var newScrollPoint = new Point(x, y);
+				panelViewer.AutoScrollPosition = newScrollPoint;
+				
+				RenderPlots();
+			}
+		}
+
+		void ZoomOut(Point clickPoint) {
+
+			if ((pictureBox1.Width > (panelViewer.Width / MINMAX)) &&
+			    (pictureBox1.Height > (panelViewer.Height / MINMAX )))
+			{
+				multiplier /= ZOOMFACTOR;
+
+				// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
+				//pictureBox1.Top = (int)(clickPoint.Y - 0.80 * (clickPoint.Y - pictureBox1.Top));
+				//pictureBox1.Left = (int)(clickPoint.X - 0.80 * (clickPoint.X - pictureBox1.Left));
+
+				var x = (int)(clickPoint.X - 0.80 * (clickPoint.X - panelViewer.AutoScrollPosition.X));
+				var y = (int)(clickPoint.Y - 0.80 * (clickPoint.Y - panelViewer.AutoScrollPosition.Y));
+				var newScrollPoint = new Point(x, y);
+				panelViewer.AutoScrollPosition = newScrollPoint;
+				
+				RenderPlots();
+			}
+
 		}
 		#endregion
 		
@@ -441,8 +502,8 @@ namespace GCodePlotter
 			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
 			
 			// set max size in case the calculated dimensions are way off
-			width = (int) Math.Min(width, MAX_WIDTH);
-			height = (int) Math.Min(height, MAX_HEIGHT);
+			//width = (int) Math.Min(width, MAX_WIDTH);
+			//height = (int) Math.Min(height, MAX_HEIGHT);
 			
 			return new Size(width, height);
 		}
@@ -463,7 +524,13 @@ namespace GCodePlotter
 				renderImage = new Bitmap(width, height);
 				pictureBox1.Width = width;
 				pictureBox1.Height = height;
-				pictureBox1.Image = renderImage;
+				
+				try {
+					pictureBox1.Image = renderImage;
+				} catch (OutOfMemoryException ex) {
+					// could draw a red cross like here:
+					// http://stackoverflow.com/questions/22163846/zooming-of-an-image-using-mousewheel
+				}
 			}
 		}
 
@@ -598,58 +665,5 @@ namespace GCodePlotter
 			}
 		}
 		#endregion
-		
-		void OnMouseWheel(object sender, MouseEventArgs mea)
-		{
-			// Override OnMouseWheel event, for zooming in/out with the scroll wheel
-			if (pictureBox1.Image != null)
-			{
-				// If the mouse wheel is moved forward (Zoom in)
-				if (mea.Delta > 0)
-				{
-					// Check if the pictureBox dimensions are in range (15 is the minimum and maximum zoom level)
-					if ((pictureBox1.Width < (15 * this.Width)) && (pictureBox1.Height < (15 * this.Height)))
-					{
-						// Change the size of the picturebox, multiply it by the ZOOMFACTOR
-						//pictureBox1.Width = (int)(pictureBox1.Width * 1.25);
-						//pictureBox1.Height = (int)(pictureBox1.Height * 1.25);
-						
-						if (multiplier < 40) {
-							multiplier *= 1.25f;
-
-							// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
-							//pictureBox1.Top = (int)(mea.Y - 1.25 * (mea.Y - pictureBox1.Top));
-							//pictureBox1.Left = (int)(mea.X - 1.25 * (mea.X - pictureBox1.Left));
-							
-							pictureBox1.Top = (int)(mea.Y - 1.15 * (mea.Y - pictureBox1.Top));
-							pictureBox1.Left = (int)(mea.X - 1.15 * (mea.X - pictureBox1.Left));
-						}
-					}
-				}
-				else
-				{
-					// Check if the pictureBox dimensions are in range (15 is the minimum and maximum zoom level)
-					if ((pictureBox1.Width > (this.Width / 15)) && (pictureBox1.Height > (this.Height / 15)))
-					{
-						// Change the size of the picturebox, divide it by the ZOOMFACTOR
-						//pictureBox1.Width = (int)(pictureBox1.Width / 1.25);
-						//pictureBox1.Height = (int)(pictureBox1.Height / 1.25);
-						
-						if (multiplier > 1) {
-							multiplier /= 1.25f;
-							
-							// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
-							//pictureBox1.Top = (int)(mea.Y - 0.80 * (mea.Y - pictureBox1.Top));
-							//pictureBox1.Left = (int)(mea.X - 0.80 * (mea.X - pictureBox1.Left));
-							
-							pictureBox1.Top = (int)(mea.Y - 0.82 * (mea.Y - pictureBox1.Top));
-							pictureBox1.Left = (int)(mea.X - 0.82 * (mea.X - pictureBox1.Left));
-						}
-					}
-				}
-				
-				RenderPlots();
-			}
-		}
 	}
 }
