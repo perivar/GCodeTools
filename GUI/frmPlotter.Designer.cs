@@ -99,7 +99,7 @@ namespace GCodePlotter
 			this.btnRedraw.Name = "btnRedraw";
 			this.btnRedraw.Size = new System.Drawing.Size(102, 32);
 			this.btnRedraw.TabIndex = 2;
-			this.btnRedraw.Text = "Reset (redraw)";
+			this.btnRedraw.Text = "Reset (Redraw)";
 			this.btnRedraw.UseVisualStyleBackColor = true;
 			this.btnRedraw.Click += new System.EventHandler(this.btnRedrawClick);
 			// 
@@ -122,7 +122,7 @@ namespace GCodePlotter
 			this.btnLoad.Name = "btnLoad";
 			this.btnLoad.Size = new System.Drawing.Size(102, 32);
 			this.btnLoad.TabIndex = 9;
-			this.btnLoad.Text = "Load Data";
+			this.btnLoad.Text = "Load";
 			this.btnLoad.UseVisualStyleBackColor = true;
 			this.btnLoad.Click += new System.EventHandler(this.btnLoadClick);
 			// 
@@ -132,7 +132,7 @@ namespace GCodePlotter
 			this.btnSave.Name = "btnSave";
 			this.btnSave.Size = new System.Drawing.Size(102, 32);
 			this.btnSave.TabIndex = 9;
-			this.btnSave.Text = "Save Data";
+			this.btnSave.Text = "Save";
 			this.btnSave.UseVisualStyleBackColor = true;
 			this.btnSave.Click += new System.EventHandler(this.btnSaveClick);
 			// 
@@ -301,7 +301,7 @@ namespace GCodePlotter
 			this.cmdSaveLayers.Name = "cmdSaveLayers";
 			this.cmdSaveLayers.Size = new System.Drawing.Size(102, 32);
 			this.cmdSaveLayers.TabIndex = 9;
-			this.cmdSaveLayers.Text = "Save Data (layers)";
+			this.cmdSaveLayers.Text = "Save w/ Layers";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
 			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSaveLayersClick);
 			// 

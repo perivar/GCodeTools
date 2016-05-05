@@ -344,9 +344,10 @@ namespace GCode
 						}
 					}
 					
-					// only care about movement instructions
+					// store latest movement instructions as previous instrucion
 					prevInstruction = currentInstruction;
 					
+					// at all times store the latest X, Y, Z and feedrate
 					if (currentInstruction.X.HasValue) lastX = currentInstruction.X.Value;
 					if (currentInstruction.Y.HasValue) lastY = currentInstruction.Y.Value;
 					if (currentInstruction.Z.HasValue) lastZ = currentInstruction.Z.Value;
