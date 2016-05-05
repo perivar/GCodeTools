@@ -18,10 +18,7 @@ namespace GCodePlotter
 	public partial class frmPlotter : Form
 	{
 		private float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
-		private int MINMAX = 5;             // 5 times bigger or smaller than the ctrl
-
-		const int MAX_WIDTH = 8000;
-		const int MAX_HEIGHT = 8000;
+		private int MINMAX = 6;             // 5 times bigger or smaller than the ctrl
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -162,9 +159,6 @@ namespace GCodePlotter
 			// reset multiplier
 			multiplier = 4.0f;
 			
-			pictureBox1.Left = 0;
-			pictureBox1.Top = 0;
-			
 			RenderPlots();
 		}
 
@@ -286,17 +280,13 @@ namespace GCodePlotter
 			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
 			    (pictureBox1.Height < (MINMAX * panelViewer.Height)))
 			{
+				// store the multiplier to be used for scrollbar setting later
+				float oldMultiplier = multiplier;
+				
+				// zoom the multiplier
 				multiplier *= ZOOMFACTOR;
 				
-				// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
-				//pictureBox1.Top = (int)(clickPoint.Y - 1.25 * (clickPoint.Y - pictureBox1.Top));
-				//pictureBox1.Left = (int)(clickPoint.X - 1.25 * (clickPoint.X - pictureBox1.Left));
-
-				var x = (int)(clickPoint.X - 1.25 * (clickPoint.X - panelViewer.AutoScrollPosition.X));
-				var y = (int)(clickPoint.Y - 1.25 * (clickPoint.Y - panelViewer.AutoScrollPosition.Y));
-				var newScrollPoint = new Point(x, y);
-				panelViewer.AutoScrollPosition = newScrollPoint;
-				
+				UpdateScrollbar(clickPoint, oldMultiplier);
 				RenderPlots();
 			}
 		}
@@ -306,17 +296,13 @@ namespace GCodePlotter
 			if ((pictureBox1.Width > (panelViewer.Width / MINMAX)) &&
 			    (pictureBox1.Height > (panelViewer.Height / MINMAX )))
 			{
+				// store the multiplier to be used for scrollbar setting later
+				float oldMultiplier = multiplier;
+				
+				// zoom the multiplier
 				multiplier /= ZOOMFACTOR;
 
-				// Formula to move the picturebox, to zoom in the point selected by the mouse cursor
-				//pictureBox1.Top = (int)(clickPoint.Y - 0.80 * (clickPoint.Y - pictureBox1.Top));
-				//pictureBox1.Left = (int)(clickPoint.X - 0.80 * (clickPoint.X - pictureBox1.Left));
-
-				var x = (int)(clickPoint.X - 0.80 * (clickPoint.X - panelViewer.AutoScrollPosition.X));
-				var y = (int)(clickPoint.Y - 0.80 * (clickPoint.Y - panelViewer.AutoScrollPosition.Y));
-				var newScrollPoint = new Point(x, y);
-				panelViewer.AutoScrollPosition = newScrollPoint;
-				
+				UpdateScrollbar(clickPoint, oldMultiplier);
 				RenderPlots();
 			}
 
@@ -324,6 +310,28 @@ namespace GCodePlotter
 		#endregion
 		
 		#region Private Methods
+		
+		/// <summary>
+		/// Update the Scrollbar
+		/// </summary>
+		/// <param name="clickPoint">position under the cursor which is to be retained</param>
+		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
+		void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
+			// http://vilipetek.com/2013/09/07/105/
+			
+			var scrollPosition = panelViewer.AutoScrollPosition;
+			var cursorOffset = new PointF(clickPoint.X + scrollPosition.X,
+			                              clickPoint.Y + scrollPosition.Y);
+			
+			// calculate the new scroll position
+			panelViewer.AutoScrollPosition = new Point(
+				(int)Math.Round(multiplier * clickPoint.X / oldMultiplier) -
+				(int)cursorOffset.X,
+				(int)Math.Round(multiplier * clickPoint.Y / oldMultiplier) -
+				(int)cursorOffset.Y);
+			panelViewer.PerformLayout();
+		}
+		
 		void ParseText(string text)
 		{
 			parsedInstructions = SimpleGCodeParser.ParseText(text);
@@ -485,10 +493,6 @@ namespace GCodePlotter
 			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
 			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
 			
-			// set max size in case the calculated dimensions are way off
-			width = (int) Math.Min(width, MAX_WIDTH);
-			height = (int) Math.Min(height, MAX_HEIGHT);
-			
 			return new Size(width, height);
 		}
 		
@@ -500,10 +504,6 @@ namespace GCodePlotter
 			// 10 mm per grid
 			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
 			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
-			
-			// set max size in case the calculated dimensions are way off
-			//width = (int) Math.Min(width, MAX_WIDTH);
-			//height = (int) Math.Min(height, MAX_HEIGHT);
 			
 			return new Size(width, height);
 		}
