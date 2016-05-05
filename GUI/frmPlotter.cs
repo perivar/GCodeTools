@@ -17,11 +17,23 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		const int MAX_WIDTH = 10000;
-		const int MAX_HEIGHT = 10000;
+		const int MAX_WIDTH = 8000;
+		const int MAX_HEIGHT = 8000;
+
+		// calculated total min and max sizes
+		float maxX = 0.0f;
+		float maxY = 0.0f;
+		float maxZ = 0.0f;
+		float minX = 0.0f;
+		float minY = 0.0f;
+		float minZ = 0.0f;
 		
-		const int leftMargin = 20;
-		const int bottomMargin = 20;
+		// margins to use within the gcode viewer
+		const int LEFT_MARGIN = 20;
+		const int BOTTOM_MARGIN = 20;
+
+		float scale = 1.0f;
+		float multiplier = 4.0f;
 		
 		List<GCodeInstruction> parsedInstructions = null;
 
@@ -31,9 +43,6 @@ namespace GCodePlotter
 
 		Image renderImage = null;
 		
-		float scale;
-		float multiplier = 4.0f;
-
 		private Point MouseDownLocation;
 
 		public frmPlotter()
@@ -322,24 +331,23 @@ namespace GCodePlotter
 			
 			// calculate max values for X, Y and Z
 			// while finalizing the plots and adding them to the lstPlot
-			float absMaxX = 0.0f;
-			float absMaxY = 0.0f;
-			float absMaxZ = 0.0f;
-			float absMinX = 0.0f;
-			float absMinY = 0.0f;
-			float absMinZ = 0.0f;
-			
+			maxX = 0.0f;
+			maxY = 0.0f;
+			maxZ = 0.0f;
+			minX = 0.0f;
+			minY = 0.0f;
+			minZ = 0.0f;
 			foreach (Plot plotItem in myPlots)
 			{
 				plotItem.CalculateMinAndMax();
 				
-				absMaxX = Math.Max(absMaxX, plotItem.MaxX);
-				absMaxY = Math.Max(absMaxY, plotItem.MaxY);
-				absMaxZ = Math.Max(absMaxZ, plotItem.MaxZ);
+				maxX = Math.Max(maxX, plotItem.MaxX);
+				maxY = Math.Max(maxY, plotItem.MaxY);
+				maxZ = Math.Max(maxZ, plotItem.MaxZ);
 
-				absMinX = Math.Min(absMinX, plotItem.MinX);
-				absMinY = Math.Min(absMinY, plotItem.MinY);
-				absMinZ = Math.Min(absMinZ, plotItem.MinZ);
+				minX = Math.Min(minX, plotItem.MinX);
+				minY = Math.Min(minY, plotItem.MinY);
+				minZ = Math.Min(minZ, plotItem.MinZ);
 				
 				// build node tree
 				var node = new TreeNode(plotItem.ToString());
@@ -354,7 +362,7 @@ namespace GCodePlotter
 			}
 			
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
-			                                  absMaxX, absMinX, absMaxY, absMinY, absMaxZ, absMinZ);
+			                                  maxX, minX, maxY, minY, maxZ, minZ);
 			
 			RenderPlots();
 			bDataLoaded = true;
@@ -388,14 +396,9 @@ namespace GCodePlotter
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
-				
-				// Save
-				//DumpGCode("first.gcode", app[0]);
-				//DumpGCode("second.gcode", app[1]);
-				
 				// clean up the mess with too many G0 commands
 				var cleaned = GCodeSplitter.CleanGCode(split[index]);
-								
+				
 				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", cleaned, false);
 				ParseText(gcodeSplitted);
 			}
@@ -417,31 +420,19 @@ namespace GCodePlotter
 			// set scale variable
 			scale = (10 * multiplier);
 
-			// determine the x and y sizes based on the maxX and Y from all the plots
-			var absMaxX = 0f;
-			var absMaxY = 0f;
-			if (myPlots != null && myPlots.Count > 0)
-			{
-				foreach (Plot plotItem in myPlots)
-				{
-					absMaxX = Math.Max(absMaxX, plotItem.MaxX);
-					absMaxY = Math.Max(absMaxY, plotItem.MaxY);
-				}
-			}
-
 			// scale it up
-			absMaxX *= scale;
-			absMaxY *= scale;
+			var scaledMaxX = (maxX + LEFT_MARGIN) * scale;
+			var scaledMaxY = (maxY + BOTTOM_MARGIN) * scale;
 
 			// 10 mm per grid
-			var intAbsMaxX = (int)(absMaxX + 1) / 10 + (int) (multiplier*leftMargin);
-			var intAbsMaxY = (int)(absMaxY + 1) / 10 + (int) (multiplier*bottomMargin);
+			var width = (int)(scaledMaxX + 1) / 10;
+			var height = (int)(scaledMaxY + 1) / 10;
 			
 			// set max size in case the calculated dimensions are way off
-			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
-			intAbsMaxY = (int) Math.Min(intAbsMaxY, MAX_HEIGHT);
+			width = (int) Math.Min(width, MAX_WIDTH);
+			height = (int) Math.Min(height, MAX_HEIGHT);
 			
-			return new Size(intAbsMaxX, intAbsMaxY);
+			return new Size(width, height);
 		}
 		
 		Size GetDimensionsFromZoom() {
@@ -449,50 +440,37 @@ namespace GCodePlotter
 			// set scale variable
 			scale = (10 * multiplier);
 
-			// determine the x and y sizes based on the maxX and Y from all the plots
-			var absMaxX = 0f;
-			var absMaxY = 0f;
-			if (myPlots != null && myPlots.Count > 0)
-			{
-				foreach (Plot plotItem in myPlots)
-				{
-					absMaxX = Math.Max(absMaxX, plotItem.MaxX);
-					absMaxY = Math.Max(absMaxY, plotItem.MaxY);
-				}
-			}
-
 			// scale it up
-			absMaxX *= scale;
-			absMaxY *= scale;
+			var scaledMaxX = (maxX + LEFT_MARGIN) * scale;
+			var scaledMaxY = (maxY + BOTTOM_MARGIN) * scale;
 
 			// 10 mm per grid
-			var intAbsMaxX = (int)(absMaxX + 1) / 10 + (int) (multiplier*leftMargin);
-			var intAbsMaxY = (int)(absMaxY + 1) / 10 + (int) (multiplier*bottomMargin);
+			var width = (int)(scaledMaxX + 1) / 10;
+			var height = (int)(scaledMaxY + 1) / 10;
 			
 			// set max size in case the calculated dimensions are way off
-			intAbsMaxX = (int) Math.Min(intAbsMaxX, MAX_WIDTH);
-			intAbsMaxY = (int) Math.Min(intAbsMaxY, MAX_HEIGHT);
+			width = (int) Math.Min(width, MAX_WIDTH);
+			height = (int) Math.Min(height, MAX_HEIGHT);
 			
-			return new Size(intAbsMaxX, intAbsMaxY);
-
+			return new Size(width, height);
 		}
 		
 		void ResetEmptyImage() {
 			
 			var imageDimension = GetDimensionsFromZoom();
-			int intAbsMaxX = imageDimension.Width;
-			int intAbsMaxY = imageDimension.Height;
+			int width = imageDimension.Width;
+			int height = imageDimension.Height;
 			
 			// if anything has changed, reset image
-			if (renderImage == null || intAbsMaxX != renderImage.Width || intAbsMaxY != renderImage.Height)
+			if (renderImage == null || width != renderImage.Width || height != renderImage.Height)
 			{
 				if (renderImage != null) {
 					renderImage.Dispose();
 				}
 
-				renderImage = new Bitmap(intAbsMaxX, intAbsMaxY);
-				pictureBox1.Width = intAbsMaxX;
-				pictureBox1.Height = intAbsMaxY;
+				renderImage = new Bitmap(width, height);
+				pictureBox1.Width = width;
+				pictureBox1.Height = height;
 				pictureBox1.Image = renderImage;
 			}
 		}
@@ -510,25 +488,25 @@ namespace GCodePlotter
 			{
 				for (var y = 0; y < pictureBox1.Height / scale; y++)
 				{
-					graphics.DrawLine(gridPen, x * scale + leftMargin, 0, x * scale + leftMargin, pictureBox1.Height);
-					graphics.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - bottomMargin, pictureBox1.Width, pictureBox1.Height - (y * scale) - bottomMargin);
+					graphics.DrawLine(gridPen, x * scale + LEFT_MARGIN, 0, x * scale + LEFT_MARGIN, pictureBox1.Height);
+					graphics.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN);
 				}
 			}
 
 			// draw arrow grid
 			using (var penZero = new Pen(Color.WhiteSmoke, 1)) {
-				graphics.DrawLine(penZero, leftMargin, pictureBox1.Height-bottomMargin, pictureBox1.Width, pictureBox1.Height-bottomMargin);
-				graphics.DrawLine(penZero, leftMargin, 0, leftMargin, pictureBox1.Height-bottomMargin);
+				graphics.DrawLine(penZero, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height-BOTTOM_MARGIN);
+				graphics.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penX = new Pen(Color.Green, 3)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				graphics.DrawLine(penX, leftMargin, pictureBox1.Height-bottomMargin, 100, pictureBox1.Height-bottomMargin);
+				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 100, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penY = new Pen(Color.Red, 3)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				graphics.DrawLine(penY, leftMargin, pictureBox1.Height-100, leftMargin, pictureBox1.Height-bottomMargin);
+				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height-100, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 
 			// draw gcode
@@ -548,11 +526,13 @@ namespace GCodePlotter
 						if (instruction == selectedInstruction) {
 							foreach (var subLinePlots in instruction.CachedLinePoints) {
 								// draw correct instruction as selected
-								subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
+								//subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
+								subLinePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 							}
 						} else {
 							foreach (var subLinePlots in instruction.CachedLinePoints) {
-								subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: leftMargin, bottom: bottomMargin);
+								//subLinePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
+								subLinePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 							}
 						}
 					}
@@ -566,12 +546,14 @@ namespace GCodePlotter
 							    && treeView.SelectedNode.Text.Equals(plotItem.ToString())) {
 
 								// draw correct segment as selected
-								linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: leftMargin, bottom: bottomMargin);
+								//linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, highlight: true, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
+								linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								
 							} else {
 								// nothing is selected, draw segment as normal
 								if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
-									linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: leftMargin, bottom: bottomMargin);
+									//linePlots.DrawSegment(graphics, pictureBox1.Height, Multiplier: multiplier, renderG0: cbRenderG0.Checked, left: LEFT_MARGIN, bottom: BOTTOM_MARGIN);
+									linePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								}
 							}
 						}
