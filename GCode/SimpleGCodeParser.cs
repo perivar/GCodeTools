@@ -120,10 +120,11 @@ namespace GCode
 					if (p1.X < shift.X) p1.X = shift.X;
 				}
 				
-				// make sure to add Z clearance
-				p1.Z = zClearance;
+				// first raise Z to Z clearance (= G0 Za)
+				output.Add(new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null));
 				
-				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+				// secondly move X and Y to right place  (= G0 Xa Yb)
+				output.Add(new GCodeInstruction(CommandList.RapidMove, p1.X, p1.Y, null, null));
 			}
 			output.Add(new GCodeInstruction(command, p2, feed));
 			
@@ -156,10 +157,11 @@ namespace GCode
 					if (p1.X < shift.X) p1.X = shift.X;
 				}
 				
-				// make sure to add Z clearance
-				p1.Z = zClearance;
+				// first raise Z to Z clearance (= G0 Za)
+				output.Add(new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null));
 				
-				output.Add(new GCodeInstruction(CommandList.RapidMove, p1, feed));
+				// secondly move X and Y to right place  (= G0 Xa Yb)
+				output.Add(new GCodeInstruction(CommandList.RapidMove, p1.X, p1.Y, null, null));
 			}
 			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
 			
@@ -167,6 +169,30 @@ namespace GCode
 		}
 		
 		#region Constructors
+		public GCodeInstruction(CommandList command, float? x, float? y, float? z, float? feed) {
+			switch (command) {
+				case CommandList.RapidMove:
+					Command = "G0";
+					break;
+				case CommandList.NormalMove:
+					Command = "G1";
+					break;
+				case CommandList.CWArc:
+					Command = "G2";
+					break;
+				case CommandList.CCWArc:
+					Command = "G3";
+					break;
+				case CommandList.Other:
+					break;
+			}
+			
+			if (x.HasValue) this.X = x.Value;
+			if (y.HasValue) this.Y = y.Value;
+			if (z.HasValue) this.Z = z.Value;
+			if (command != CommandList.RapidMove && feed.HasValue) this.F = feed.Value;
+		}
+		
 		public GCodeInstruction(CommandList command, Point3D point, float feed) {
 			switch (command) {
 				case CommandList.RapidMove:

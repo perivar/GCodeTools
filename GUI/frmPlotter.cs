@@ -210,6 +210,8 @@ namespace GCodePlotter
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
 				SaveSplittedGCodes(split, splitPoint, (string)txtFile.Tag);
+				
+				MessageBox.Show("Saved splitted files to same directory as loaded file.\nExtensions are _first.gcode and _second.gcode!");
 			}
 		}
 		
@@ -692,8 +694,14 @@ namespace GCodePlotter
 				foreach (var instruction in instructions) {
 					if (instruction.CanRender) {
 						// transform
-						if (instruction.X.HasValue) {
+						if (splitPoint.X > 0 && instruction.X.HasValue) {
 							instruction.X = instruction.X - splitPoint.X;
+						}
+						if (splitPoint.Y > 0 && instruction.Y.HasValue) {
+							instruction.Y = instruction.Y - splitPoint.Y;
+						}
+						if (splitPoint.Z > 0 && instruction.Z.HasValue) {
+							instruction.Z = instruction.Z - splitPoint.Z;
 						}
 					}
 					transformedInstructions.Add(instruction);
