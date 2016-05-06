@@ -209,12 +209,7 @@ namespace GCodePlotter
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
-				//var gcodeLeft = Plot.BuildGCodeOutput("Unnamed", split[0], false);
-				//var gcodeRight = Plot.BuildGCodeOutput("Unnamed", split[1], false);
-				
-				GCodeSplitter.DumpGCode(txtFile.Text+"_left.gcode", split[0]);
-				GCodeSplitter.DumpGCode(txtFile.Text+"_right.gcode", split[1]);
-				
+				SaveSplittedGCodes(split, splitPoint, (string)txtFile.Tag);
 			}
 		}
 		
@@ -343,18 +338,20 @@ namespace GCodePlotter
 			panelViewer.AutoScrollPosition = newScrollPosition;
 		}
 		
-		void ParseText(string text)
-		{
-			parsedInstructions = SimpleGCodeParser.ParseText(text);
-
-			treeView.Nodes.Clear();
-
+		/// <summary>
+		/// Turn the list of instruction into a list of plots
+		/// where the plots are separated if "cutting path id" is found
+		/// </summary>
+		/// <param name="instructions">list of gcode instructions</param>
+		/// <returns>list of plots</returns>
+		static List<Plot> GetPlots(List<GCodeInstruction> instructions) {
+			
 			var currentPoint = Point3D.Empty;
-
-			myPlots = new List<Plot>();
+			var plots = new List<Plot>();
 			var currentPlot = new Plot();
 			currentPlot.Name = "Unnamed Plot";
-			foreach (var currentInstruction in parsedInstructions)
+			
+			foreach (var currentInstruction in instructions)
 			{
 				if (currentInstruction.IsOnlyComment) {
 					
@@ -371,7 +368,7 @@ namespace GCodePlotter
 					} else if (currentInstruction.Comment.StartsWith("End cutting path id:")) {
 						if (currentPlot.PlotPoints.Count > 0) {
 							
-							myPlots.Add(currentPlot);
+							plots.Add(currentPlot);
 							
 							// Reset plot, meaning add new
 							currentPlot = new Plot();
@@ -382,7 +379,7 @@ namespace GCodePlotter
 						// TODO: Handle headers like (Circles) and (Square)
 					}
 					
-				} else if (currentInstruction.CanRender()) {
+				} else if (currentInstruction.CanRender) {
 					// this is where the plot is put together and where the linepoints is added
 					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
 					if (linePointsCollection != null) {
@@ -398,16 +395,28 @@ namespace GCodePlotter
 			}
 
 			if (currentPlot.PlotPoints.Count > 0) {
-				myPlots.Add(currentPlot);
+				plots.Add(currentPlot);
 			}
 
 			// remove footer if it exists
-			if (myPlots.Count > 0) {
-				var footer = myPlots.Last();
+			if (plots.Count > 0) {
+				var footer = plots.Last();
 				if (footer.Name == "Footer") {
-					myPlots.Remove(footer);
+					plots.Remove(footer);
 				}
 			}
+
+			return plots;
+		}
+		
+		void ParseText(string text)
+		{
+			parsedInstructions = SimpleGCodeParser.ParseText(text);
+
+			treeView.Nodes.Clear();
+
+			// turn the instructions into plots
+			myPlots = GetPlots(parsedInstructions);
 			
 			// calculate max values for X, Y and Z
 			// while finalizing the plots and adding them to the lstPlot
@@ -652,6 +661,83 @@ namespace GCodePlotter
 				tw.Close();
 			}
 		}
+		
+		void SaveSplittedGCodes(List<List<GCodeInstruction>> split, Point3D splitPoint, string filePath) {
+			
+			var dirPath = Path.GetDirectoryName(filePath);
+			var fileName = Path.GetFileNameWithoutExtension(filePath);
+			
+			var fileFirst = new FileInfo(dirPath + Path.DirectorySeparatorChar + fileName + "_first.gcode");
+			var fileSecond = new FileInfo(dirPath + Path.DirectorySeparatorChar + fileName + "_second.gcode");
+			
+			// clean them
+			var cleanedFirst = GCodeSplitter.CleanGCode(split[0]);
+			var cleanedSecond = GCodeSplitter.CleanGCode(split[1]);
+			
+			SaveGCodes(cleanedFirst, Point3D.Empty, fileFirst);
+			SaveGCodes(cleanedSecond, splitPoint, fileSecond);
+		}
+
+		void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
+		{
+			List<Plot> plots = null;
+			
+			if (splitPoint.IsEmpty) {
+				// turn the instructins into plots
+				plots = GetPlots(instructions);
+			} else {
+				// transform instructions
+				var transformedInstructions = new List<GCodeInstruction>();
+				
+				foreach (var instruction in instructions) {
+					if (instruction.CanRender) {
+						// transform
+						if (instruction.X.HasValue) {
+							instruction.X = instruction.X - splitPoint.X;
+						}
+					}
+					transformedInstructions.Add(instruction);
+				}
+				
+				// turn the instructins into plots
+				plots =  GetPlots(transformedInstructions);
+			}
+			
+			if (file.Exists) {
+				file.Delete();
+			}
+			
+			var tw = new StreamWriter(file.OpenWrite());
+
+			tw.WriteLine("(File built with GCodeTools)");
+			tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
+			tw.WriteLine();
+			tw.WriteLine("(Header)");
+			tw.WriteLine("G90   (set absolute distance mode)");
+			//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+			tw.WriteLine("G17   (set active plane to XY)");
+			tw.WriteLine("G21   (set units to mm)");
+			tw.WriteLine("(Header end.)");
+			tw.WriteLine();
+			
+			plots.ForEach(x =>
+			              {
+			              	tw.WriteLine();
+			              	tw.Write(x.BuildGCodeOutput(false));
+			              });
+			tw.Flush();
+
+			tw.WriteLine();
+			tw.WriteLine("(Footer)");
+			tw.WriteLine("G00 Z5");
+			tw.WriteLine("G00 X0 Y0");
+			tw.WriteLine("(Footer end.)");
+			tw.WriteLine();
+
+			tw.Flush();
+			tw.Close();
+		}
+
 		#endregion
 	}
 }

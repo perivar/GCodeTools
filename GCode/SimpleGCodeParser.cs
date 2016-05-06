@@ -270,6 +270,21 @@ namespace GCode
 		}
 		#endregion
 		
+		#region Properties
+		public bool CanRender
+		{
+			get {
+				if (CommandEnum == CommandList.NormalMove ||
+				    CommandEnum == CommandList.RapidMove ||
+				    CommandEnum == CommandList.CWArc ||
+				    CommandEnum == CommandList.CCWArc) {
+					return true;
+				}
+				return false;
+			}
+		}
+		#endregion
+		
 		/// <summary>
 		/// Parse the comments out from the passed line
 		/// and store the Comments, return the remaining command if it exists or the full line
@@ -415,23 +430,7 @@ namespace GCode
 
 			return sb.ToString();
 		}
-
-		internal bool CanRender()
-		{
-			if (CommandEnum == CommandList.NormalMove ||
-			    CommandEnum == CommandList.RapidMove ||
-			    CommandEnum == CommandList.CWArc ||
-			    CommandEnum == CommandList.CCWArc) {
-				
-				// TODO: If only Z is enabled, ignore
-				//if (!X.HasValue && !Y.HasValue && Z.HasValue) {
-				//	return false;
-				//}
-				return true;
-			}
-			return false;
-		}
-
+		
 		internal List<LinePoints> RenderCode(ref Point3D currentPoint)
 		{
 			if (CommandEnum == CommandList.Other)
