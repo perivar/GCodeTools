@@ -58,10 +58,6 @@ namespace GCodePlotter
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelZoomFilename = new System.Windows.Forms.Panel();
-			this.radZoomSixteen = new System.Windows.Forms.RadioButton();
-			this.radZoomEight = new System.Windows.Forms.RadioButton();
-			this.radZoomFour = new System.Windows.Forms.RadioButton();
-			this.radZoomTwo = new System.Windows.Forms.RadioButton();
 			this.panelViewer = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.panelCode.SuspendLayout();
@@ -309,74 +305,20 @@ namespace GCodePlotter
 			// 
 			this.txtFile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
 			this.txtFile.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtFile.Location = new System.Drawing.Point(14, 11);
+			this.txtFile.Location = new System.Drawing.Point(16, 11);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(380, 20);
+			this.txtFile.Size = new System.Drawing.Size(378, 20);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panelZoomFilename
 			// 
-			this.panelZoomFilename.Controls.Add(this.radZoomSixteen);
 			this.panelZoomFilename.Controls.Add(this.txtFile);
-			this.panelZoomFilename.Controls.Add(this.radZoomEight);
-			this.panelZoomFilename.Controls.Add(this.radZoomFour);
-			this.panelZoomFilename.Controls.Add(this.radZoomTwo);
 			this.panelZoomFilename.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panelZoomFilename.Location = new System.Drawing.Point(5, 477);
 			this.panelZoomFilename.Name = "panelZoomFilename";
 			this.panelZoomFilename.Size = new System.Drawing.Size(412, 38);
 			this.panelZoomFilename.TabIndex = 12;
-			// 
-			// radZoomSixteen
-			// 
-			this.radZoomSixteen.AutoSize = true;
-			this.radZoomSixteen.Location = new System.Drawing.Point(149, 12);
-			this.radZoomSixteen.Name = "radZoomSixteen";
-			this.radZoomSixteen.Size = new System.Drawing.Size(36, 17);
-			this.radZoomSixteen.TabIndex = 0;
-			this.radZoomSixteen.Text = "x4";
-			this.radZoomSixteen.UseVisualStyleBackColor = true;
-			this.radZoomSixteen.Visible = false;
-			this.radZoomSixteen.CheckedChanged += new System.EventHandler(this.radScaleChange);
-			// 
-			// radZoomEight
-			// 
-			this.radZoomEight.AutoSize = true;
-			this.radZoomEight.Location = new System.Drawing.Point(107, 12);
-			this.radZoomEight.Name = "radZoomEight";
-			this.radZoomEight.Size = new System.Drawing.Size(36, 17);
-			this.radZoomEight.TabIndex = 0;
-			this.radZoomEight.Text = "x2";
-			this.radZoomEight.UseVisualStyleBackColor = true;
-			this.radZoomEight.Visible = false;
-			this.radZoomEight.CheckedChanged += new System.EventHandler(this.radScaleChange);
-			// 
-			// radZoomFour
-			// 
-			this.radZoomFour.AutoSize = true;
-			this.radZoomFour.Checked = true;
-			this.radZoomFour.Location = new System.Drawing.Point(65, 12);
-			this.radZoomFour.Name = "radZoomFour";
-			this.radZoomFour.Size = new System.Drawing.Size(36, 17);
-			this.radZoomFour.TabIndex = 0;
-			this.radZoomFour.TabStop = true;
-			this.radZoomFour.Text = "x1";
-			this.radZoomFour.UseVisualStyleBackColor = true;
-			this.radZoomFour.Visible = false;
-			this.radZoomFour.CheckedChanged += new System.EventHandler(this.radScaleChange);
-			// 
-			// radZoomTwo
-			// 
-			this.radZoomTwo.AutoSize = true;
-			this.radZoomTwo.Location = new System.Drawing.Point(14, 12);
-			this.radZoomTwo.Name = "radZoomTwo";
-			this.radZoomTwo.Size = new System.Drawing.Size(45, 17);
-			this.radZoomTwo.TabIndex = 0;
-			this.radZoomTwo.Text = "x0.5";
-			this.radZoomTwo.UseVisualStyleBackColor = true;
-			this.radZoomTwo.Visible = false;
-			this.radZoomTwo.CheckedChanged += new System.EventHandler(this.radScaleChange);
 			// 
 			// panelViewer
 			// 
@@ -431,10 +373,6 @@ namespace GCodePlotter
 		private System.Windows.Forms.Panel panelCommands;
 		private System.Windows.Forms.TextBox txtFile;
 		private System.Windows.Forms.Panel panelZoomFilename;
-		private System.Windows.Forms.RadioButton radZoomFour;
-		private System.Windows.Forms.RadioButton radZoomTwo;
-		private System.Windows.Forms.RadioButton radZoomEight;
-		private System.Windows.Forms.RadioButton radZoomSixteen;
 		private System.Windows.Forms.Panel panelViewer;
 		private System.Windows.Forms.TextBox txtDimension;
 		private System.Windows.Forms.TreeView treeView;

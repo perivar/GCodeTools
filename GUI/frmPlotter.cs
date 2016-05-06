@@ -18,7 +18,7 @@ namespace GCodePlotter
 	public partial class frmPlotter : Form
 	{
 		private float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
-		private int MINMAX = 6;             // 5 times bigger or smaller than the ctrl
+		private int MINMAX = 6;             // Times bigger or smaller than the ctrl
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -273,6 +273,9 @@ namespace GCodePlotter
 			} else {
 				ZoomOut(mea.Location);
 			}
+			
+			// set handled to true to disable scrolling the scrollbars using the mousewheel
+			((HandledMouseEventArgs)mea).Handled = true;
 		}
 		
 		void ZoomIn(Point clickPoint) {
@@ -286,8 +289,8 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier *= ZOOMFACTOR;
 				
-				UpdateScrollbar(clickPoint, oldMultiplier);
 				RenderPlots();
+				UpdateScrollbar(clickPoint, oldMultiplier);
 			}
 		}
 
@@ -302,8 +305,8 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier /= ZOOMFACTOR;
 
-				UpdateScrollbar(clickPoint, oldMultiplier);
 				RenderPlots();
+				UpdateScrollbar(clickPoint, oldMultiplier);
 			}
 
 		}
@@ -323,13 +326,21 @@ namespace GCodePlotter
 			var cursorOffset = new PointF(clickPoint.X + scrollPosition.X,
 			                              clickPoint.Y + scrollPosition.Y);
 			
-			// calculate the new scroll position
-			panelViewer.AutoScrollPosition = new Point(
+			// AutoScrollPosition is quite cumbersome.
+			// usually you get negative values when doing this:
+			// Point p = this.AutoScrollPosition;
+			// but when setting the scroll position you have to use positive values
+			// ... so to restore the exact same scroll position you have to invert the negative numbers:
+			// this.AutoScrollPosition = new Point(-p.X, -p.Y)
+			
+			// Calculate the new scroll position
+			var newScrollPosition = new Point(
 				(int)Math.Round(multiplier * clickPoint.X / oldMultiplier) -
 				(int)cursorOffset.X,
 				(int)Math.Round(multiplier * clickPoint.Y / oldMultiplier) -
-				(int)cursorOffset.Y);
-			panelViewer.PerformLayout();
+				(int)cursorOffset.Y );
+			
+			panelViewer.AutoScrollPosition = newScrollPosition;
 		}
 		
 		void ParseText(string text)
@@ -471,29 +482,6 @@ namespace GCodePlotter
 				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", cleaned, false);
 				ParseText(gcodeSplitted);
 			}
-		}
-		
-		Size GetDimensionsFromRadioButtons() {
-			
-			// set multiplier variable
-			if (radZoomTwo.Checked) {
-				multiplier = 2;
-			} else if (radZoomFour.Checked) {
-				multiplier = 4;
-			} else if (radZoomEight.Checked) {
-				multiplier = 8;
-			} else if (radZoomSixteen.Checked) {
-				multiplier = 16;
-			}
-
-			// set scale variable
-			scale = (10 * multiplier);
-
-			// 10 mm per grid
-			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
-			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
-			
-			return new Size(width, height);
 		}
 		
 		Size GetDimensionsFromZoom() {

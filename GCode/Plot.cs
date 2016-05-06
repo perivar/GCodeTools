@@ -38,30 +38,25 @@ namespace GCode
 
 		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
 		{
-			if (Pen == PenColorList.RapidMove && !renderG0)
-			{
+			if (Pen == PenColorList.RapidMove && !renderG0) {
 				return;
 			}
 			
-			if (Pen == PenColorList.RapidMove && highlight)
-			{
+			if (Pen == PenColorList.RapidMove && highlight) {
 				g.DrawLine(ColorHelper.GetPen(PenColorList.RapidMoveHilight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 				return;
 			}
 
-			if (highlight)
-			{
+			if (highlight) {
 				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
-			}
-			else
-			{
+			} else {
 				g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 			}
 		}
 		
 		public override string ToString()
 		{
-			return string.Format("[{0}, {1}, {2}] - [{3}, {4}, {5}]", X1, Y1, Z1, X2, Y2, Z2);
+			return string.Format("[{0:0.##}, {1:0.##}, {2:0.##}] - [{3:0.##}, {4:0.##}, {5:0.##}]", X1, Y1, Z1, X2, Y2, Z2);
 		}
 	}
 
