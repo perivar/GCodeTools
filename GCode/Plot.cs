@@ -8,6 +8,7 @@
 using System;
 using System.Drawing;
 using System.Collections.Generic;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -43,14 +44,24 @@ namespace GCode
 			}
 			
 			if (Pen == PenColorList.RapidMove && highlight) {
-				g.DrawLine(ColorHelper.GetPen(PenColorList.RapidMoveHilight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHilight);
+				float[] dashValues = { 5, 2 };
+				rapidPen.DashPattern = dashValues;
+				g.DrawLine(rapidPen, X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 				return;
 			}
 
 			if (highlight) {
 				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
 			} else {
-				g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				if (Pen == PenColorList.RapidMove) {
+					var rapidPen = ColorHelper.GetPen(Pen);
+					float[] dashValues = { 5, 2 };
+					rapidPen.DashPattern = dashValues;
+					g.DrawLine(rapidPen, X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				} else {
+					g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				}
 			}
 		}
 		

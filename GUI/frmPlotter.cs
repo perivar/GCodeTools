@@ -17,8 +17,13 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
+		private const float DEFAULT_MULTIPLIER = 4.0f;
+
 		private float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
-		private int MINMAX = 6;             // Times bigger or smaller than the ctrl
+		private int MINMAX = 8;             // Times bigger or smaller than the ctrl
+		
+		float scale = 1.0f;
+		float multiplier = DEFAULT_MULTIPLIER;
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -31,9 +36,6 @@ namespace GCodePlotter
 		// margins to use within the gcode viewer
 		const int LEFT_MARGIN = 20;
 		const int BOTTOM_MARGIN = 20;
-
-		float scale = 1.0f;
-		float multiplier = 4.0f;
 		
 		List<GCodeInstruction> parsedInstructions = null;
 
@@ -131,6 +133,9 @@ namespace GCodePlotter
 				string data = tr.ReadToEnd();
 				tr.Close();
 				
+				// reset multiplier
+				multiplier = DEFAULT_MULTIPLIER;
+
 				ParseText(data);
 			}
 		}
@@ -157,7 +162,7 @@ namespace GCodePlotter
 		void btnRedrawClick(object sender, EventArgs e)
 		{
 			// reset multiplier
-			multiplier = 4.0f;
+			multiplier = DEFAULT_MULTIPLIER;
 			
 			RenderPlots();
 		}
@@ -556,15 +561,15 @@ namespace GCodePlotter
 				graphics.DrawLine(penZero, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height-BOTTOM_MARGIN);
 				graphics.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
-			using (var penX = new Pen(Color.Green, 3)) {
+			using (var penX = new Pen(Color.Red, 3)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 100, pictureBox1.Height-BOTTOM_MARGIN);
+				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 10 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
-			using (var penY = new Pen(Color.Red, 3)) {
+			using (var penY = new Pen(Color.Green, 3)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height-100, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (10 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 
 			// draw gcode
