@@ -254,6 +254,12 @@ namespace GCode
 		
 		public GCodeInstruction(string line)
 		{
+			// A good parser can be found in bCNC, file CNC.py
+			// def load(self, filename=None) - Load a file into editor
+			// def _addLine(self, line) - add new line to list create block if necessary
+			// def parseLine(line) - return line in broken a list of commands, None if empty or comment
+			// def motionStart(self, cmds):
+			
 			// parse comments and return the remaining command if any
 			string command = ParseComments(line).Trim();
 			

@@ -358,6 +358,8 @@ namespace GCodePlotter
 			var currentPlot = new Plot();
 			currentPlot.Name = "Unnamed Plot";
 			
+			// TODO: Parse into blocks like bCNC (CNC.py), i.e. rapid move up = end of block
+			
 			foreach (var currentInstruction in instructions)
 			{
 				if (currentInstruction.IsOnlyComment) {
