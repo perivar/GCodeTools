@@ -41,7 +41,7 @@ namespace GCodePlotter
 
 		bool bDataLoaded = false;
 		
-		List<Plot> myPlots;
+		List<Block> myBlocks;
 
 		Image renderImage = null;
 		
@@ -88,12 +88,12 @@ namespace GCodePlotter
 				return;
 			}
 			
-			RenderPlots();
+			RenderBlocks();
 		}
 
 		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
 		{
-			RenderPlots();
+			RenderBlocks();
 			pictureBox1.Refresh();
 		}
 
@@ -102,7 +102,7 @@ namespace GCodePlotter
 			var me = (MouseEventArgs) e;
 			if (me.Button == MouseButtons.Right) {
 				treeView.SelectedNode = null;
-				RenderPlots();
+				RenderBlocks();
 			}
 		}
 
@@ -164,7 +164,7 @@ namespace GCodePlotter
 			// reset multiplier
 			multiplier = DEFAULT_MULTIPLIER;
 			
-			RenderPlots();
+			RenderBlocks();
 		}
 
 		void btnSplitClick(object sender, EventArgs e)
@@ -222,7 +222,7 @@ namespace GCodePlotter
 		
 		void radScaleChange(object sender, EventArgs e)
 		{
-			RenderPlots();
+			RenderBlocks();
 		}
 
 		void cbRenderG0CheckedChanged(object sender, EventArgs e)
@@ -231,7 +231,7 @@ namespace GCodePlotter
 				return;
 			}
 
-			RenderPlots();
+			RenderBlocks();
 		}
 		
 		void cbSoloSelectCheckedChanged(object sender, EventArgs e)
@@ -240,7 +240,7 @@ namespace GCodePlotter
 				return;
 			}
 
-			RenderPlots();
+			RenderBlocks();
 		}
 		
 		void PictureBox1MouseDown(object sender, MouseEventArgs e)
@@ -291,7 +291,7 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier *= ZOOMFACTOR;
 				
-				RenderPlots();
+				RenderBlocks();
 				UpdateScrollbar(clickPoint, oldMultiplier);
 			}
 		}
@@ -307,7 +307,7 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier /= ZOOMFACTOR;
 
-				RenderPlots();
+				RenderBlocks();
 				UpdateScrollbar(clickPoint, oldMultiplier);
 			}
 
@@ -346,19 +346,19 @@ namespace GCodePlotter
 		}
 		
 		/// <summary>
-		/// Turn the list of instruction into a list of plots
-		/// where the plots are separated if "cutting path id" is found
+		/// Turn the list of instruction into a list of blocks
+		/// where the blocks are separated if "cutting path id" is found
+		/// and when a rapid move up is found
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
-		/// <returns>list of plots</returns>
-		static List<Plot> GetPlots(List<GCodeInstruction> instructions) {
+		/// <returns>list of blocks</returns>
+		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 			
 			var currentPoint = Point3D.Empty;
-			var plots = new List<Plot>();
-			var currentPlot = new Plot();
-			currentPlot.Name = "Unnamed Plot";
-			
-			// TODO: Parse into blocks like bCNC (CNC.py), i.e. rapid move up = end of block
+			var blocks = new List<Block>();
+			var currentBlock = new Block();
+			int blockCounter = 1;
+			currentBlock.Name = "Block_" + blockCounter++;
 			
 			foreach (var currentInstruction in instructions)
 			{
@@ -368,20 +368,20 @@ namespace GCodePlotter
 					    || currentInstruction.Comment == "Footer") {
 
 						if (currentInstruction.Comment == "Footer") {
-							currentPlot.Name = currentInstruction.Comment;
+							currentBlock.Name = currentInstruction.Comment;
 						} else {
 							if (currentInstruction.Comment.Length > 23) {
-								currentPlot.Name = currentInstruction.Comment.Substring(23);
+								currentBlock.Name = currentInstruction.Comment.Substring(23);
 							}
 						}
 					} else if (currentInstruction.Comment.StartsWith("End cutting path id:")) {
-						if (currentPlot.PlotPoints.Count > 0) {
+						// disregards blocks if only one entry which is a rapid up move
+						if (currentBlock.PlotPoints.Count > 1) {
+							blocks.Add(currentBlock);
 							
-							plots.Add(currentPlot);
-							
-							// Reset plot, meaning add new
-							currentPlot = new Plot();
-							currentPlot.Name = "Unnamed Plot";
+							// Reset block, meaning add new
+							currentBlock = new Block();
+							currentBlock.Name = "Block_" + blockCounter++;
 						}
 					} else {
 						// ignore all comments up to first "Start Cutting", i.e. header
@@ -389,33 +389,48 @@ namespace GCodePlotter
 					}
 					
 				} else if (currentInstruction.CanRender) {
-					// this is where the plot is put together and where the linepoints is added
+					
+					// rapid move up = end of block
+					if (currentInstruction.CommandEnum == CommandList.RapidMove
+					    && !currentInstruction.X.HasValue
+					    && !currentInstruction.Y.HasValue
+					    && currentInstruction.Z.HasValue
+					    && currentBlock.PlotPoints.Count > 1) {
+						
+						blocks.Add(currentBlock);
+						
+						// Reset block, meaning add new
+						currentBlock = new Block();
+						currentBlock.Name = "Block_" + blockCounter++;
+					}
+					
+					// this is where the block is put together and where the linepoints is added
 					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
 					if (linePointsCollection != null) {
 						currentInstruction.CachedLinePoints = linePointsCollection;
-						currentPlot.PlotPoints.AddRange(linePointsCollection);
+						currentBlock.PlotPoints.AddRange(linePointsCollection);
 					}
 
 					// make sure to store the actual instruction as well
-					currentPlot.GCodeInstructions.Add(currentInstruction);
+					currentBlock.GCodeInstructions.Add(currentInstruction);
 				} else {
 					// ignore everything that isn't a comment and or cannot be rendered
 				}
 			}
 
-			if (currentPlot.PlotPoints.Count > 0) {
-				plots.Add(currentPlot);
+			if (currentBlock.PlotPoints.Count > 0) {
+				blocks.Add(currentBlock);
 			}
 
 			// remove footer if it exists
-			if (plots.Count > 0) {
-				var footer = plots.Last();
+			if (blocks.Count > 0) {
+				var footer = blocks.Last();
 				if (footer.Name == "Footer") {
-					plots.Remove(footer);
+					blocks.Remove(footer);
 				}
 			}
 
-			return plots;
+			return blocks;
 		}
 		
 		void ParseText(string text)
@@ -424,33 +439,33 @@ namespace GCodePlotter
 
 			treeView.Nodes.Clear();
 
-			// turn the instructions into plots
-			myPlots = GetPlots(parsedInstructions);
+			// turn the instructions into blocks
+			myBlocks = GetBlocks(parsedInstructions);
 			
 			// calculate max values for X, Y and Z
-			// while finalizing the plots and adding them to the lstPlot
+			// while finalizing the blocks and adding them to the lstPlot
 			maxX = 0.0f;
 			maxY = 0.0f;
 			maxZ = 0.0f;
 			minX = 0.0f;
 			minY = 0.0f;
 			minZ = 0.0f;
-			foreach (Plot plotItem in myPlots)
+			foreach (Block block in myBlocks)
 			{
-				plotItem.CalculateMinAndMax();
+				block.CalculateMinAndMax();
 				
-				maxX = Math.Max(maxX, plotItem.MaxX);
-				maxY = Math.Max(maxY, plotItem.MaxY);
-				maxZ = Math.Max(maxZ, plotItem.MaxZ);
+				maxX = Math.Max(maxX, block.MaxX);
+				maxY = Math.Max(maxY, block.MaxY);
+				maxZ = Math.Max(maxZ, block.MaxZ);
 
-				minX = Math.Min(minX, plotItem.MinX);
-				minY = Math.Min(minY, plotItem.MinY);
-				minZ = Math.Min(minZ, plotItem.MinZ);
+				minX = Math.Min(minX, block.MinX);
+				minY = Math.Min(minY, block.MinY);
+				minZ = Math.Min(minZ, block.MinZ);
 				
 				// build node tree
-				var node = new TreeNode(plotItem.ToString());
-				node.Tag = plotItem;
-				foreach (var instruction in plotItem.GCodeInstructions) {
+				var node = new TreeNode(block.ToString());
+				node.Tag = block;
+				foreach (var instruction in block.GCodeInstructions) {
 					var childNode = new TreeNode();
 					childNode.Text = instruction.ToString();
 					childNode.Tag = instruction;
@@ -462,7 +477,7 @@ namespace GCodePlotter
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
 			                                  maxX, minX, maxY, minY, maxZ, minZ);
 			
-			RenderPlots();
+			RenderBlocks();
 			bDataLoaded = true;
 		}
 		
@@ -497,7 +512,7 @@ namespace GCodePlotter
 				// clean up the mess with too many G0 commands
 				var cleaned = GCodeSplitter.CleanGCode(split[index]);
 				
-				var gcodeSplitted = Plot.BuildGCodeOutput("Unnamed Plot", cleaned, false);
+				var gcodeSplitted = Block.BuildGCodeOutput("Block_1", cleaned, false);
 				ParseText(gcodeSplitted);
 			}
 		}
@@ -540,7 +555,7 @@ namespace GCodePlotter
 			}
 		}
 
-		void RenderPlots()
+		void RenderBlocks()
 		{
 			GetEmptyImage();
 			
@@ -575,7 +590,7 @@ namespace GCodePlotter
 			}
 
 			// draw gcode
-			if (myPlots != null && myPlots.Count > 0)
+			if (myBlocks != null && myBlocks.Count > 0)
 			{
 				if (treeView.SelectedNode != null
 				    && treeView.SelectedNode.Level == 1) {
@@ -583,10 +598,10 @@ namespace GCodePlotter
 
 					var selectedInstruction = (GCodeInstruction) treeView.SelectedNode.Tag;
 					
-					// find what plot this instruction is a part of
-					var parentPlot = (Plot) treeView.SelectedNode.Parent.Tag;
+					// find what block this instruction is a part of
+					var parentBlock = (Block) treeView.SelectedNode.Parent.Tag;
 					
-					foreach (var instruction in parentPlot.GCodeInstructions) {
+					foreach (var instruction in parentBlock.GCodeInstructions) {
 						
 						if (instruction == selectedInstruction) {
 							foreach (var subLinePlots in instruction.CachedLinePoints) {
@@ -600,13 +615,13 @@ namespace GCodePlotter
 						}
 					}
 				} else {
-					// top level, i.e. the plot level or if nothing is selected
-					foreach (Plot plotItem in myPlots) {
-						foreach (var linePlots in plotItem.PlotPoints) {
+					// top level, i.e. the block level or if nothing is selected
+					foreach (Block blockItem in myBlocks) {
+						foreach (var linePlots in blockItem.PlotPoints) {
 							
 							// check level first
 							if (treeView.SelectedNode != null
-							    && treeView.SelectedNode.Text.Equals(plotItem.ToString())) {
+							    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
 
 								// draw correct segment as selected
 								linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
@@ -652,11 +667,11 @@ namespace GCodePlotter
 				tw.WriteLine("G21   (set units to mm)");
 				tw.WriteLine("(Header end.)");
 				tw.WriteLine();
-				myPlots.ForEach(x =>
-				                {
-				                	tw.WriteLine();
-				                	tw.Write(x.BuildGCodeOutput(doMultiLayer));
-				                });
+				myBlocks.ForEach(x =>
+				                 {
+				                 	tw.WriteLine();
+				                 	tw.Write(x.BuildGCodeOutput(doMultiLayer));
+				                 });
 				tw.Flush();
 
 				tw.WriteLine();
@@ -689,11 +704,11 @@ namespace GCodePlotter
 
 		void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
 		{
-			List<Plot> plots = null;
+			List<Block> blocks = null;
 			
 			if (splitPoint.IsEmpty) {
-				// turn the instructins into plots
-				plots = GetPlots(instructions);
+				// turn the instructins into blocks
+				blocks = GetBlocks(instructions);
 			} else {
 				// transform instructions
 				var transformedInstructions = new List<GCodeInstruction>();
@@ -714,8 +729,8 @@ namespace GCodePlotter
 					transformedInstructions.Add(instruction);
 				}
 				
-				// turn the instructins into plots
-				plots =  GetPlots(transformedInstructions);
+				// turn the instructins into blocks
+				blocks =  GetBlocks(transformedInstructions);
 			}
 			
 			if (file.Exists) {
@@ -735,11 +750,11 @@ namespace GCodePlotter
 			tw.WriteLine("(Header end.)");
 			tw.WriteLine();
 			
-			plots.ForEach(x =>
-			              {
-			              	tw.WriteLine();
-			              	tw.Write(x.BuildGCodeOutput(false));
-			              });
+			blocks.ForEach(x =>
+			               {
+			               	tw.WriteLine();
+			               	tw.Write(x.BuildGCodeOutput(false));
+			               });
 			tw.Flush();
 
 			tw.WriteLine();

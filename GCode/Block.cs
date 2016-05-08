@@ -71,9 +71,9 @@ namespace GCode
 		}
 	}
 
-	// A section of gcode instructions together is called a plot
-	// A plot includes a number of LinePoints that is used to draw the plot
-	public class Plot
+	// A section of gcode instructions together is called a block
+	// A block includes a number of LinePoints that is used to draw the plot
+	public class Block
 	{
 		private float minX, minY, minZ;
 		private float maxX, maxY, maxZ;
@@ -125,7 +125,8 @@ namespace GCode
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
-			sb.AppendFormat("{0}  --  {1} lines -- {2:0.####} , {3:0.####}", Name, PlotPoints != null ? PlotPoints.Count : 0, maxX, maxY);
+			//sb.AppendFormat("{0}  --  {1} lines -- {2:0.####} , {3:0.####}", Name, PlotPoints != null ? PlotPoints.Count : 0, maxX, maxY);
+			sb.AppendFormat("{0}  --  {1} commands -- {2:0.####} , {3:0.####}", Name, GCodeInstructions.Count, maxX, maxY);
 
 			return sb.ToString();
 		}

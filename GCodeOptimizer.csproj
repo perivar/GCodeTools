@@ -56,7 +56,7 @@
   <ItemGroup>
     <Compile Include="GCode\ColorHelper.cs" />
     <Compile Include="GCode\GCodeSplitter.cs" />
-    <Compile Include="GCode\Plot.cs" />
+    <Compile Include="GCode\Block.cs" />
     <Compile Include="GCode\Point3D.cs" />
     <Compile Include="GCode\QuickSettings.cs" />
     <Compile Include="GCode\SimpleGCodeParser.cs" />
