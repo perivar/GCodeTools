@@ -28,7 +28,7 @@ namespace GCode
 					float? y = currentInstruction.Y;
 
 					// check if x or y exist for this line
-					if ((x.HasValue || y.HasValue) || (x.HasValue && y.HasValue)) {
+					if (x.HasValue || y.HasValue) {
 						
 						// if x or y here is false we need to use the last coordinate from the previous G0 or G1 in followingLines as that is where the machine would be
 						if (!y.HasValue && allG0.Count > 0) {
@@ -45,6 +45,7 @@ namespace GCode
 									break;
 								}
 							}
+							
 						} else if (!x.HasValue && allG0.Count > 0) {
 							// loop through allG0[-1].followingLines to find the most recent G0 or G1 with a x coordinate
 							
@@ -58,8 +59,18 @@ namespace GCode
 									break;
 								}
 							}
+							
+						} else if (!y.HasValue) {
+							
+							// if still no value, force to 0
+							y = 0;
+							
+						} else if (!x.HasValue) {
+							
+							// if still no value, force to 0
+							x = 0;
 						}
-
+						
 						if (allG0.Count > 0) {
 							// allG0 has entries, so we need to add notG0 to the followingLines for the previous entry in allG0
 							var lastElement = allG0.Last();
