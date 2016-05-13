@@ -46,6 +46,7 @@ namespace GCodePlotter
 			this.panelCheckboxes = new System.Windows.Forms.Panel();
 			this.cbSoloSelect = new System.Windows.Forms.CheckBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.btnOptimize = new System.Windows.Forms.Button();
 			this.btnSaveSplit = new System.Windows.Forms.Button();
 			this.lblZClearance = new System.Windows.Forms.Label();
 			this.txtZClearance = new System.Windows.Forms.TextBox();
@@ -81,9 +82,9 @@ namespace GCodePlotter
 			// btnParseData
 			// 
 			this.btnParseData.Enabled = false;
-			this.btnParseData.Location = new System.Drawing.Point(10, 47);
+			this.btnParseData.Location = new System.Drawing.Point(10, 37);
 			this.btnParseData.Name = "btnParseData";
-			this.btnParseData.Size = new System.Drawing.Size(102, 32);
+			this.btnParseData.Size = new System.Drawing.Size(102, 22);
 			this.btnParseData.TabIndex = 2;
 			this.btnParseData.Text = "Parse";
 			this.btnParseData.UseVisualStyleBackColor = true;
@@ -91,9 +92,9 @@ namespace GCodePlotter
 			// 
 			// btnRedraw
 			// 
-			this.btnRedraw.Location = new System.Drawing.Point(10, 161);
+			this.btnRedraw.Location = new System.Drawing.Point(10, 121);
 			this.btnRedraw.Name = "btnRedraw";
-			this.btnRedraw.Size = new System.Drawing.Size(102, 32);
+			this.btnRedraw.Size = new System.Drawing.Size(102, 22);
 			this.btnRedraw.TabIndex = 2;
 			this.btnRedraw.Text = "Reset (Redraw)";
 			this.btnRedraw.UseVisualStyleBackColor = true;
@@ -116,7 +117,7 @@ namespace GCodePlotter
 			// 
 			this.btnLoad.Location = new System.Drawing.Point(10, 9);
 			this.btnLoad.Name = "btnLoad";
-			this.btnLoad.Size = new System.Drawing.Size(102, 32);
+			this.btnLoad.Size = new System.Drawing.Size(102, 22);
 			this.btnLoad.TabIndex = 9;
 			this.btnLoad.Text = "Load";
 			this.btnLoad.UseVisualStyleBackColor = true;
@@ -124,9 +125,9 @@ namespace GCodePlotter
 			// 
 			// btnSave
 			// 
-			this.btnSave.Location = new System.Drawing.Point(10, 85);
+			this.btnSave.Location = new System.Drawing.Point(10, 65);
 			this.btnSave.Name = "btnSave";
-			this.btnSave.Size = new System.Drawing.Size(102, 32);
+			this.btnSave.Size = new System.Drawing.Size(102, 22);
 			this.btnSave.TabIndex = 9;
 			this.btnSave.Text = "Save";
 			this.btnSave.UseVisualStyleBackColor = true;
@@ -186,6 +187,7 @@ namespace GCodePlotter
 			// 
 			// panelCommands
 			// 
+			this.panelCommands.Controls.Add(this.btnOptimize);
 			this.panelCommands.Controls.Add(this.btnSaveSplit);
 			this.panelCommands.Controls.Add(this.lblZClearance);
 			this.panelCommands.Controls.Add(this.txtZClearance);
@@ -206,11 +208,21 @@ namespace GCodePlotter
 			this.panelCommands.Size = new System.Drawing.Size(125, 510);
 			this.panelCommands.TabIndex = 11;
 			// 
+			// btnOptimize
+			// 
+			this.btnOptimize.Location = new System.Drawing.Point(10, 149);
+			this.btnOptimize.Name = "btnOptimize";
+			this.btnOptimize.Size = new System.Drawing.Size(102, 22);
+			this.btnOptimize.TabIndex = 20;
+			this.btnOptimize.Text = "Optimize";
+			this.btnOptimize.UseVisualStyleBackColor = true;
+			this.btnOptimize.Click += new System.EventHandler(this.BtnOptimizeClick);
+			// 
 			// btnSaveSplit
 			// 
-			this.btnSaveSplit.Location = new System.Drawing.Point(10, 351);
+			this.btnSaveSplit.Location = new System.Drawing.Point(10, 341);
 			this.btnSaveSplit.Name = "btnSaveSplit";
-			this.btnSaveSplit.Size = new System.Drawing.Size(102, 32);
+			this.btnSaveSplit.Size = new System.Drawing.Size(102, 22);
 			this.btnSaveSplit.TabIndex = 19;
 			this.btnSaveSplit.Text = "Save Both";
 			this.btnSaveSplit.UseVisualStyleBackColor = true;
@@ -272,7 +284,7 @@ namespace GCodePlotter
 			// 
 			this.btnSplit.Location = new System.Drawing.Point(10, 313);
 			this.btnSplit.Name = "btnSplit";
-			this.btnSplit.Size = new System.Drawing.Size(102, 32);
+			this.btnSplit.Size = new System.Drawing.Size(102, 22);
 			this.btnSplit.TabIndex = 12;
 			this.btnSplit.Text = "Split";
 			this.btnSplit.UseVisualStyleBackColor = true;
@@ -293,9 +305,9 @@ namespace GCodePlotter
 			// 
 			// cmdSaveLayers
 			// 
-			this.cmdSaveLayers.Location = new System.Drawing.Point(10, 123);
+			this.cmdSaveLayers.Location = new System.Drawing.Point(10, 93);
 			this.cmdSaveLayers.Name = "cmdSaveLayers";
-			this.cmdSaveLayers.Size = new System.Drawing.Size(102, 32);
+			this.cmdSaveLayers.Size = new System.Drawing.Size(102, 22);
 			this.cmdSaveLayers.TabIndex = 9;
 			this.cmdSaveLayers.Text = "Save w/ Layers";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
@@ -385,6 +397,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.TextBox txtZClearance;
 		private System.Windows.Forms.Button btnSaveSplit;
 		private System.Windows.Forms.CheckBox cbSoloSelect;
+		private System.Windows.Forms.Button btnOptimize;
 	}
 }
 

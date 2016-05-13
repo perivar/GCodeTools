@@ -26,7 +26,7 @@ namespace GCodeOptimizer
 		private GAAlgorithm _alg;
 		private List<Point> _points;
 		
-		public MainForm()
+		public MainForm(List<Point> points)
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
@@ -41,7 +41,7 @@ namespace GCodeOptimizer
 			
 			//_tspGa = new TSP_GA(100000);
 			
-			_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
+			_points = points; //DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			_alg = new GAAlgorithm(_points);
 			
 			DrawPoints();

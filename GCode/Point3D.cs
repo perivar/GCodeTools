@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace GCode
 {
-	public struct Point3D {
+	public struct Point3D : IPoint {
 		
 		private float x;
 		private float y;
@@ -43,7 +44,7 @@ namespace GCode
 				this.z = value;
 			}
 		}
-
+		
 		public Point3D(float x, float y, float z)
 		{
 			this.x = x;
@@ -89,6 +90,44 @@ namespace GCode
 			                     	this.y,
 			                     	this.z
 			                     });
+		}
+	}
+	
+	public class Point3DBlocks : IPoint {
+
+		private Point3D point;
+		
+		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
+		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
+
+		#region IPoint implementation
+		public float X {
+			get {
+				return point.X;
+			}
+		}
+
+		public float Y {
+			get {
+				return point.Y;
+			}
+		}
+		#endregion
+
+		
+		public Point3DBlocks(float x, float y) {
+			point.X = x;
+			point.Y = y;
+		}
+		
+		public override string ToString()
+		{
+			return string.Format(CultureInfo.CurrentCulture,
+			                     "X={0}, Y={1} - Count: {2}",
+			                     this.X,
+			                     this.Y,
+			                     this.gcodeInstructions.Count
+			                    );
 		}
 	}
 }

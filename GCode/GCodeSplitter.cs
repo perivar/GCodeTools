@@ -404,7 +404,7 @@ namespace GCode
 			if (xcross > Math.Min(p1.X,p2.X) + SELF_ZERO
 			    && xcross < Math.Max(p1.X,p2.X) - SELF_ZERO) {
 				
-				var point = new Point3D() { X = xcross, Y = ycross, Z = zcross };
+				var point = new Point3D(xcross, ycross, zcross);
 				output.Add(point);
 			}
 			
@@ -501,10 +501,10 @@ namespace GCode
 			zcross2 = (float) (p1.Z + gamma2 * mz);
 			
 			if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta-SELF_ZERO)
-				output.Add(new Point3D() { X=xcross1,Y=ycross1,Z=zcross1 });
+				output.Add(new Point3D(xcross1,ycross1,zcross1));
 			
 			if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta-SELF_ZERO)
-				output.Add(new Point3D() { X=xcross2,Y=ycross2,Z=zcross2 });
+				output.Add(new Point3D(xcross2,ycross2,zcross2));
 
 			/*
 				#print(" start: x1 =%5.2f y1=%5.2f z1=%5.2f" %(p1[0],     p1[1],     p1[2]))
@@ -543,11 +543,11 @@ namespace GCode
 			var i2 = PointF.Empty;
 			int numIntersections = FindLineCircleIntersections(cent.X, cent.Y, (float) R, pp1, pp2, out i1, out i2);
 			if (numIntersections > 0) {
-				var ip1 = new Point3D() { X = i1.X, Y = i1.Y, Z = p1.Z };
+				var ip1 = new Point3D(i1.X, i1.Y, p1.Z);
 				if (ip1 != p1) output.Add(ip1);
 				
 				if (numIntersections == 2) {
-					var ip2 = new Point3D() { X = i2.X, Y = i2.Y, Z = p1.Z };
+					var ip2 = new Point3D(i2.X, i2.Y, p1.Z);
 					if (ip2 != p1) output.Add(ip2);
 				}
 			}
@@ -592,7 +592,7 @@ namespace GCode
 			y = y - offset.Y;
 			z = z - offset.Z;
 			var xy = Transform(x,y, DegreeToRadian(rotate) );
-			return new Point3D() { X=(float)xy.Item1, Y=(float)xy.Item2, Z=z };
+			return new Point3D((float)xy.Item1, (float)xy.Item2, z);
 		}
 
 		private static Point3D UnsetOffsetAndRotation(Point3D coords, Point3D offset, double rotate) {
@@ -603,7 +603,7 @@ namespace GCode
 			x = (float) xy.Item1 + offset.X;
 			y = (float) xy.Item2 + offset.Y;
 			z = z + offset.Z;
-			return new Point3D() { X=x, Y=y, Z=z };
+			return new Point3D(x, y, z);
 		}
 		
 		private static double DegreeToRadian(double angle)

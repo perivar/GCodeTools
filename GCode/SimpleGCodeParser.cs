@@ -81,6 +81,7 @@ namespace GCode
 		public float? J { get; set; }	// arc y coordinate
 		public float? P { get; set; }
 		public int? T { get; set; }		// tool change
+		public int? M { get; set; }		// 
 
 		internal float minX, minY, minZ;
 		internal float maxX, maxY, maxZ;
@@ -292,7 +293,8 @@ namespace GCode
 								case "I": I = value; break; // arc x
 								case "J": J = value; break; // arc y
 								case "P": P = value; break;
-								case "T": T = (int) value; break;
+								//case "T": T = (int) value; break;
+								//case "M": M = (int) value; break;
 						}
 					}
 				} else {
@@ -455,6 +457,7 @@ namespace GCode
 			if (F.HasValue) sb.AppendFormat(" F{0:0.####}", this.F);
 			if (P.HasValue) sb.AppendFormat(" P{0:0.####}", this.P);
 			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
+			if (M.HasValue) sb.AppendFormat(" M{0}", this.M);
 
 			if (!string.IsNullOrWhiteSpace(Comment)) {
 				sb.AppendFormat(" ({0})", Comment);
