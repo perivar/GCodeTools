@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Drawing; // Point
 using System.Collections.Generic;
+using GCode; // Point3D
 
 /// <summary>
 /// Description of Utils.
@@ -168,10 +169,10 @@ public static class Utils
 	/// <param name="width">width</param>
 	/// <param name="height">height</param>
 	/// <returns>a random point</returns>
-	public static Point RandomPoint(int width, int height) {
+	public static IPoint RandomPoint(int width, int height) {
 		int randomx = RandomNumber(width);
 		int randomy = RandomNumber(height);
-		var randomP = new Point(randomx, randomy);
+		var randomP = new Point3D(randomx, randomy);
 		return randomP;
 	}
 	
@@ -204,4 +205,23 @@ public static class Utils
 		return Math.Sqrt(dx*dx + dy*dy);
 	}
 	
+	/// <summary>
+	/// Calculate the distance between two points using euclidean calculation
+	/// </summary>
+	/// <param name="p1">point 1</param>
+	/// <param name="p2">point 2</param>
+	/// <returns>the euclidean distance between the two points</returns>
+	public static double Distance(IPoint p1, IPoint p2) {
+		return Euclidean(p1.X-p2.X, p1.Y-p2.Y);
+	}
+	
+	/// <summary>
+	/// Perform an euclidean calculation of two points
+	/// </summary>
+	/// <param name="dx">first point</param>
+	/// <param name="dy">first point</param>
+	/// <returns>the euclidean result</returns>
+	public static double Euclidean(float dx, float dy) {
+		return Math.Sqrt(dx*dx + dy*dy);
+	}
 }

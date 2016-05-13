@@ -1,417 +1,419 @@
 using System;
-using System.Drawing; // Point
 using System.Linq;
 using System.Collections.Generic;
+using GCode;
 
-/// <summary>
-/// This whole algorithm is ported from the JavaScript version found at
-/// http://xyzbots.com/gcode-optimizer/
-/// https://github.com/andrewhodel/gcode-optimizer
-/// Based on https://github.com/parano/GeneticAlgorithm-TSP
-/// <seealso cref="http://geneticalgorithms.ai-depot.com/Tutorial/Overview.html"/>
-/// Ported by perivar@nerseth.com, 2016
-/// </summary>
-public class GAAlgorithm {
-	
-	private static Random rng = new Random();
+namespace GeneticAlgorithm
+{
+	/// <summary>
+	/// This whole algorithm is ported from the JavaScript version found at
+	/// http://xyzbots.com/gcode-optimizer/
+	/// https://github.com/andrewhodel/gcode-optimizer
+	/// Based on https://github.com/parano/GeneticAlgorithm-TSP
+	/// <seealso cref="http://geneticalgorithms.ai-depot.com/Tutorial/Overview.html"/>
+	/// Ported by perivar@nerseth.com, 2016
+	/// </summary>
+	public class GAAlgorithm {
+		
+		private static Random rng = new Random();
 
-	#region events that triggers on generation complete and run complete
-	public delegate void GenerationCompleteHandler(GAAlgorithm sender);
-	public delegate void RunCompleteHandler(GAAlgorithm sender);
+		#region events that triggers on generation complete and run complete
+		public delegate void GenerationCompleteHandler(GAAlgorithm sender);
+		public delegate void RunCompleteHandler(GAAlgorithm sender);
 
-	public event GenerationCompleteHandler OnGenerationComplete;
-	public event RunCompleteHandler OnRunComplete;
-	#endregion
-	
-	enum Direction {
-		Next,
-		Previous
-	}
-	
-	class Best {
-		public int BestPosition {get; set;}
-		public int BestValue {get; set;}
+		public event GenerationCompleteHandler OnGenerationComplete;
+		public event RunCompleteHandler OnRunComplete;
+		#endregion
+		
+		enum Direction {
+			Next,
+			Previous
+		}
+		
+		class Best {
+			public int BestPosition {get; set;}
+			public int BestValue {get; set;}
+			
+			public override string ToString()
+			{
+				return string.Format("[BestPosition={0}, BestValue={1}]", BestPosition, BestValue);
+			}
+		}
+		
+		#region Private Fields
+		List<IPoint> points;
+		bool running = false;
+		int POPULATION_SIZE;
+		double CROSSOVER_PROBABILITY;
+		double MUTATION_PROBABILITY;
+		
+		int unchangedGenerations;
+
+		int mutationTimes;
+		int[][] distances; // distances
+		int bestValue;
+		List<int> best;
+		int currentGeneration;
+
+		Best currentBest;
+		double[] roulette;
+		List<List<int>> population;
+		int[] values;
+		double[] fitnessValues;
+		#endregion
+
+		#region Public Getters
+		
+		/// <summary>
+		/// Return the current generation number
+		/// </summary>
+		public int CurrentGeneration {
+			get {
+				return currentGeneration;
+			}
+		}
+
+		/// <summary>
+		/// Return number of mutations that has occured so far
+		/// </summary>
+		public int MutationTimes {
+			get {
+				return mutationTimes;
+			}
+		}
+
+		/// <summary>
+		/// Return the best value found so far
+		/// </summary>
+		public double BestValue {
+			get {
+				return bestValue;
+			}
+		}
+
+		/// <summary>
+		/// Return a list of the indexes of the best path found so far
+		/// </summary>
+		public List<int> BestPath {
+			get {
+				return best;
+			}
+		}
+
+		/// <summary>
+		/// Returns the number of unchanged generations
+		/// The higher the number, the more generations has lived without improving the path
+		/// </summary>
+		public int UnchangedGenerations {
+			get {
+				return unchangedGenerations;
+			}
+		}
+		#endregion
+		
+		#region Properties
+		public bool Running {
+			get {
+				return running;
+			}
+			set {
+				running = value;
+			}
+		}
+		#endregion
+		
+		/// <summary>
+		/// Constructor
+		/// </summary>
+		/// <param name="points">list of points</param>
+		public GAAlgorithm(List<IPoint> points) {
+			this.points = points;
+			
+			InitData();
+			GAInitialize();
+		}
+
+		/// <summary>
+		/// Evolves a population over one generation
+		/// Main Genetic Algorithm method that mutates and calculates new values.
+		/// Is to be called repeatably until the wanted result is found
+		/// </summary>
+		public void GANextGeneration() {
+			
+			// build new population
+			currentGeneration++;
+			
+			/* 3. elitism and roulette wheel selection */
+			Selection();
+			
+			/* 4. crossover */
+			Crossover();
+			
+			/* 5. mutation */
+			Mutation();
+
+			/* 6. re-evaluate current population */
+			SetBestValue();
+		}
+		
+		/// <summary>
+		/// Start the Genetic Algorithm and call events
+		/// </summary>
+		public void Run() {
+			
+			while (running) {
+				GANextGeneration();
+				if (OnGenerationComplete != null) OnGenerationComplete(this);
+			}
+			
+			if (OnRunComplete != null) OnRunComplete(this);
+		}
+		
+		void InitData() {
+			
+			running = false;
+
+			POPULATION_SIZE = 30; 			// 30
+			CROSSOVER_PROBABILITY = 0.9;  	// 0.9 or 0.7
+			MUTATION_PROBABILITY  = 0.01; 	// 0.01 or 0.05
+
+			unchangedGenerations = 0;
+			mutationTimes = 0;
+
+			bestValue = 0;
+			best = new List<int>();
+			currentGeneration = 0;
+			currentBest = null;
+			
+			population = new List<List<int>>();
+			values = new int[POPULATION_SIZE];
+			fitnessValues = new double[POPULATION_SIZE];
+			roulette = new double[POPULATION_SIZE];
+		}
+		
+		void GAInitialize() {
+			CountDistances();
+			
+			/* 1. init population */
+			for(int i=0; i<POPULATION_SIZE; i++) {
+				population.Add(RandomIndividual(points.Count));
+			}
+			
+			/* 2. evaluate current population */
+			SetBestValue();
+		}
+		
+		void Selection() {
+			const int initnum = 4;
+
+			// Keep our best individual if elitism is enabled
+			var parents = new List<List<int>>();
+			parents.Add(population[currentBest.BestPosition]);
+			parents.Add(DoMutate(best.Clone()));
+			parents.Add(AddMutate(best.Clone()));
+			parents.Add(best.Clone());
+
+			/* 3. roulette wheel selection */
+			SetRoulette();
+			for(int i=initnum; i<POPULATION_SIZE; i++) {
+				parents.Add(population[WheelOut(rng.NextDouble())]);
+			}
+			population = parents;
+		}
+
+		void Crossover() {
+			var queue= new List<int>();
+			for(int i=0; i<POPULATION_SIZE; i++) {
+				if(rng.NextDouble() < CROSSOVER_PROBABILITY ) {
+					queue.Add(i);
+				}
+			}
+			queue.Shuffle();
+			for(int i=0, j=queue.Count-1; i<j; i+=2) {
+				DoCrossover(queue[i], queue[i+1]);
+			}
+		}
+
+		void DoCrossover(int x, int y) {
+			
+			var child1 = GetChild(Direction.Next, x, y);
+			var child2 = GetChild(Direction.Previous, x, y);
+			population[x] = child1;
+			population[y] = child2;
+		}
+
+		List<int> GetChild(Direction dir, int x, int y) {
+			var solution = new List<int>();
+			var px = population[x].Clone();
+			var py = population[y].Clone();
+			int dx = 0;
+			int dy = 0;
+			int c = px[Utils.RandomNumber(px.Count)];
+			solution.Add(c);
+			
+			while(px.Count > 1) {
+				if (dir == Direction.Next) {
+					dx = px.Next(px.IndexOf(c));
+					dy = py.Next(py.IndexOf(c));
+				}
+				if (dir == Direction.Previous) {
+					dx = px.Previous(px.IndexOf(c));
+					dy = py.Previous(py.IndexOf(c));
+				}
+				
+				px.DeleteByValue(c);
+				py.DeleteByValue(c);
+				
+				c = distances[c][dx] < distances[c][dy] ? dx : dy;
+				solution.Add(c);
+			}
+			
+			return solution;
+		}
+
+		void Mutation() {
+			for(int i=0; i<POPULATION_SIZE; i++) {
+				if(rng.NextDouble() < MUTATION_PROBABILITY) {
+					if(rng.NextDouble() > 0.5) {
+						population[i] = AddMutate(population[i]);
+					} else {
+						population[i] = DoMutate(population[i]);
+					}
+					i--;
+				}
+			}
+		}
+
+		List<T> DoMutate<T>(List<T> seq){
+			mutationTimes++;
+			int m,n = 0;
+			// m and n refers to the actual index in the array
+			// m range from 0 to length-2, n range from 2...Length-m
+			do {
+				m = Utils.RandomNumber(seq.Count - 2);
+				n = Utils.RandomNumber(seq.Count);
+			} while (m>=n);
+
+			for(int i=0, j=(n-m+1)>>1; i<j; i++) {
+				seq.Swap(m+i, n-i);
+			}
+			return seq;
+		}
+
+		List<T> AddMutate<T>(List<T> seq){
+			mutationTimes++;
+			int m,n = 0;
+			// m and n refers to the actual index in the array
+			do {
+				m = Utils.RandomNumber(seq.Count>>1);
+				n = Utils.RandomNumber(seq.Count);
+			} while (m>=n);
+			
+			var s1 = seq.Slice(0,m);
+			var s2 = seq.Slice(m,n);
+			var s3 = seq.Slice(n,seq.Count);
+			return s2.Concat(s1).Concat(s3).ToList().Clone();
+		}
+
+		void SetBestValue() {
+			/* 2. evaluate current population */
+			for(int i=0; i<population.Count; i++) {
+				values[i] = Evaluate(population[i].ToArray());
+			}
+			currentBest = GetCurrentBest();
+			if(bestValue == 0 || bestValue > currentBest.BestValue) {
+				best = population[currentBest.BestPosition].Clone();
+				bestValue = currentBest.BestValue;
+				unchangedGenerations = 0;
+			} else {
+				unchangedGenerations += 1;
+			}
+		}
+
+		Best GetCurrentBest() {
+			int bestP = 0;
+			int currentBestValue = values[0];
+
+			for(int i=1; i<population.Count; i++) {
+				if(values[i] < currentBestValue) {
+					currentBestValue = values[i];
+					bestP = i;
+				}
+			}
+			return new Best() {
+				BestPosition = bestP,
+				BestValue = currentBestValue,
+			};
+		}
+
+		void SetRoulette() {
+			
+			//calculate all the fitness
+			for(int i=0; i<values.Length; i++) { fitnessValues[i] = 1.0/values[i]; }
+			
+			//set the roulette
+			double sum = 0;
+			for(int i=0; i<fitnessValues.Length; i++) { sum += fitnessValues[i]; }
+			for(int i=0; i<roulette.Length; i++) { roulette[i] = fitnessValues[i]/sum; }
+			for(int i=1; i<roulette.Length; i++) { roulette[i] += roulette[i-1]; }
+		}
+
+		int WheelOut(double rand){
+			int i;
+			for(i=0; i<roulette.Length; i++) {
+				if( rand <= roulette[i] ) {
+					return i;
+				}
+			}
+			return 0;
+		}
+
+		/// <summary>
+		/// Return a list of numbers between 0 and n that has been shuffled
+		/// </summary>
+		/// <param name="n">upper bound</param>
+		/// <returns>a shuffled list of numbers between 0 and n</returns>
+		static List<int> RandomIndividual(int n){
+			var a = new List<int>();
+			for(int i=0; i<n; i++) {
+				a.Add(i);
+			}
+			a.Shuffle();
+			return a;
+		}
+
+		/// <summary>
+		/// Calculate the total sum of the given distances
+		/// </summary>
+		/// <param name="indivial">array to evaluate</param>
+		/// <returns>total sum</returns>
+		int Evaluate(int[] indivial) {
+			int sum = distances[ indivial[0] ][ indivial[indivial.Length - 1] ];
+			for(int i=1; i<indivial.Length; i++) {
+				sum += distances[ indivial[i] ][ indivial[i-1] ];
+			}
+			return sum;
+		}
+
+		void CountDistances() {
+			int length = points.Count;
+			distances = new int[length][];
+			for(int i=0; i<length; i++) {
+				distances[i] = new int[length];
+				for(int j=0; j<length; j++) {
+					distances[i][j] = (int) Math.Floor(Utils.Distance(points[i], points[j]));
+				}
+			}
+		}
 		
 		public override string ToString()
 		{
-			return string.Format("[BestPosition={0}, BestValue={1}]", BestPosition, BestValue);
+			return string.Format("[CurrentGeneration={0}, MutationTimes={1}, BestValue={2}]", currentGeneration, mutationTimes, bestValue);
 		}
-	}
-	
-	#region Private Fields
-	List<Point> points = new List<Point>(); // data200
-	bool running = false;
-	int POPULATION_SIZE;
-	double CROSSOVER_PROBABILITY;
-	double MUTATION_PROBABILITY;
-	
-	int unchangedGenerations;
 
-	int mutationTimes;
-	int[][] distances; // distances
-	int bestValue;
-	List<int> best;
-	int currentGeneration;
-
-	Best currentBest;
-	double[] roulette;
-	List<List<int>> population;
-	int[] values;
-	double[] fitnessValues;
-	#endregion
-
-	#region Public Getters
-	
-	/// <summary>
-	/// Return the current generation number
-	/// </summary>
-	public int CurrentGeneration {
-		get {
-			return currentGeneration;
-		}
-	}
-
-	/// <summary>
-	/// Return number of mutations that has occured so far
-	/// </summary>
-	public int MutationTimes {
-		get {
-			return mutationTimes;
-		}
-	}
-
-	/// <summary>
-	/// Return the best value found so far
-	/// </summary>
-	public double BestValue {
-		get {
-			return bestValue;
-		}
-	}
-
-	/// <summary>
-	/// Return a list of the indexes of the best path found so far
-	/// </summary>
-	public List<int> BestPath {
-		get {
-			return best;
-		}
-	}
-
-	/// <summary>
-	/// Returns the number of unchanged generations
-	/// The higher the number, the more generations has lived without improving the path
-	/// </summary>
-	public int UnchangedGenerations {
-		get {
-			return unchangedGenerations;
-		}
-	}
-	#endregion
-	
-	#region Properties
-	public bool Running {
-		get {
-			return running;
-		}
-		set {
-			running = value;
-		}
-	}
-	#endregion
-	
-	/// <summary>
-	/// Constructor
-	/// </summary>
-	/// <param name="points">list of points</param>
-	public GAAlgorithm(List<Point> points) {
-		this.points = points;
 		
-		InitData();
-		GAInitialize();
-	}
-
-	/// <summary>
-	/// Evolves a population over one generation
-	/// Main Genetic Algorithm method that mutates and calculates new values.
-	/// Is to be called repeatably until the wanted result is found
-	/// </summary>
-	public void GANextGeneration() {
-		
-		// build new population
-		currentGeneration++;
-		
-		/* 3. elitism and roulette wheel selection */
-		Selection();
-		
-		/* 4. crossover */
-		Crossover();
-		
-		/* 5. mutation */
-		Mutation();
-
-		/* 6. re-evaluate current population */
-		SetBestValue();
-	}
-	
-	/// <summary>
-	/// Start the Genetic Algorithm and call events
-	/// </summary>
-	public void Run() {
-		
-		while (running) {
-			GANextGeneration();
-			if (OnGenerationComplete != null) OnGenerationComplete(this);
-		}
-		
-		if (OnRunComplete != null) OnRunComplete(this);
-	}
-	
-	void InitData() {
-		
-		running = false;
-
-		POPULATION_SIZE = 30; 			// 30
-		CROSSOVER_PROBABILITY = 0.9;  	// 0.9 or 0.7
-		MUTATION_PROBABILITY  = 0.01; 	// 0.01 or 0.05
-
-		unchangedGenerations = 0;
-		mutationTimes = 0;
-
-		bestValue = 0;
-		best = new List<int>();
-		currentGeneration = 0;
-		currentBest = null;
-		
-		population = new List<List<int>>();
-		values = new int[POPULATION_SIZE];
-		fitnessValues = new double[POPULATION_SIZE];
-		roulette = new double[POPULATION_SIZE];
-	}
-	
-	void GAInitialize() {
-		CountDistances();
-		
-		/* 1. init population */
-		for(int i=0; i<POPULATION_SIZE; i++) {
-			population.Add(RandomIndividual(points.Count));
-		}
-		
-		/* 2. evaluate current population */
-		SetBestValue();
-	}
-	
-	void Selection() {
-		const int initnum = 4;
-
-		// Keep our best individual if elitism is enabled
-		var parents = new List<List<int>>();
-		parents.Add(population[currentBest.BestPosition]);
-		parents.Add(DoMutate(best.Clone()));
-		parents.Add(AddMutate(best.Clone()));
-		parents.Add(best.Clone());
-
-		/* 3. roulette wheel selection */
-		SetRoulette();
-		for(int i=initnum; i<POPULATION_SIZE; i++) {
-			parents.Add(population[WheelOut(rng.NextDouble())]);
-		}
-		population = parents;
-	}
-
-	void Crossover() {
-		var queue= new List<int>();
-		for(int i=0; i<POPULATION_SIZE; i++) {
-			if(rng.NextDouble() < CROSSOVER_PROBABILITY ) {
-				queue.Add(i);
-			}
-		}
-		queue.Shuffle();
-		for(int i=0, j=queue.Count-1; i<j; i+=2) {
-			DoCrossover(queue[i], queue[i+1]);
-		}
-	}
-
-	void DoCrossover(int x, int y) {
-		
-		var child1 = GetChild(Direction.Next, x, y);
-		var child2 = GetChild(Direction.Previous, x, y);
-		population[x] = child1;
-		population[y] = child2;
-	}
-
-	List<int> GetChild(Direction dir, int x, int y) {
-		var solution = new List<int>();
-		var px = population[x].Clone();
-		var py = population[y].Clone();
-		int dx = 0;
-		int dy = 0;
-		int c = px[Utils.RandomNumber(px.Count)];
-		solution.Add(c);
-		
-		while(px.Count > 1) {
-			if (dir == Direction.Next) {
-				dx = px.Next(px.IndexOf(c));
-				dy = py.Next(py.IndexOf(c));
-			}
-			if (dir == Direction.Previous) {
-				dx = px.Previous(px.IndexOf(c));
-				dy = py.Previous(py.IndexOf(c));
-			}
-			
-			px.DeleteByValue(c);
-			py.DeleteByValue(c);
-			
-			c = distances[c][dx] < distances[c][dy] ? dx : dy;
-			solution.Add(c);
-		}
-		
-		return solution;
-	}
-
-	void Mutation() {
-		for(int i=0; i<POPULATION_SIZE; i++) {
-			if(rng.NextDouble() < MUTATION_PROBABILITY) {
-				if(rng.NextDouble() > 0.5) {
-					population[i] = AddMutate(population[i]);
-				} else {
-					population[i] = DoMutate(population[i]);
-				}
-				i--;
-			}
-		}
-	}
-
-	List<T> DoMutate<T>(List<T> seq){
-		mutationTimes++;
-		int m,n = 0;
-		// m and n refers to the actual index in the array
-		// m range from 0 to length-2, n range from 2...Length-m
-		do {
-			m = Utils.RandomNumber(seq.Count - 2);
-			n = Utils.RandomNumber(seq.Count);
-		} while (m>=n);
-
-		for(int i=0, j=(n-m+1)>>1; i<j; i++) {
-			seq.Swap(m+i, n-i);
-		}
-		return seq;
-	}
-
-	List<T> AddMutate<T>(List<T> seq){
-		mutationTimes++;
-		int m,n = 0;
-		// m and n refers to the actual index in the array
-		do {
-			m = Utils.RandomNumber(seq.Count>>1);
-			n = Utils.RandomNumber(seq.Count);
-		} while (m>=n);
-		
-		var s1 = seq.Slice(0,m);
-		var s2 = seq.Slice(m,n);
-		var s3 = seq.Slice(n,seq.Count);
-		return s2.Concat(s1).Concat(s3).ToList().Clone();
-	}
-
-	void SetBestValue() {
-		/* 2. evaluate current population */
-		for(int i=0; i<population.Count; i++) {
-			values[i] = Evaluate(population[i].ToArray());
-		}
-		currentBest = GetCurrentBest();
-		if(bestValue == 0 || bestValue > currentBest.BestValue) {
-			best = population[currentBest.BestPosition].Clone();
-			bestValue = currentBest.BestValue;
-			unchangedGenerations = 0;
-		} else {
-			unchangedGenerations += 1;
-		}
-	}
-
-	Best GetCurrentBest() {
-		int bestP = 0;
-		int currentBestValue = values[0];
-
-		for(int i=1; i<population.Count; i++) {
-			if(values[i] < currentBestValue) {
-				currentBestValue = values[i];
-				bestP = i;
-			}
-		}
-		return new Best() {
-			BestPosition = bestP,
-			BestValue = currentBestValue,
-		};
-	}
-
-	void SetRoulette() {
-		
-		//calculate all the fitness
-		for(int i=0; i<values.Length; i++) { fitnessValues[i] = 1.0/values[i]; }
-		
-		//set the roulette
-		double sum = 0;
-		for(int i=0; i<fitnessValues.Length; i++) { sum += fitnessValues[i]; }
-		for(int i=0; i<roulette.Length; i++) { roulette[i] = fitnessValues[i]/sum; }
-		for(int i=1; i<roulette.Length; i++) { roulette[i] += roulette[i-1]; }
-	}
-
-	int WheelOut(double rand){
-		int i;
-		for(i=0; i<roulette.Length; i++) {
-			if( rand <= roulette[i] ) {
-				return i;
-			}
-		}
-		return 0;
-	}
-
-	/// <summary>
-	/// Return a list of numbers between 0 and n that has been shuffled
-	/// </summary>
-	/// <param name="n">upper bound</param>
-	/// <returns>a shuffled list of numbers between 0 and n</returns>
-	static List<int> RandomIndividual(int n){
-		var a = new List<int>();
-		for(int i=0; i<n; i++) {
-			a.Add(i);
-		}
-		a.Shuffle();
-		return a;
-	}
-
-	/// <summary>
-	/// Calculate the total sum of the given distances
-	/// </summary>
-	/// <param name="indivial">array to evaluate</param>
-	/// <returns>total sum</returns>
-	int Evaluate(int[] indivial) {
-		int sum = distances[ indivial[0] ][ indivial[indivial.Length - 1] ];
-		for(int i=1; i<indivial.Length; i++) {
-			sum += distances[ indivial[i] ][ indivial[i-1] ];
-		}
-		return sum;
-	}
-
-	void CountDistances() {
-		int length = points.Count;
-		distances = new int[length][];
-		for(int i=0; i<length; i++) {
-			distances[i] = new int[length];
-			for(int j=0; j<length; j++) {
-				distances[i][j] = (int) Math.Floor(Utils.Distance(points[i], points[j]));
-			}
-		}
-	}
-	
-	public override string ToString()
-	{
-		return string.Format("[CurrentGeneration={0}, MutationTimes={1}, BestValue={2}]", currentGeneration, mutationTimes, bestValue);
-	}
-
-	
-	#region Stuff from main.js
-	/*
+		#region Stuff from main.js
+		/*
 	void drawCircle (point){
 		ctx.fillStyle   = '#000';
 		ctx.beginPath();
@@ -469,9 +471,9 @@ public class GAAlgorithm {
 	void clearCanvas() {
 		ctx.clearRect(0, 0, WIDTH, HEIGHT);
 	}
-	 */
-	
-	/*
+		 */
+		
+		/*
 	$(function() {
 
 	  	FIXME_VAR_TYPE saveAs=saveAs||function(e){"use strict";if("undefined"==typeof navigator||!/MSIE [1-9]\./.test(navigator.userAgent)){FIXME_VAR_TYPE t=e.document,n=function(){return e.URL||e.webkitURL||e},o=t.createElementNS("http://www.w3.org/1999/xhtml","a"),r="download"in o,i=function(n){FIXME_VAR_TYPE o=t.createEvent("MouseEvents");o.initMouseEvent("click",!0,!1,e,0,0,0,0,0,!1,!1,!1,!1,0,null),n.dispatchEvent(o)},a=e.webkitRequestFileSystem,c=e.requestFileSystem||a||e.mozRequestFileSystem,u=function(t){(e.setImmediate||e.setTimeout)(function(){throw t},0)},f="application/octet-stream",s=0,d=500,l=function(t){FIXME_VAR_TYPE o=function(){"string"==typeof t?n().revokeObjectURL(t):t.remove()};e.chrome?o():setTimeout(o,d)},v=function(e,t,n){t=[].concat(t);for(FIXME_VAR_TYPE o=t.Length;o--;){FIXME_VAR_TYPE r=e["on"+t[o]];if("function"==typeof r)try{r.call(e,n||e)}catch(i){u(i)}}},p=function(e){return/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(e.type)?new Blob(["\ufeff",e],{type:e.type}):e},w=function(t,u){t=p(t);var d,w,y,m=this,S=t.type,h=!1,O=function(){v(m,"writestart progress write writeend".split(" "))},E=function(){if((h||!d)&&(d=n().createObjectURL(t)),w)w.location.href=d;else{FIXME_VAR_TYPE o=e.open(d,"_blank");void 0==o&&"undefined"!=typeof safari&&(e.location.href=d)}m.readyState=m.DONE,O(),l(d)},R=function(e){return function(){return m.readyState!==m.DONE?e.apply(this,arguments):void 0}},b={create:!0,exclusive:!1};return m.readyState=m.INIT,u||(u="download"),r?(d=n().createObjectURL(t),o.href=d,o.download=u,i(o),m.readyState=m.DONE,O(),void l(d)):(e.chrome&&S&&S!==f&&(y=t.slice||t.webkitSlice,t=y.call(t,0,t.size,f),h=!0),a&&"download"!==u&&(u+=".download"),(S==f||a)&&(w=e),c?(s+=t.size,void c(e.TEMPORARY,s,R(function(e){e.root.getDirectory("saved",b,R(function(e){FIXME_VAR_TYPE n=function(){e.getFile(u,b,R(function(e){e.createWriter(R(function(n){n.onwriteend=function(t){w.location.href=e.toURL(),m.readyState=m.DONE,v(m,"writeend",t),l(e)},n.onerror=function(){FIXME_VAR_TYPE e=n.error;e.code!==e.ABORT_ERR&&E()},"writestart progress write abort".split(" ").forEach(function(e){n["on"+e]=m["on"+e]}),n.write(t),m.abort=function(){n.abort(),m.readyState=m.DONE},m.readyState=m.WRITING}),E)}),E)};e.getFile(u,{create:!1},R(function(e){e.remove(),n()}),R(function(e){e.code==e.NOT_FOUND_ERR?n():E()}))}),E)}),E)):void E())},y=w.prototype,m=function(e,t){return new w(e,t)};return"undefined"!=typeof navigator&&navigator.msSaveOrOpenBlob?function(e,t){return navigator.msSaveOrOpenBlob(p(e),t)}:(y.abort=function(){FIXME_VAR_TYPE e=this;e.readyState=e.DONE,v(e,"abort")},y.readyState=y.INIT=0,y.WRITING=1,y.DONE=2,y.error=y.onwritestart=y.onprogress=y.onwrite=y.onabort=y.onerror=y.onwriteend=null,m)}}("undefined"!=typeof self&&self||"undefined"!=typeof window&&window||this.content);"undefined"!=typeof module&&module.exports?module.exports.saveAs=saveAs:"undefined"!=typeof define&&null!==define&&null!=define.amd&&define([],function(){return saveAs});
@@ -730,6 +732,7 @@ public class GAAlgorithm {
 		HEIGHT = $('#canvas').height();
 		setInterval(draw, 10);
 	}
-	 */
-	#endregion
+		 */
+		#endregion
+	}	
 }

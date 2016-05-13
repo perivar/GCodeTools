@@ -5,7 +5,7 @@ using System.Globalization;
 namespace GCode
 {
 	public struct Point3D : IPoint {
-		
+
 		private float x;
 		private float y;
 		private float z;

@@ -69,26 +69,14 @@
     <Compile Include="GUI\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="JavaConverted2\Individual.cs" />
-    <Compile Include="JavaConverted2\Population.cs" />
-    <Compile Include="JavaConverted\City.cs" />
-    <Compile Include="JavaConverted\GA.cs" />
-    <Compile Include="JavaConverted\Population.cs" />
-    <Compile Include="JavaConverted\Tour.cs" />
-    <Compile Include="JavaConverted\TourManager.cs" />
-    <Compile Include="JavaConverted\TSP_GA.cs" />
     <Compile Include="DataProvider.cs" />
     <Compile Include="JavaScriptConverted\GAAlgorithm.cs" />
-    <Compile Include="Location.cs" />
-    <Compile Include="GAOperations.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="JavaConverted2\README.txt" />
-    <None Include="JavaConverted\README.txt" />
     <None Include="JavaScript\algorithm.js" />
     <None Include="JavaScript\data.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -111,8 +99,6 @@
   <ItemGroup>
     <Folder Include="GCode" />
     <Folder Include="GUI" />
-    <Folder Include="JavaConverted" />
-    <Folder Include="JavaConverted2" />
     <Folder Include="JavaScript" />
     <Folder Include="JavaScriptConverted" />
     <Folder Include="Samples" />

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using GCode;
+using GeneticAlgorithm;
 
 namespace GCodePlotter
 {
@@ -282,7 +283,8 @@ namespace GCodePlotter
 		
 		void BtnOptimizeClick(object sender, EventArgs e)
 		{
-			new GCodeOptimizer.MainForm(null).Show();
+			var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
+			new GCodeOptimizer.MainForm(points).Show();
 		}
 		#endregion
 		
