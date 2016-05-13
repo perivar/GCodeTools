@@ -9,9 +9,9 @@ namespace GCode
 	/// </summary>
 	public static class GCodeUtils
 	{
-		public static Point3DList GetPoint3DBlocks(List<GCodeInstruction> instructions) {
+		public static Point3DList GetPoint3DList(List<GCodeInstruction> instructions) {
 
-			var allG0 = new List<Point3DBlocks>();
+			var allG0 = new List<Point3DBlock>();
 
 			// temporary lists
 			var priorToG0 = new List<GCodeInstruction>();
@@ -77,7 +77,7 @@ namespace GCode
 						}
 
 						// this G0 has a valid X or Y coordinate, add it to allG0 with itself (the G0) as the first entry in followingLines
-						var point = new Point3DBlocks(x.Value, y.Value);
+						var point = new Point3DBlock(x.Value, y.Value);
 						point.GCodeInstructions.Add(currentInstruction);
 						allG0.Add(point);
 						
@@ -117,11 +117,12 @@ namespace GCode
 			}
 			
 			// add header and footer as special blocks
-			var pointList = new Point3DList(allG0);
-			pointList.Header = priorToG0;
-			pointList.Footer = eof;
+			var point3DList = new Point3DList();
+			point3DList.MainBlocks = allG0;
+			point3DList.Header = priorToG0;
+			point3DList.Footer = eof;
 			
-			return pointList;
+			return point3DList;
 		}
 	}
 }

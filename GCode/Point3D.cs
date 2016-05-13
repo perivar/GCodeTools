@@ -93,7 +93,7 @@ namespace GCode
 		}
 	}
 	
-	public class Point3DBlocks : IPoint {
+	public class Point3DBlock : IPoint {
 
 		private Point3D point;
 		
@@ -114,7 +114,7 @@ namespace GCode
 		}
 		#endregion
 		
-		public Point3DBlocks(float x, float y) {
+		public Point3DBlock(float x, float y) {
 			point.X = x;
 			point.Y = y;
 		}
@@ -132,21 +132,17 @@ namespace GCode
 	
 	public class Point3DList {
 		
-		private List<Point3DBlocks> point3DBlocks;
-		public List<Point3DBlocks> Point3DBlocks { get { return point3DBlocks; } }
-		
+		public List<Point3DBlock> MainBlocks { get; set; }
 		public List<GCodeInstruction> Header { get; set; }
 		public List<GCodeInstruction> Footer { get; set; }
-		
-		public Point3DList(List<Point3DBlocks> point3DBlocks) {
-			this.point3DBlocks = point3DBlocks;
-		}
 		
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
-			                     "Count: {0}",
-			                     this.point3DBlocks.Count
+			                     "Header: {0}, Blocks: {1}, Footer: {2}",
+			                     this.Header.Count,
+			                     this.MainBlocks.Count,
+			                     this.Footer.Count
 			                    );
 		}
 	}

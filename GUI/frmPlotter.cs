@@ -449,23 +449,23 @@ namespace GCodePlotter
 		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 
 			// convert instructions into Point3DBlocks
-			var point3DBlocks = GCodeUtils.GetPoint3DBlocks(instructions);
+			var point3DList = GCodeUtils.GetPoint3DList(instructions);
 
 			var blocks = new List<Block>();
 
 			// first add header
-			blocks.AddRange(GetBlockList(point3DBlocks.Header, "Header"));
+			blocks.AddRange(GetBlockElements(point3DList.Header, "Header"));
 
 			// add main blocks
-			blocks.AddRange(GetBlockList(point3DBlocks.Point3DBlocks));
+			blocks.AddRange(GetBlockElements(point3DList.MainBlocks));
 			
 			// last add footer
-			blocks.AddRange(GetBlockList(point3DBlocks.Footer, "Footer"));
+			blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer"));
 			
 			return blocks;
 		}
 		
-		static List<Block> GetBlockList(List<Point3DBlocks> point3DBlocks) {
+		static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks) {
 			
 			int blockCounter = 1;
 			var currentPoint = Point3D.Empty;
@@ -496,7 +496,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		static List<Block> GetBlockList(List<GCodeInstruction> instructions, string name) {
+		static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name) {
 			
 			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
