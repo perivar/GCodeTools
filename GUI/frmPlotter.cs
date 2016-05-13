@@ -448,11 +448,28 @@ namespace GCodePlotter
 		/// <returns>list of blocks</returns>
 		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 
+			// convert instructions into Point3DBlocks
 			var point3DBlocks = GCodeUtils.GetPoint3DBlocks(instructions);
 
+			var blocks = new List<Block>();
+
+			// first add header
+			blocks.AddRange(GetBlockList(point3DBlocks.Header, "Header"));
+
+			// add main blocks
+			blocks.AddRange(GetBlockList(point3DBlocks.Point3DBlocks));
+			
+			// last add footer
+			blocks.AddRange(GetBlockList(point3DBlocks.Footer, "Footer"));
+			
+			return blocks;
+		}
+		
+		static List<Block> GetBlockList(List<Point3DBlocks> point3DBlocks) {
+			
+			int blockCounter = 1;
 			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
-			int blockCounter = 1;
 			
 			foreach (var currentPoint3D in point3DBlocks) {
 				
@@ -469,13 +486,37 @@ namespace GCodePlotter
 
 					// make sure to store the actual instruction as well
 					if (currentInstruction.CanRender) {
-						//if (!currentInstruction.IsEmptyLine) {
 						currentBlock.GCodeInstructions.Add(currentInstruction);
 					}
 				}
 				
 				blocks.Add(currentBlock);
 			}
+			
+			return blocks;
+		}
+		
+		static List<Block> GetBlockList(List<GCodeInstruction> instructions, string name) {
+			
+			var currentPoint = Point3D.Empty;
+			var blocks = new List<Block>();
+			
+			var currentBlock = new Block();
+			currentBlock.Name = name;
+			foreach (var currentInstruction in instructions) {
+				// this is where the block is put together and where the linepoints is added
+				var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
+				if (linePointsCollection != null) {
+					currentInstruction.CachedLinePoints = linePointsCollection;
+					currentBlock.PlotPoints.AddRange(linePointsCollection);
+				}
+
+				// make sure to store the actual instruction as well
+				if (currentInstruction.CanRender) {
+					currentBlock.GCodeInstructions.Add(currentInstruction);
+				}
+			}
+			if (currentBlock.GCodeInstructions.Count > 0) blocks.Add(currentBlock);
 			
 			return blocks;
 		}

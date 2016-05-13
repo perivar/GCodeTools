@@ -9,7 +9,7 @@ namespace GCode
 	/// </summary>
 	public static class GCodeUtils
 	{
-		public static List<Point3DBlocks> GetPoint3DBlocks(List<GCodeInstruction> instructions) {
+		public static Point3DList GetPoint3DBlocks(List<GCodeInstruction> instructions) {
 
 			var allG0 = new List<Point3DBlocks>();
 
@@ -31,7 +31,7 @@ namespace GCode
 					if (x.HasValue || y.HasValue) {
 						
 						// if x or y here is false we need to use the last coordinate from the previous G0 or G1 in followingLines as that is where the machine would be
-						if (!y.HasValue && allG0.Count > 0) {
+						if (!y.HasValue && notG0.Count > 0) {
 							
 							// loop through allG0[-1].followingLines to find the most recent G0 or G1 with a y coordinate
 
@@ -46,7 +46,7 @@ namespace GCode
 								}
 							}
 							
-						} else if (!x.HasValue && allG0.Count > 0) {
+						} else if (!x.HasValue && notG0.Count > 0) {
 							// loop through allG0[-1].followingLines to find the most recent G0 or G1 with a x coordinate
 							
 							// We want to use the LINQ to Objects non-invasive
@@ -59,15 +59,14 @@ namespace GCode
 									break;
 								}
 							}
-							
-						} else if (!y.HasValue) {
-							
-							// if still no value, force to 0
+						}
+						
+						// if y still have no value, force to 0
+						if (!y.HasValue) {
 							y = 0;
-							
-						} else if (!x.HasValue) {
-							
-							// if still no value, force to 0
+						}
+						// if x still have no value, force to 0
+						if (!x.HasValue) {
 							x = 0;
 						}
 						
@@ -117,7 +116,12 @@ namespace GCode
 				}
 			}
 			
-			return allG0;
+			// add header and footer as special blocks
+			var pointList = new Point3DList(allG0);
+			pointList.Header = priorToG0;
+			pointList.Footer = eof;
+			
+			return pointList;
 		}
 	}
 }
