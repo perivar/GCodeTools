@@ -92,6 +92,16 @@ namespace GCode
 
 		internal bool IsOnlyComment { get; private set; }
 		
+		internal bool IsEmptyLine {
+			get {
+				if (string.IsNullOrEmpty(Comment) && string.IsNullOrEmpty(Command)) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		}
+		
 		// Lines
 		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			

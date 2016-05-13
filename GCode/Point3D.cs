@@ -113,7 +113,6 @@ namespace GCode
 			}
 		}
 		#endregion
-
 		
 		public Point3DBlocks(float x, float y) {
 			point.X = x;
