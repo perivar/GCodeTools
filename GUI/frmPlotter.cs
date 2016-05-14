@@ -268,7 +268,8 @@ namespace GCodePlotter
 				panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
 				                                           -panelViewer.AutoScrollPosition.Y - changePoint.Y);
 				
-				// redraw
+				// Since we are only drawing the visable rectange of the picturebox
+				// we have to ensure we update the drawing when we scroll
 				RenderBlocks();
 			}
 			
@@ -295,12 +296,16 @@ namespace GCodePlotter
 		
 		void BtnOptimizeClick(object sender, EventArgs e)
 		{
-			var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
+			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
+			var point3DList = GCodeUtils.GetPoint3DList(parsedInstructions);
+			var points = point3DList.MainBlocks.ToList<IPoint>();
 			new GCodeOptimizer.MainForm(points).Show();
 		}
 		
 		void PanelViewerScroll(object sender, ScrollEventArgs e)
 		{
+			// Since we are only drawing the visable rectange of the picturebox
+			// we have to ensure we update the drawing when we scroll
 			RenderBlocks();
 		}
 		#endregion

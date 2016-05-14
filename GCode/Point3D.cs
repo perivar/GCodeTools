@@ -112,6 +112,12 @@ namespace GCode
 				return point.Y;
 			}
 		}
+
+		public bool IsEmpty {
+			get {
+				return this.X == 0f && this.Y == 0f;
+			}
+		}
 		#endregion
 		
 		public Point3DBlock(float x, float y) {

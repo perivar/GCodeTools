@@ -19,6 +19,8 @@ namespace GCodeOptimizer
 		private GAAlgorithm _alg;
 		private List<IPoint> _points;
 		
+		float scale = 2.0f;
+		
 		public MainForm(List<IPoint> points)
 		{
 			//
@@ -96,8 +98,7 @@ namespace GCodeOptimizer
 		#region Draw Methods
 		void RedrawPreview(GAAlgorithm alg)
 		{
-			if (pictureBox1.Image != null)
-			{
+			if (pictureBox1.Image != null) {
 				pictureBox1.Image.Dispose();
 				pictureBox1.Image = null;
 			}
@@ -113,23 +114,23 @@ namespace GCodeOptimizer
 			var arcBrush = new SolidBrush(Color.Black);
 			
 			// run through each location in the order specified in the chromosome
-			var previousLocation = Point3D.Empty;
+			var previousLocation = (IPoint) Point3D.Empty;
 			const int radius = 4;
 			
-			for (int i = 0; i < alg.BestPath.Count; i++)
-			{
-				var currentLocation = (Point3D) _points[alg.BestPath[i]];
+			for (int i = 0; i < alg.BestPath.Count; i++) {
 				
-				if (previousLocation != Point3D.Empty)
-				{
+				var currentLocation = (IPoint) _points[alg.BestPath[i]];
+				
+				if (!previousLocation.IsEmpty) {
+					
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X-radius, pictureBox1.Height-currentLocation.Y-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
 					             previousLocation.X,
-					             previousLocation.Y,
+					             pictureBox1.Height-previousLocation.Y,
 					             currentLocation.X,
-					             currentLocation.Y);
+					             pictureBox1.Height-currentLocation.Y);
 				}
 
 				previousLocation = currentLocation;
@@ -139,17 +140,16 @@ namespace GCodeOptimizer
 			var firstLocation = _points[alg.BestPath[0]];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, pictureBox1.Height-firstLocation.Y-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
 			             previousLocation.X,
-			             previousLocation.Y,
+			             pictureBox1.Height-previousLocation.Y,
 			             firstLocation.X,
-			             firstLocation.Y);
+			             pictureBox1.Height-firstLocation.Y);
 
 			gfx.Flush();
-
 			gfx.Dispose();
 			straightPen.Dispose();
 			arcPen.Dispose();
@@ -164,8 +164,7 @@ namespace GCodeOptimizer
 		}
 		
 		void DrawPoints() {
-			if (pictureBox1.Image != null)
-			{
+			if (pictureBox1.Image != null) {
 				pictureBox1.Image.Dispose();
 				pictureBox1.Image = null;
 			}
@@ -181,23 +180,22 @@ namespace GCodeOptimizer
 			var arcBrush = new SolidBrush(Color.Black);
 			
 			// run through each location in the order specified in the chromosome
-			var previousLocation = Point3D.Empty;
+			var previousLocation = (IPoint) Point3D.Empty;
 			const int radius = 4;
 			
-			for (int i = 0; i < _points.Count; i++)
-			{
-				var currentLocation = (Point3D) _points[i];
+			for (int i = 0; i < _points.Count; i++) {
 				
-				if (previousLocation != Point3D.Empty)
-				{
+				var currentLocation = (IPoint) _points[i];
+				
+				if (!previousLocation.IsEmpty) {
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X-radius, pictureBox1.Height-currentLocation.Y-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
 					             previousLocation.X,
-					             previousLocation.Y,
+					             pictureBox1.Height-previousLocation.Y,
 					             currentLocation.X,
-					             currentLocation.Y);
+					             pictureBox1.Height-currentLocation.Y);
 				}
 
 				previousLocation = currentLocation;
@@ -207,17 +205,16 @@ namespace GCodeOptimizer
 			var firstLocation = _points[0];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, pictureBox1.Height-firstLocation.Y-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
 			             previousLocation.X,
-			             previousLocation.Y,
+			             pictureBox1.Height-previousLocation.Y,
 			             firstLocation.X,
-			             firstLocation.Y);
+			             pictureBox1.Height-firstLocation.Y);
 
 			gfx.Flush();
-
 			gfx.Dispose();
 			straightPen.Dispose();
 			arcPen.Dispose();

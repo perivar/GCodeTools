@@ -67,7 +67,7 @@ namespace GeneticAlgorithm
 		}
 		
 		/// <summary>
-		/// Shallow Clone a List (Value Lists are properly clones, but not objects)
+		/// Shallow Clone a List (Value Lists are properly cloned, but not objects)
 		/// </summary>
 		/// <param name="listToClone">list to clone</param>
 		/// <returns>Shallow cloned list</returns>

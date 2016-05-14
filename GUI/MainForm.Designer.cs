@@ -50,17 +50,18 @@ namespace GCodeOptimizer
 			// 
 			// tableLayoutPanel1
 			// 
+			this.tableLayoutPanel1.AutoScroll = true;
 			this.tableLayoutPanel1.ColumnCount = 1;
 			this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.tableLayoutPanel1.Controls.Add(this.pictureBox1, 0, 1);
 			this.tableLayoutPanel1.Controls.Add(this.label1, 0, 0);
+			this.tableLayoutPanel1.Controls.Add(this.pictureBox1, 0, 1);
 			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
 			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
 			this.tableLayoutPanel1.RowCount = 2;
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
 			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.tableLayoutPanel1.Size = new System.Drawing.Size(944, 692);
+			this.tableLayoutPanel1.Size = new System.Drawing.Size(584, 361);
 			this.tableLayoutPanel1.TabIndex = 0;
 			// 
 			// pictureBox1
@@ -68,7 +69,7 @@ namespace GCodeOptimizer
 			this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.pictureBox1.Location = new System.Drawing.Point(3, 23);
 			this.pictureBox1.Name = "pictureBox1";
-			this.pictureBox1.Size = new System.Drawing.Size(938, 666);
+			this.pictureBox1.Size = new System.Drawing.Size(578, 335);
 			this.pictureBox1.TabIndex = 0;
 			this.pictureBox1.TabStop = false;
 			// 
@@ -76,14 +77,14 @@ namespace GCodeOptimizer
 			// 
 			this.label1.Location = new System.Drawing.Point(3, 0);
 			this.label1.Name = "label1";
-			this.label1.Size = new System.Drawing.Size(647, 20);
+			this.label1.Size = new System.Drawing.Size(490, 20);
 			this.label1.TabIndex = 1;
 			this.label1.Text = "label1";
 			// 
 			// btnStop
 			// 
 			this.btnStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.btnStop.Location = new System.Drawing.Point(839, 0);
+			this.btnStop.Location = new System.Drawing.Point(499, 0);
 			this.btnStop.Name = "btnStop";
 			this.btnStop.Size = new System.Drawing.Size(80, 20);
 			this.btnStop.TabIndex = 1;
@@ -95,7 +96,7 @@ namespace GCodeOptimizer
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(944, 692);
+			this.ClientSize = new System.Drawing.Size(584, 361);
 			this.Controls.Add(this.btnStop);
 			this.Controls.Add(this.tableLayoutPanel1);
 			this.Name = "MainForm";

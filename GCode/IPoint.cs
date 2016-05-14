@@ -11,5 +11,7 @@ namespace GCode
 		float X { get; }
 
 		float Y { get; }
+		
+		bool IsEmpty { get; }
 	}
 }
