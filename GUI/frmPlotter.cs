@@ -73,6 +73,8 @@ namespace GCodePlotter
 				{
 					txtFile.Text = fileInfo.Name;
 					txtFile.Tag = fileInfo.FullName;
+					this.Text = fileInfo.Name;
+					
 					Application.DoEvents();
 					btnParseData.Enabled = true;
 					btnParseData.PerformClick();
@@ -117,19 +119,20 @@ namespace GCodePlotter
 			var result = ofdLoadDialog.ShowDialog();
 			if (result == System.Windows.Forms.DialogResult.OK)
 			{
-				var file = new FileInfo(ofdLoadDialog.FileName);
-				if (!file.Exists)
+				var fileInfo = new FileInfo(ofdLoadDialog.FileName);
+				if (!fileInfo.Exists)
 				{
 					MessageBox.Show("Selected file does not exist, please select an existing file!");
 					return;
 				}
 
-				QuickSettings.Get["LastOpenedFile"] = file.FullName;
+				QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
 
-				StreamReader tr = file.OpenText();
+				StreamReader tr = fileInfo.OpenText();
 
-				txtFile.Text = file.Name;
-				txtFile.Tag = file.FullName;
+				txtFile.Text = fileInfo.Name;
+				txtFile.Tag = fileInfo.FullName;
+				this.Text = fileInfo.Name;
 
 				string data = tr.ReadToEnd();
 				tr.Close();
@@ -265,6 +268,12 @@ namespace GCodePlotter
 				panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
 				                                           -panelViewer.AutoScrollPosition.Y - changePoint.Y);
 			}
+			
+			// output scaled coordinates
+			float x = (e.X - LEFT_MARGIN) / scale * 10;
+			float y = (pictureBox1.Height - e.Y - BOTTOM_MARGIN) / scale * 10;
+			
+			txtCoordinates.Text = string.Format("X: {0:0.##}, Y: {1:0.##}", x, y);
 		}
 
 		void OnMouseWheel(object sender, MouseEventArgs mea) {
@@ -452,23 +461,23 @@ namespace GCodePlotter
 			var point3DList = GCodeUtils.GetPoint3DList(instructions);
 
 			var blocks = new List<Block>();
+			var currentPoint = Point3D.Empty;
 
 			// first add header
-			blocks.AddRange(GetBlockElements(point3DList.Header, "Header"));
+			blocks.AddRange(GetBlockElements(point3DList.Header, "Header", ref currentPoint));
 
 			// add main blocks
-			blocks.AddRange(GetBlockElements(point3DList.MainBlocks));
+			blocks.AddRange(GetBlockElements(point3DList.MainBlocks, ref currentPoint));
 			
 			// last add footer
-			blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer"));
+			blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer", ref currentPoint));
 			
 			return blocks;
 		}
 		
-		static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks) {
+		static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks, ref Point3D currentPoint) {
 			
 			int blockCounter = 1;
-			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
 			
 			foreach (var currentPoint3D in point3DBlocks) {
@@ -496,9 +505,8 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name) {
+		static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name, ref Point3D currentPoint) {
 			
-			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
 			
 			var currentBlock = new Block();

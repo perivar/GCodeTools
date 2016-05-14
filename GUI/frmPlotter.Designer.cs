@@ -59,6 +59,7 @@ namespace GCodePlotter
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelZoomFilename = new System.Windows.Forms.Panel();
+			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.panelViewer = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.panelCode.SuspendLayout();
@@ -320,17 +321,27 @@ namespace GCodePlotter
 			this.txtFile.Location = new System.Drawing.Point(16, 11);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(378, 20);
+			this.txtFile.Size = new System.Drawing.Size(266, 20);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panelZoomFilename
 			// 
+			this.panelZoomFilename.Controls.Add(this.txtCoordinates);
 			this.panelZoomFilename.Controls.Add(this.txtFile);
 			this.panelZoomFilename.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panelZoomFilename.Location = new System.Drawing.Point(5, 477);
 			this.panelZoomFilename.Name = "panelZoomFilename";
 			this.panelZoomFilename.Size = new System.Drawing.Size(412, 38);
 			this.panelZoomFilename.TabIndex = 12;
+			// 
+			// txtCoordinates
+			// 
+			this.txtCoordinates.BackColor = System.Drawing.SystemColors.Control;
+			this.txtCoordinates.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.txtCoordinates.Location = new System.Drawing.Point(299, 11);
+			this.txtCoordinates.Name = "txtCoordinates";
+			this.txtCoordinates.Size = new System.Drawing.Size(107, 20);
+			this.txtCoordinates.TabIndex = 11;
 			// 
 			// panelViewer
 			// 
@@ -398,6 +409,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button btnSaveSplit;
 		private System.Windows.Forms.CheckBox cbSoloSelect;
 		private System.Windows.Forms.Button btnOptimize;
+		private System.Windows.Forms.TextBox txtCoordinates;
 	}
 }
 

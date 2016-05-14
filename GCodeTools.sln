@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 # SharpDevelop 5.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GCodeOptimizer", "GCodeOptimizer.csproj", "{27B4AA09-34C1-46FA-8775-E513A0A9C9CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GCodeApp", "GCodeApp.csproj", "{27B4AA09-34C1-46FA-8775-E513A0A9C9CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
