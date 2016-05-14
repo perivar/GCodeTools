@@ -352,6 +352,7 @@ namespace GCodePlotter
 			this.panelViewer.Name = "panelViewer";
 			this.panelViewer.Size = new System.Drawing.Size(412, 472);
 			this.panelViewer.TabIndex = 13;
+			this.panelViewer.Scroll += new System.Windows.Forms.ScrollEventHandler(this.PanelViewerScroll);
 			// 
 			// frmPlotter
 			// 

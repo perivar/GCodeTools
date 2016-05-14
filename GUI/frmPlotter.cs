@@ -267,6 +267,9 @@ namespace GCodePlotter
 				
 				panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
 				                                           -panelViewer.AutoScrollPosition.Y - changePoint.Y);
+				
+				// redraw
+				RenderBlocks();
 			}
 			
 			// output scaled coordinates
@@ -295,9 +298,26 @@ namespace GCodePlotter
 			var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			new GCodeOptimizer.MainForm(points).Show();
 		}
+		
+		void PanelViewerScroll(object sender, ScrollEventArgs e)
+		{
+			RenderBlocks();
+		}
 		#endregion
 		
 		#region Private Methods
+		private Rectangle GetVisibleRectangle(Control c)
+		{
+			Rectangle rect = c.RectangleToScreen(c.ClientRectangle);
+			while (c != null)
+			{
+				rect = Rectangle.Intersect(rect, c.RectangleToScreen(c.ClientRectangle));
+				c = c.Parent;
+			}
+			rect = pictureBox1.RectangleToClient(rect);
+			return rect;
+		}
+		
 		void ZoomIn(Point clickPoint) {
 
 			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
@@ -309,8 +329,8 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier *= ZOOMFACTOR;
 				
-				RenderBlocks();
 				UpdateScrollbar(clickPoint, oldMultiplier);
+				RenderBlocks();
 			}
 		}
 
@@ -325,10 +345,9 @@ namespace GCodePlotter
 				// zoom the multiplier
 				multiplier /= ZOOMFACTOR;
 
-				RenderBlocks();
 				UpdateScrollbar(clickPoint, oldMultiplier);
+				RenderBlocks();
 			}
-
 		}
 		
 		/// <summary>
@@ -658,6 +677,9 @@ namespace GCodePlotter
 			var graphics = Graphics.FromImage(renderImage);
 			graphics.Clear(ColorHelper.GetColor(PenColorList.Background));
 			
+			// limit the drawing area
+			graphics.Clip = new Region(GetVisibleRectangle(this.pictureBox1));
+			
 			// draw grid
 			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines);
 			for (var x = 0; x < pictureBox1.Width / scale; x++)
@@ -863,7 +885,6 @@ namespace GCodePlotter
 			tw.Flush();
 			tw.Close();
 		}
-		
 		#endregion
 	}
 }
