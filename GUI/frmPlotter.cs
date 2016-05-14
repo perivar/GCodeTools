@@ -299,7 +299,7 @@ namespace GCodePlotter
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			var point3DList = GCodeUtils.GetPoint3DList(parsedInstructions);
 			var points = point3DList.MainBlocks.ToList<IPoint>();
-			new GCodeOptimizer.MainForm(points).Show();
+			new GCodeOptimizer.MainForm(points, maxX, maxY).Show();
 		}
 		
 		void PanelViewerScroll(object sender, ScrollEventArgs e)

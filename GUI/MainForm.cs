@@ -19,14 +19,19 @@ namespace GCodeOptimizer
 		private GAAlgorithm _alg;
 		private List<IPoint> _points;
 		
+		float width = 0.0f;
+		float height = 0.0f;
 		float scale = 2.0f;
 		
-		public MainForm(List<IPoint> points)
+		public MainForm(List<IPoint> points, float maxX, float maxY)
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
 			//
 			InitializeComponent();
+			
+			this.width = maxX;
+			this.height = maxY;
 			
 			//_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			_points = points;
@@ -103,7 +108,8 @@ namespace GCodeOptimizer
 				pictureBox1.Image = null;
 			}
 
-			var b = new Bitmap((int)(pictureBox1.Width), (int)(pictureBox1.Height));
+			//var b = new Bitmap((int)(pictureBox1.Width), (int)(height));
+			var b = new Bitmap((int)width, (int)height);
 
 			Graphics gfx = Graphics.FromImage(b);
 
@@ -124,13 +130,13 @@ namespace GCodeOptimizer
 				if (!previousLocation.IsEmpty) {
 					
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, pictureBox1.Height-currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X-radius, height-currentLocation.Y-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
 					             previousLocation.X,
-					             pictureBox1.Height-previousLocation.Y,
+					             height-previousLocation.Y,
 					             currentLocation.X,
-					             pictureBox1.Height-currentLocation.Y);
+					             height-currentLocation.Y);
 				}
 
 				previousLocation = currentLocation;
@@ -140,14 +146,14 @@ namespace GCodeOptimizer
 			var firstLocation = _points[alg.BestPath[0]];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, pictureBox1.Height-firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, height-firstLocation.Y-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
 			             previousLocation.X,
-			             pictureBox1.Height-previousLocation.Y,
+			             height-previousLocation.Y,
 			             firstLocation.X,
-			             pictureBox1.Height-firstLocation.Y);
+			             height-firstLocation.Y);
 
 			gfx.Flush();
 			gfx.Dispose();
@@ -169,7 +175,8 @@ namespace GCodeOptimizer
 				pictureBox1.Image = null;
 			}
 
-			var b = new Bitmap((int)(pictureBox1.Width), (int)(pictureBox1.Height));
+			//var b = new Bitmap((int)(pictureBox1.Width), (int)(pictureBox1.Height));
+			var b = new Bitmap((int)width, (int)height);
 
 			Graphics gfx = Graphics.FromImage(b);
 
@@ -189,13 +196,13 @@ namespace GCodeOptimizer
 				
 				if (!previousLocation.IsEmpty) {
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, pictureBox1.Height-currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X-radius, height-currentLocation.Y-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
 					             previousLocation.X,
-					             pictureBox1.Height-previousLocation.Y,
+					             height-previousLocation.Y,
 					             currentLocation.X,
-					             pictureBox1.Height-currentLocation.Y);
+					             height-currentLocation.Y);
 				}
 
 				previousLocation = currentLocation;
@@ -205,14 +212,14 @@ namespace GCodeOptimizer
 			var firstLocation = _points[0];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, pictureBox1.Height-firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, height-firstLocation.Y-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
 			             previousLocation.X,
-			             pictureBox1.Height-previousLocation.Y,
+			             height-previousLocation.Y,
 			             firstLocation.X,
-			             pictureBox1.Height-firstLocation.Y);
+			             height-firstLocation.Y);
 
 			gfx.Flush();
 			gfx.Dispose();
