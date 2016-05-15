@@ -26,6 +26,7 @@ namespace GCodeOptimizer
 		private System.Windows.Forms.Button btnSave;
 		private System.Windows.Forms.Panel pnlBottom;
 		private System.Windows.Forms.RadioButton radScaleEight;
+		private System.Windows.Forms.SaveFileDialog sfdSaveDialog;
 		
 		/// <summary>
 		/// Disposes resources used by the form.
@@ -60,6 +61,7 @@ namespace GCodeOptimizer
 			this.btnSave = new System.Windows.Forms.Button();
 			this.pnlBottom = new System.Windows.Forms.Panel();
 			this.radScaleEight = new System.Windows.Forms.RadioButton();
+			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.pnlTop.SuspendLayout();
 			this.pnlViewer.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -130,22 +132,22 @@ namespace GCodeOptimizer
 			// 
 			// radScaleOne
 			// 
+			this.radScaleOne.Checked = true;
 			this.radScaleOne.Location = new System.Drawing.Point(64, 2);
 			this.radScaleOne.Name = "radScaleOne";
 			this.radScaleOne.Size = new System.Drawing.Size(36, 24);
 			this.radScaleOne.TabIndex = 3;
+			this.radScaleOne.TabStop = true;
 			this.radScaleOne.Text = "1x";
 			this.radScaleOne.UseVisualStyleBackColor = true;
 			this.radScaleOne.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
 			// 
 			// radScaleTwo
 			// 
-			this.radScaleTwo.Checked = true;
 			this.radScaleTwo.Location = new System.Drawing.Point(106, 2);
 			this.radScaleTwo.Name = "radScaleTwo";
 			this.radScaleTwo.Size = new System.Drawing.Size(36, 24);
 			this.radScaleTwo.TabIndex = 4;
-			this.radScaleTwo.TabStop = true;
 			this.radScaleTwo.Text = "2x";
 			this.radScaleTwo.UseVisualStyleBackColor = true;
 			this.radScaleTwo.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);

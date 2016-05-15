@@ -4,6 +4,9 @@ using System.Globalization;
 
 namespace GCode
 {
+	/// <summary>
+	/// Struct to hold a 3D point (i.e. x, y and z coordinates)
+	/// </summary>
 	public struct Point3D : IPoint {
 
 		private float x;
@@ -93,6 +96,9 @@ namespace GCode
 		}
 	}
 	
+	/// <summary>
+	/// Class to hold gcode-instructions connected to a 3D point (i.e. x, y and z coordinates)
+	/// </summary>
 	public class Point3DBlock : IPoint {
 
 		private Point3D point;
@@ -118,6 +124,12 @@ namespace GCode
 				return this.X == 0f && this.Y == 0f;
 			}
 		}
+		
+		public bool EqualCoordinates(Point3DBlock other) {
+			if (other != null && this.X == other.X && this.Y == other.Y) return true;
+			return false;
+		}
+		
 		#endregion
 		
 		public Point3DBlock(float x, float y) {
@@ -132,23 +144,6 @@ namespace GCode
 			                     this.X,
 			                     this.Y,
 			                     this.gcodeInstructions.Count
-			                    );
-		}
-	}
-	
-	public class Point3DList {
-		
-		public List<Point3DBlock> MainBlocks { get; set; }
-		public List<GCodeInstruction> Header { get; set; }
-		public List<GCodeInstruction> Footer { get; set; }
-		
-		public override string ToString()
-		{
-			return string.Format(CultureInfo.CurrentCulture,
-			                     "Header: {0}, Blocks: {1}, Footer: {2}",
-			                     this.Header.Count,
-			                     this.MainBlocks.Count,
-			                     this.Footer.Count
 			                    );
 		}
 	}

@@ -111,17 +111,15 @@ namespace GCodePlotter
 
 		void btnLoadClick(object sender, EventArgs e)
 		{
-			if (AskToLoadData() == DialogResult.No)
-			{
+			if (AskToLoadData() == DialogResult.No) {
 				return;
 			}
 
 			var result = ofdLoadDialog.ShowDialog();
-			if (result == System.Windows.Forms.DialogResult.OK)
-			{
+			if (result == DialogResult.OK) {
+				
 				var fileInfo = new FileInfo(ofdLoadDialog.FileName);
-				if (!fileInfo.Exists)
-				{
+				if (!fileInfo.Exists) {
 					MessageBox.Show("Selected file does not exist, please select an existing file!");
 					return;
 				}
@@ -146,10 +144,8 @@ namespace GCodePlotter
 
 		void btnParseDataClick(object sender, EventArgs e)
 		{
-			if (bDataLoaded)
-			{
-				if (AskToLoadData() == DialogResult.No)
-				{
+			if (bDataLoaded) {
+				if (AskToLoadData() == DialogResult.No) {
 					return;
 				}
 			}
@@ -160,7 +156,8 @@ namespace GCodePlotter
 				string data = tr.ReadToEnd();
 				tr.Close();
 				
-				ParseText(data);}
+				ParseText(data);
+			}
 		}
 
 		void btnRedrawClick(object sender, EventArgs e)
@@ -297,8 +294,8 @@ namespace GCodePlotter
 		void BtnOptimizeClick(object sender, EventArgs e)
 		{
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
-			var point3DList = GCodeUtils.GetPoint3DList(parsedInstructions);
-			var points = point3DList.MainBlocks.ToList<IPoint>();
+			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
+			var points = gcodeSplitObject.MainBlocks.ToList<IPoint>();
 			new GCodeOptimizer.MainForm(points, maxX, maxY).Show();
 		}
 		
@@ -481,20 +478,20 @@ namespace GCodePlotter
 		/// <returns>list of blocks</returns>
 		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 
-			// convert instructions into Point3DBlocks
-			var point3DList = GCodeUtils.GetPoint3DList(instructions);
+			// convert instructions into splitted gcode instructions
+			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(instructions);
 
 			var blocks = new List<Block>();
 			var currentPoint = Point3D.Empty;
 
 			// first add header
-			blocks.AddRange(GetBlockElements(point3DList.Header, "Header", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(point3DList.Header, "Header", ref currentPoint));
 
 			// add main blocks
-			blocks.AddRange(GetBlockElements(point3DList.MainBlocks, ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeSplitObject.MainBlocks, ref currentPoint));
 			
 			// last add footer
-			blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer", ref currentPoint));
 			
 			return blocks;
 		}
@@ -766,7 +763,7 @@ namespace GCodePlotter
 		void SaveGCodes(bool doMultiLayer)
 		{
 			var result = sfdSaveDialog.ShowDialog();
-			if (result == System.Windows.Forms.DialogResult.OK)
+			if (result == DialogResult.OK)
 			{
 				var file = new FileInfo(sfdSaveDialog.FileName);
 				if (!doMultiLayer)

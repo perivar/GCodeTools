@@ -233,15 +233,15 @@ namespace GCodePlotter
 			// 
 			this.lblZClearance.Location = new System.Drawing.Point(10, 261);
 			this.lblZClearance.Name = "lblZClearance";
-			this.lblZClearance.Size = new System.Drawing.Size(68, 19);
+			this.lblZClearance.Size = new System.Drawing.Size(80, 19);
 			this.lblZClearance.TabIndex = 18;
-			this.lblZClearance.Text = "Z-Clearance:";
+			this.lblZClearance.Text = "Z-Safe Height:";
 			// 
 			// txtZClearance
 			// 
-			this.txtZClearance.Location = new System.Drawing.Point(80, 258);
+			this.txtZClearance.Location = new System.Drawing.Point(90, 258);
 			this.txtZClearance.Name = "txtZClearance";
-			this.txtZClearance.Size = new System.Drawing.Size(29, 20);
+			this.txtZClearance.Size = new System.Drawing.Size(22, 20);
 			this.txtZClearance.TabIndex = 17;
 			this.txtZClearance.Text = "2.0";
 			// 
@@ -268,7 +268,7 @@ namespace GCodePlotter
 			// 
 			// txtSplit
 			// 
-			this.txtSplit.Location = new System.Drawing.Point(45, 235);
+			this.txtSplit.Location = new System.Drawing.Point(48, 235);
 			this.txtSplit.Name = "txtSplit";
 			this.txtSplit.Size = new System.Drawing.Size(64, 20);
 			this.txtSplit.TabIndex = 14;

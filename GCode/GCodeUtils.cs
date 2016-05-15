@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.Collections.Generic;
 
 namespace GCode
@@ -9,7 +11,14 @@ namespace GCode
 	/// </summary>
 	public static class GCodeUtils
 	{
-		public static Point3DList GetPoint3DList(List<GCodeInstruction> instructions) {
+		/// <summary>
+		/// Split the list of gcode instructions into gcode blocks.
+		/// splits a G0 commands that includes either X and/or Y.
+		/// Returns everything before the first G0, all G0 blocks and everything after last block
+		/// </summary>
+		/// <param name="instructions">list of gcode instructions</param>
+		/// <returns>GCode split object</returns>
+		public static GCodeSplitObject SplitGCodeInstructions(List<GCodeInstruction> instructions) {
 
 			var allG0 = new List<Point3DBlock>();
 
@@ -117,12 +126,134 @@ namespace GCode
 			}
 			
 			// add header and footer as special blocks
-			var point3DList = new Point3DList();
-			point3DList.MainBlocks = allG0;
-			point3DList.Header = priorToG0;
-			point3DList.Footer = eof;
+			var gcodeBlocks = new GCodeSplitObject();
+			gcodeBlocks.MainBlocks = allG0;
+			gcodeBlocks.Header = priorToG0;
+			gcodeBlocks.Footer = eof;
 			
-			return point3DList;
+			return gcodeBlocks;
+		}
+		
+		/// <summary>
+		/// Sort the list of Point3DBlock by Z-height so that the cutting is incremental
+		/// </summary>
+		/// <param name="bestPath">Original sequence of the point3d elements</param>
+		/// <param name="points">Point elements</param>
+		/// <returns>sorted sequence of the point3d elements</returns>
+		public static List<int> SortBlocksByZDepth(List<int> bestPath, List<IPoint> points) {
+			var sortedBestPath = new List<int>();
+			
+			float z = 0.0f;
+			Point3DBlock previousBlock = null;
+			
+			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
+				
+				for (int c=0; c < bestPath.Count; c++) {
+					var block = points[bestPath[c]] as Point3DBlock;
+					
+					if (block.EqualCoordinates(previousBlock)) {
+						// find all blocks with the same X and Y
+						
+						// and then sort by z
+					} else {
+						// new block
+					}
+					
+					var instructions = block.GCodeInstructions;
+					
+					foreach (var instruction in instructions) {
+						if (instruction.CommandEnum == CommandList.NormalMove
+						    && !instruction.X.HasValue
+						    && !instruction.Y.HasValue
+						    && instruction.Z.HasValue) {
+							z = instruction.Z.Value;
+							break;
+						}
+					}
+					
+					//
+				}
+				
+			}
+			
+			return sortedBestPath;
+		}
+		
+		/// <summary>
+		/// Save the gcode instructions assuming the points are Point3DBlock elements
+		/// </summary>
+		/// <param name="bestPath">best sequence of the point3d elements</param>
+		/// <param name="points">Point elements</param>
+		/// <param name="filePath">filepath to save</param>
+		/// <returns>succesful or </returns>
+		public static bool SaveGCode(List<int> bestPath, List<IPoint> points, string filePath) {
+			
+			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
+				
+				// put all the lines back together in the best order
+				var file = new FileInfo(filePath);
+				var tw = new StreamWriter(file.OpenWrite());
+				tw.WriteLine("(File built with GCodeTools)");
+				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
+				tw.WriteLine();
+
+				for (int c=0; c < bestPath.Count; c++) {
+					tw.WriteLine(string.Format("(Start Block_{0})", c));
+					
+					var block = points[bestPath[c]] as Point3DBlock;
+					var instructions = block.GCodeInstructions;
+					foreach (var instruction in instructions) {
+						tw.WriteLine(instruction);
+					}
+
+					tw.WriteLine(string.Format("(End Block_{0})", c));
+					tw.WriteLine();
+					tw.Flush();
+				}
+
+				tw.WriteLine("(Footer)");
+				tw.WriteLine("(Footer end.)");
+				tw.WriteLine();
+
+				tw.Flush();
+				tw.Close();
+				
+				return true;
+				
+			} else {
+				return false;
+			}
+			
+			/*
+			for (FIXME_VAR_TYPE c=0; c<priorToG0.Length; c++) {
+				fout += priorToG0[c] + '\n';
+			}
+			for (FIXME_VAR_TYPE c=0; c<best.Length; c++) {
+				for (FIXME_VAR_TYPE n=0; n<points[best[c]].followingLines.Length; n++) {
+					fout += points[best[c]].followingLines[n] + '\n';
+				}
+			}
+			for (FIXME_VAR_TYPE c=0; c<eof.Length; c++) {
+				fout += eof[c] + '\n';
+			}
+			 */
+		}
+	}
+	
+	public class GCodeSplitObject {
+		
+		public List<Point3DBlock> MainBlocks { get; set; }
+		public List<GCodeInstruction> Header { get; set; }
+		public List<GCodeInstruction> Footer { get; set; }
+		
+		public override string ToString()
+		{
+			return string.Format(CultureInfo.CurrentCulture,
+			                     "Header: {0}, Blocks: {1}, Footer: {2}",
+			                     this.Header.Count,
+			                     this.MainBlocks.Count,
+			                     this.Footer.Count
+			                    );
 		}
 	}
 }
