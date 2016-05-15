@@ -14,10 +14,17 @@ namespace GCodeOptimizer
 		/// Designer variable used to keep track of non-visual components.
 		/// </summary>
 		private System.ComponentModel.IContainer components = null;
-		private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
-		private System.Windows.Forms.PictureBox pictureBox1;
+		private System.Windows.Forms.Panel pnlTop;
+		private System.Windows.Forms.Button btnStartStop;
 		private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.Button btnStop;
+		private System.Windows.Forms.Panel pnlViewer;
+		private System.Windows.Forms.PictureBox pictureBox1;
+		private System.Windows.Forms.RadioButton radScaleHalf;
+		private System.Windows.Forms.RadioButton radScaleOne;
+		private System.Windows.Forms.RadioButton radScaleTwo;
+		private System.Windows.Forms.RadioButton radScaleFour;
+		private System.Windows.Forms.Button btnSave;
+		private System.Windows.Forms.Panel pnlBottom;
 		
 		/// <summary>
 		/// Disposes resources used by the form.
@@ -40,70 +47,156 @@ namespace GCodeOptimizer
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-			this.pictureBox1 = new System.Windows.Forms.PictureBox();
+			this.pnlTop = new System.Windows.Forms.Panel();
+			this.btnStartStop = new System.Windows.Forms.Button();
 			this.label1 = new System.Windows.Forms.Label();
-			this.btnStop = new System.Windows.Forms.Button();
-			this.tableLayoutPanel1.SuspendLayout();
+			this.pnlViewer = new System.Windows.Forms.Panel();
+			this.pictureBox1 = new System.Windows.Forms.PictureBox();
+			this.radScaleHalf = new System.Windows.Forms.RadioButton();
+			this.radScaleOne = new System.Windows.Forms.RadioButton();
+			this.radScaleTwo = new System.Windows.Forms.RadioButton();
+			this.radScaleFour = new System.Windows.Forms.RadioButton();
+			this.btnSave = new System.Windows.Forms.Button();
+			this.pnlBottom = new System.Windows.Forms.Panel();
+			this.pnlTop.SuspendLayout();
+			this.pnlViewer.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+			this.pnlBottom.SuspendLayout();
 			this.SuspendLayout();
 			// 
-			// tableLayoutPanel1
+			// pnlTop
 			// 
-			this.tableLayoutPanel1.AutoScroll = true;
-			this.tableLayoutPanel1.ColumnCount = 1;
-			this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.tableLayoutPanel1.Controls.Add(this.label1, 0, 0);
-			this.tableLayoutPanel1.Controls.Add(this.pictureBox1, 0, 1);
-			this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
-			this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-			this.tableLayoutPanel1.RowCount = 2;
-			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-			this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.tableLayoutPanel1.Size = new System.Drawing.Size(584, 361);
-			this.tableLayoutPanel1.TabIndex = 0;
+			this.pnlTop.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.pnlTop.Controls.Add(this.btnStartStop);
+			this.pnlTop.Controls.Add(this.label1);
+			this.pnlTop.Location = new System.Drawing.Point(1, 1);
+			this.pnlTop.Name = "pnlTop";
+			this.pnlTop.Size = new System.Drawing.Size(642, 30);
+			this.pnlTop.TabIndex = 0;
 			// 
-			// pictureBox1
+			// btnStartStop
 			// 
-			this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.pictureBox1.Location = new System.Drawing.Point(3, 23);
-			this.pictureBox1.Name = "pictureBox1";
-			this.pictureBox1.Size = new System.Drawing.Size(578, 335);
-			this.pictureBox1.TabIndex = 0;
-			this.pictureBox1.TabStop = false;
+			this.btnStartStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.btnStartStop.Location = new System.Drawing.Point(564, 3);
+			this.btnStartStop.Name = "btnStartStop";
+			this.btnStartStop.Size = new System.Drawing.Size(75, 23);
+			this.btnStartStop.TabIndex = 1;
+			this.btnStartStop.Text = "Start";
+			this.btnStartStop.UseVisualStyleBackColor = true;
+			this.btnStartStop.Click += new System.EventHandler(this.BtnStartStopClick);
 			// 
 			// label1
 			// 
-			this.label1.Location = new System.Drawing.Point(3, 0);
+			this.label1.Location = new System.Drawing.Point(11, 3);
 			this.label1.Name = "label1";
-			this.label1.Size = new System.Drawing.Size(490, 20);
-			this.label1.TabIndex = 1;
+			this.label1.Size = new System.Drawing.Size(487, 23);
+			this.label1.TabIndex = 0;
 			this.label1.Text = "label1";
 			// 
-			// btnStop
+			// pnlViewer
 			// 
-			this.btnStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.btnStop.Location = new System.Drawing.Point(499, 0);
-			this.btnStop.Name = "btnStop";
-			this.btnStop.Size = new System.Drawing.Size(80, 20);
-			this.btnStop.TabIndex = 1;
-			this.btnStop.Text = "Stop / Start";
-			this.btnStop.UseVisualStyleBackColor = true;
-			this.btnStop.Click += new System.EventHandler(this.BtnStopClick);
+			this.pnlViewer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			| System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.pnlViewer.AutoScroll = true;
+			this.pnlViewer.Controls.Add(this.pictureBox1);
+			this.pnlViewer.Location = new System.Drawing.Point(1, 30);
+			this.pnlViewer.Name = "pnlViewer";
+			this.pnlViewer.Size = new System.Drawing.Size(642, 311);
+			this.pnlViewer.TabIndex = 1;
+			// 
+			// pictureBox1
+			// 
+			this.pictureBox1.Location = new System.Drawing.Point(3, 3);
+			this.pictureBox1.Name = "pictureBox1";
+			this.pictureBox1.Size = new System.Drawing.Size(500, 200);
+			this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+			this.pictureBox1.TabIndex = 0;
+			this.pictureBox1.TabStop = false;
+			// 
+			// radScaleHalf
+			// 
+			this.radScaleHalf.Location = new System.Drawing.Point(11, 2);
+			this.radScaleHalf.Name = "radScaleHalf";
+			this.radScaleHalf.Size = new System.Drawing.Size(47, 24);
+			this.radScaleHalf.TabIndex = 2;
+			this.radScaleHalf.Text = "0.5x";
+			this.radScaleHalf.UseVisualStyleBackColor = true;
+			this.radScaleHalf.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
+			// 
+			// radScaleOne
+			// 
+			this.radScaleOne.Location = new System.Drawing.Point(64, 2);
+			this.radScaleOne.Name = "radScaleOne";
+			this.radScaleOne.Size = new System.Drawing.Size(36, 24);
+			this.radScaleOne.TabIndex = 3;
+			this.radScaleOne.Text = "1x";
+			this.radScaleOne.UseVisualStyleBackColor = true;
+			this.radScaleOne.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
+			// 
+			// radScaleTwo
+			// 
+			this.radScaleTwo.Checked = true;
+			this.radScaleTwo.Location = new System.Drawing.Point(106, 2);
+			this.radScaleTwo.Name = "radScaleTwo";
+			this.radScaleTwo.Size = new System.Drawing.Size(36, 24);
+			this.radScaleTwo.TabIndex = 4;
+			this.radScaleTwo.TabStop = true;
+			this.radScaleTwo.Text = "2x";
+			this.radScaleTwo.UseVisualStyleBackColor = true;
+			this.radScaleTwo.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
+			// 
+			// radScaleFour
+			// 
+			this.radScaleFour.Location = new System.Drawing.Point(148, 2);
+			this.radScaleFour.Name = "radScaleFour";
+			this.radScaleFour.Size = new System.Drawing.Size(36, 24);
+			this.radScaleFour.TabIndex = 5;
+			this.radScaleFour.Text = "4x";
+			this.radScaleFour.UseVisualStyleBackColor = true;
+			this.radScaleFour.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
+			// 
+			// btnSave
+			// 
+			this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.btnSave.Location = new System.Drawing.Point(559, 2);
+			this.btnSave.Name = "btnSave";
+			this.btnSave.Size = new System.Drawing.Size(75, 23);
+			this.btnSave.TabIndex = 6;
+			this.btnSave.Text = "Save";
+			this.btnSave.UseVisualStyleBackColor = true;
+			this.btnSave.Click += new System.EventHandler(this.BtnSaveClick);
+			// 
+			// pnlBottom
+			// 
+			this.pnlBottom.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
+			this.pnlBottom.Controls.Add(this.radScaleHalf);
+			this.pnlBottom.Controls.Add(this.btnSave);
+			this.pnlBottom.Controls.Add(this.radScaleOne);
+			this.pnlBottom.Controls.Add(this.radScaleFour);
+			this.pnlBottom.Controls.Add(this.radScaleTwo);
+			this.pnlBottom.Location = new System.Drawing.Point(1, 342);
+			this.pnlBottom.Name = "pnlBottom";
+			this.pnlBottom.Size = new System.Drawing.Size(639, 29);
+			this.pnlBottom.TabIndex = 7;
 			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(584, 361);
-			this.Controls.Add(this.btnStop);
-			this.Controls.Add(this.tableLayoutPanel1);
+			this.ClientSize = new System.Drawing.Size(644, 374);
+			this.Controls.Add(this.pnlBottom);
+			this.Controls.Add(this.pnlViewer);
+			this.Controls.Add(this.pnlTop);
 			this.Name = "MainForm";
 			this.Text = "GCodeOptimizer";
-			this.Load += new System.EventHandler(this.MainFormLoad);
-			this.tableLayoutPanel1.ResumeLayout(false);
+			this.pnlTop.ResumeLayout(false);
+			this.pnlViewer.ResumeLayout(false);
+			this.pnlViewer.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+			this.pnlBottom.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}

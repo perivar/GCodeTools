@@ -1,10 +1,9 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
-
+using System.Threading;
 using GeneticAlgorithm;
 using GCode;
 
@@ -15,13 +14,14 @@ namespace GCodeOptimizer
 	/// </summary>
 	public partial class MainForm : Form
 	{
-		private static BackgroundWorker _backgroundWorker;
 		private GAAlgorithm _alg;
 		private List<IPoint> _points;
 		
-		float width = 0.0f;
-		float height = 0.0f;
-		float scale = 2.0f;
+		float _width = 0.0f;
+		float _height = 0.0f;
+		float _scale = 2.0f;
+		
+		CancellationTokenSource _cancelTokenSource = null;
 		
 		public MainForm(List<IPoint> points, float maxX, float maxY)
 		{
@@ -30,86 +30,82 @@ namespace GCodeOptimizer
 			//
 			InitializeComponent();
 			
-			this.width = maxX;
-			this.height = maxY;
+			_points = points;
+			this._width = maxX;
+			this._height = maxY;
 			
 			//_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
-			_points = points;
+			//this._width = 900;
+			//this._height = 680;
+			
 			_alg = new GAAlgorithm(_points);
 			
 			DrawPoints();
 		}
 		
-		void MainFormLoad(object sender, EventArgs e)
+		void RadScaleCheckedChanged(object sender, EventArgs e)
 		{
-			_backgroundWorker = new BackgroundWorker
-			{
-				WorkerSupportsCancellation = true,
-				WorkerReportsProgress = true
-			};
-			_backgroundWorker.DoWork += backgroundWorker_DoWork;
-			_backgroundWorker.ProgressChanged += backgroundWorker_ProgressChanged;
-			_backgroundWorker.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
+			// check scale
+			if (radScaleHalf.Checked) {
+				_scale = 0.5f;
+			} else if (radScaleOne.Checked) {
+				_scale = 1.0f;
+			} else if (radScaleTwo.Checked) {
+				_scale = 2.0f;
+			} else if (radScaleFour.Checked) {
+				_scale = 4.0f;
+			}
 			
-			// hook up using the JavaScript ported code
-			_alg.OnGenerationComplete += algGaOnGenerationComplete;
-			_alg.OnRunComplete += algGaOnRunComplete;
+			if (!_alg.Running) {
+				DrawPoints();
+			}
 		}
 		
-		void BtnStopClick(object sender, EventArgs e)
+		void BtnSaveClick(object sender, EventArgs e)
+		{
+			MessageBox.Show(string.Format("There are {0} G0 points, the {1}th generation with {2} times of mutation. Best value: {3}",
+			                              _points.Count, _alg.CurrentGeneration, _alg.MutationTimes, _alg.BestValue));
+		}
+		
+		async void BtnStartStopClick(object sender, EventArgs e)
 		{
 			if (_alg.Running) {
 				_alg.Running = false;
+				_cancelTokenSource.Cancel();
 			} else {
 				_alg.Running = true;
-				_backgroundWorker.RunWorkerAsync();
+				btnStartStop.Text = "Stop";
+				var progressIndicator = new Progress<GAAlgorithm>(ReportProgress);
+				_cancelTokenSource = new CancellationTokenSource();
+				try {
+					await _alg.Run(progressIndicator, _cancelTokenSource.Token);
+				} catch (OperationCanceledException) {
+					// do nothing?
+					
+				} finally {
+					btnStartStop.Text = "Start";
+					_alg.Running = false;
+					_cancelTokenSource = null;
+				}
 			}
 		}
 		
-		#region Events
-		void algGaOnGenerationComplete(GAAlgorithm sender)
+		// method that is called from the async GAAlgorithm long running task
+		void ReportProgress(GAAlgorithm alg)
 		{
-			if (!_backgroundWorker.CancellationPending)
-			{
-				_backgroundWorker.ReportProgress(sender.CurrentGeneration, sender);
-			}
-		}
-		
-		void algGaOnRunComplete(GAAlgorithm sender) {
+			RedrawPreview(alg);
 			
-		}
-		#endregion
-		
-		#region Event Handlers
-		private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-		{
-			_alg.Run();
-		}
-		
-		private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-		{
-			RedrawPreview((GAAlgorithm)e.UserState);
-		}
-
-		private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-		{
 			// print calculated distance
 			label1.Text = string.Format("There are {0} G0 points, the {1}th generation with {2} times of mutation. Best value: {3}",
-			                            _points.Count, _alg.CurrentGeneration, _alg.MutationTimes, _alg.BestValue);
-
+			                            _points.Count, alg.CurrentGeneration, alg.MutationTimes, alg.BestValue);
+			
 		}
-		#endregion
 		
 		#region Draw Methods
 		void RedrawPreview(GAAlgorithm alg)
 		{
-			if (pictureBox1.Image != null) {
-				pictureBox1.Image.Dispose();
-				pictureBox1.Image = null;
-			}
-
 			//var b = new Bitmap((int)(pictureBox1.Width), (int)(height));
-			var b = new Bitmap((int)width, (int)height);
+			var b = new Bitmap((int)(_width*_scale), (int)(_height*_scale));
 
 			Graphics gfx = Graphics.FromImage(b);
 
@@ -130,13 +126,13 @@ namespace GCodeOptimizer
 				if (!previousLocation.IsEmpty) {
 					
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, height-currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X*_scale-radius, (_height-currentLocation.Y)*_scale-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
-					             previousLocation.X,
-					             height-previousLocation.Y,
-					             currentLocation.X,
-					             height-currentLocation.Y);
+					             previousLocation.X*_scale,
+					             (_height-previousLocation.Y)*_scale,
+					             currentLocation.X*_scale,
+					             (_height-currentLocation.Y)*_scale);
 				}
 
 				previousLocation = currentLocation;
@@ -146,14 +142,14 @@ namespace GCodeOptimizer
 			var firstLocation = _points[alg.BestPath[0]];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, height-firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*_scale-radius, (_height-firstLocation.Y)*_scale-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
-			             previousLocation.X,
-			             height-previousLocation.Y,
-			             firstLocation.X,
-			             height-firstLocation.Y);
+			             previousLocation.X*_scale,
+			             (_height-previousLocation.Y)*_scale,
+			             firstLocation.X*_scale,
+			             (_height-firstLocation.Y)*_scale);
 
 			gfx.Flush();
 			gfx.Dispose();
@@ -162,21 +158,11 @@ namespace GCodeOptimizer
 			arcBrush.Dispose();
 
 			pictureBox1.Image = b;
-
-			// print calculated distance
-			label1.Text = string.Format("There are {0} G0 points, the {1}th generation with {2} times of mutation. Best value: {3}",
-			                            _points.Count, alg.CurrentGeneration, alg.MutationTimes, alg.BestValue);
-			
 		}
 		
 		void DrawPoints() {
-			if (pictureBox1.Image != null) {
-				pictureBox1.Image.Dispose();
-				pictureBox1.Image = null;
-			}
-
-			//var b = new Bitmap((int)(pictureBox1.Width), (int)(pictureBox1.Height));
-			var b = new Bitmap((int)width, (int)height);
+			//var b = new Bitmap((int)(pictureBox1.Width), (int)(height));
+			var b = new Bitmap((int)(_width*_scale), (int)(_height*_scale));
 
 			Graphics gfx = Graphics.FromImage(b);
 
@@ -196,13 +182,13 @@ namespace GCodeOptimizer
 				
 				if (!previousLocation.IsEmpty) {
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X-radius, height-currentLocation.Y-radius, radius*2, radius*2 );
+					gfx.FillEllipse( arcBrush, currentLocation.X*_scale-radius, (_height-currentLocation.Y)*_scale-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
-					             previousLocation.X,
-					             height-previousLocation.Y,
-					             currentLocation.X,
-					             height-currentLocation.Y);
+					             previousLocation.X*_scale,
+					             (_height-previousLocation.Y)*_scale,
+					             currentLocation.X*_scale,
+					             (_height-currentLocation.Y)*_scale);
 				}
 
 				previousLocation = currentLocation;
@@ -212,14 +198,14 @@ namespace GCodeOptimizer
 			var firstLocation = _points[0];
 
 			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X-radius, height-firstLocation.Y-radius, radius*2, radius*2 );
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*_scale-radius, (_height-firstLocation.Y)*_scale-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(straightPen,
-			             previousLocation.X,
-			             height-previousLocation.Y,
-			             firstLocation.X,
-			             height-firstLocation.Y);
+			             previousLocation.X*_scale,
+			             (_height-previousLocation.Y)*_scale,
+			             firstLocation.X*_scale,
+			             (_height-firstLocation.Y)*_scale);
 
 			gfx.Flush();
 			gfx.Dispose();
@@ -234,6 +220,7 @@ namespace GCodeOptimizer
 			                            _points.Count);
 			
 		}
+
 		#endregion
 	}
 }

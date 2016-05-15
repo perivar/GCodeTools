@@ -1,6 +1,10 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+
+using System.Threading;
+using System.Threading.Tasks;
+
 using GCode;
 
 namespace GeneticAlgorithm
@@ -16,14 +20,6 @@ namespace GeneticAlgorithm
 	public class GAAlgorithm {
 		
 		private static Random rng = new Random();
-
-		#region events that triggers on generation complete and run complete
-		public delegate void GenerationCompleteHandler(GAAlgorithm sender);
-		public delegate void RunCompleteHandler(GAAlgorithm sender);
-
-		public event GenerationCompleteHandler OnGenerationComplete;
-		public event RunCompleteHandler OnRunComplete;
-		#endregion
 		
 		enum Direction {
 			Next,
@@ -134,6 +130,24 @@ namespace GeneticAlgorithm
 		}
 
 		/// <summary>
+		/// Start the Genetic Algorithm and call progress event
+		/// Use the Task-Based Asynchronous Pattern
+		/// </summary>
+		public async Task Run(IProgress<GAAlgorithm> progress, CancellationToken cancellationToken)
+		{
+			int counter = 0;
+			await Task.Run(() =>
+			               {
+			               	while (running) {
+			               		counter++;
+			               		GANextGeneration();
+			               		if (progress != null && counter % 10 == 0) progress.Report(this);
+			               		cancellationToken.ThrowIfCancellationRequested();
+			               	}
+			               });
+		}
+		
+		/// <summary>
 		/// Evolves a population over one generation
 		/// Main Genetic Algorithm method that mutates and calculates new values.
 		/// Is to be called repeatably until the wanted result is found
@@ -154,19 +168,6 @@ namespace GeneticAlgorithm
 
 			/* 6. re-evaluate current population */
 			SetBestValue();
-		}
-		
-		/// <summary>
-		/// Start the Genetic Algorithm and call events
-		/// </summary>
-		public void Run() {
-			
-			while (running) {
-				GANextGeneration();
-				if (OnGenerationComplete != null) OnGenerationComplete(this);
-			}
-			
-			if (OnRunComplete != null) OnRunComplete(this);
 		}
 		
 		void InitData() {
@@ -734,5 +735,5 @@ namespace GeneticAlgorithm
 	}
 		 */
 		#endregion
-	}	
+	}
 }
