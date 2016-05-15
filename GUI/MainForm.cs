@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Threading;
 using GeneticAlgorithm;
+using System.IO;
 using GCode;
 
 namespace GCodeOptimizer
@@ -69,6 +70,45 @@ namespace GCodeOptimizer
 		{
 			MessageBox.Show(string.Format("There are {0} G0 points, the {1}th generation with {2} times of mutation. Best value: {3}",
 			                              _points.Count, _alg.CurrentGeneration, _alg.MutationTimes, _alg.BestValue));
+			
+			// put all the lines back together in the best order
+			var file = new FileInfo("test.gcode");
+			var tw = new StreamWriter(file.OpenWrite());
+			tw.WriteLine("(File built with GCodeTools)");
+			tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
+			tw.WriteLine();
+
+			for (int c=0; c < _alg.BestPath.Count; c++) {
+				var block = _points[_alg.BestPath[c]] as Point3DBlock;
+				var instructions = block.GCodeInstructions;
+				foreach (var instruction in instructions) {
+					tw.WriteLine(instruction);
+				}
+				tw.Flush();
+			}
+
+			tw.WriteLine();
+			tw.WriteLine("(Footer)");
+			tw.WriteLine("(Footer end.)");
+			tw.WriteLine();
+
+			tw.Flush();
+			tw.Close();
+			
+			/*
+			for (FIXME_VAR_TYPE c=0; c<priorToG0.Length; c++) {
+				fout += priorToG0[c] + '\n';
+			}
+			for (FIXME_VAR_TYPE c=0; c<best.Length; c++) {
+				for (FIXME_VAR_TYPE n=0; n<points[best[c]].followingLines.Length; n++) {
+					fout += points[best[c]].followingLines[n] + '\n';
+				}
+			}
+			for (FIXME_VAR_TYPE c=0; c<eof.Length; c++) {
+				fout += eof[c] + '\n';
+			}
+			 */
+			
 		}
 		
 		async void BtnStartStopClick(object sender, EventArgs e)
