@@ -17,11 +17,13 @@ namespace GCodeOptimizer
 		private GAAlgorithm _alg;
 		private List<IPoint> _points;
 		
-		float _width = 0.0f;
-		float _height = 0.0f;
+		float _maxX = 0.0f;
+		float _maxY = 0.0f;
 		float _scale = 2.0f;
 		
 		CancellationTokenSource _cancelTokenSource = null;
+		
+		private DateTime previousTime = DateTime.Now;
 		
 		public MainForm(List<IPoint> points, float maxX, float maxY)
 		{
@@ -31,8 +33,8 @@ namespace GCodeOptimizer
 			InitializeComponent();
 			
 			_points = points;
-			this._width = maxX;
-			this._height = maxY;
+			this._maxX = maxX;
+			this._maxY = maxY;
 			
 			//_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			//this._width = 900;
@@ -40,7 +42,7 @@ namespace GCodeOptimizer
 			
 			_alg = new GAAlgorithm(_points);
 			
-			DrawPoints();
+			DrawInitialPoints();
 		}
 		
 		void RadScaleCheckedChanged(object sender, EventArgs e)
@@ -54,10 +56,12 @@ namespace GCodeOptimizer
 				_scale = 2.0f;
 			} else if (radScaleFour.Checked) {
 				_scale = 4.0f;
+			} else if (radScaleEight.Checked) {
+				_scale = 8.0f;
 			}
 			
 			if (!_alg.Running) {
-				DrawPoints();
+				DrawInitialPoints();
 			}
 		}
 		
@@ -93,7 +97,97 @@ namespace GCodeOptimizer
 		// method that is called from the async GAAlgorithm long running task
 		void ReportProgress(GAAlgorithm alg)
 		{
-			RedrawPreview(alg);
+			// only update if 50 ms has passed
+			var timeNow = DateTime.Now;
+			if ((DateTime.Now - previousTime).Milliseconds <= 50) return;
+			
+			DrawUpdatedPoints(alg);
+			
+			previousTime = timeNow;
+		}
+		
+		#region Draw Methods
+		static Bitmap GetImage(float maxX, float maxY, float scale, IList<IPoint> points, GAAlgorithm alg = null) {
+
+			// constants
+			const int radius = 4;
+
+			var bitmap = new Bitmap((int)(maxX*scale), (int)(maxY*scale));
+			Graphics gfx = Graphics.FromImage(bitmap);
+
+			// set background
+			gfx.Clear(Color.White);
+
+			// define pens
+			var straightPen = new Pen(Color.Red, 0.5f);
+			var lastStraightPen = new Pen(Color.HotPink, 1.0f);
+			var arcPen = new Pen(Color.Black, 0.5f);
+			var arcBrush = new SolidBrush(Color.Black);
+			
+			IPoint firstLocation = null;
+			IPoint previousLocation = null;
+			IPoint currentLocation = null;
+			
+			int TotalCount = 0;
+			if (alg != null) {
+				TotalCount = alg.BestPath.Count;
+			} else {
+				TotalCount = points.Count;
+			}
+			
+			for (int i = 0; i < TotalCount; i++) {
+				
+				if (alg != null) {
+					currentLocation = (IPoint) points[alg.BestPath[i]];
+				} else {
+					currentLocation = (IPoint) points[i];
+				}
+				
+				if (previousLocation != null) {
+					
+					// draw
+					gfx.FillEllipse( arcBrush, currentLocation.X*scale-radius, (maxY-currentLocation.Y)*scale-radius, radius*2, radius*2 );
+					
+					gfx.DrawLine(straightPen,
+					             previousLocation.X*scale,
+					             (maxY-previousLocation.Y)*scale,
+					             currentLocation.X*scale,
+					             (maxY-currentLocation.Y)*scale);
+				}
+
+				previousLocation = currentLocation;
+			}
+			
+			// last line and circle
+			if (alg != null) {
+				firstLocation = points[alg.BestPath[0]];
+			} else {
+				firstLocation = points[0];
+			}
+			
+			// draw last circle
+			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*scale-radius, (maxY-firstLocation.Y)*scale-radius, radius*2, radius*2 );
+
+			// draw last line
+			gfx.DrawLine(lastStraightPen,
+			             previousLocation.X*scale,
+			             (maxY-previousLocation.Y)*scale,
+			             firstLocation.X*scale,
+			             (maxY-firstLocation.Y)*scale);
+
+			gfx.Flush();
+			gfx.Dispose();
+			straightPen.Dispose();
+			lastStraightPen.Dispose();
+			arcPen.Dispose();
+			arcBrush.Dispose();
+
+			return bitmap;
+		}
+		
+		void DrawUpdatedPoints(GAAlgorithm alg)
+		{
+			pictureBox1.Image = GetImage(_maxX, _maxY, _scale, _points, alg);
 			
 			// print calculated distance
 			label1.Text = string.Format("There are {0} G0 points, the {1}th generation with {2} times of mutation. Best value: {3}",
@@ -101,124 +195,12 @@ namespace GCodeOptimizer
 			
 		}
 		
-		#region Draw Methods
-		void RedrawPreview(GAAlgorithm alg)
-		{
-			//var b = new Bitmap((int)(pictureBox1.Width), (int)(height));
-			var b = new Bitmap((int)(_width*_scale), (int)(_height*_scale));
-
-			Graphics gfx = Graphics.FromImage(b);
-
-			gfx.Clear(Color.Snow);
-
-			var straightPen = new Pen(Color.Red, 0.5f);
-			var arcPen = new Pen(Color.Black, 0.5f);
-			var arcBrush = new SolidBrush(Color.Black);
-			
-			// run through each location in the order specified in the chromosome
-			var previousLocation = (IPoint) Point3D.Empty;
-			const int radius = 4;
-			
-			for (int i = 0; i < alg.BestPath.Count; i++) {
-				
-				var currentLocation = (IPoint) _points[alg.BestPath[i]];
-				
-				if (!previousLocation.IsEmpty) {
-					
-					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X*_scale-radius, (_height-currentLocation.Y)*_scale-radius, radius*2, radius*2 );
-					
-					gfx.DrawLine(straightPen,
-					             previousLocation.X*_scale,
-					             (_height-previousLocation.Y)*_scale,
-					             currentLocation.X*_scale,
-					             (_height-currentLocation.Y)*_scale);
-				}
-
-				previousLocation = currentLocation;
-			}
-
-			// last line and circle
-			var firstLocation = _points[alg.BestPath[0]];
-
-			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*_scale-radius, (_height-firstLocation.Y)*_scale-radius, radius*2, radius*2 );
-
-			// draw last line
-			gfx.DrawLine(straightPen,
-			             previousLocation.X*_scale,
-			             (_height-previousLocation.Y)*_scale,
-			             firstLocation.X*_scale,
-			             (_height-firstLocation.Y)*_scale);
-
-			gfx.Flush();
-			gfx.Dispose();
-			straightPen.Dispose();
-			arcPen.Dispose();
-			arcBrush.Dispose();
-
-			pictureBox1.Image = b;
-		}
-		
-		void DrawPoints() {
-			//var b = new Bitmap((int)(pictureBox1.Width), (int)(height));
-			var b = new Bitmap((int)(_width*_scale), (int)(_height*_scale));
-
-			Graphics gfx = Graphics.FromImage(b);
-
-			gfx.Clear(Color.Snow);
-
-			var straightPen = new Pen(Color.Red, 0.5f);
-			var arcPen = new Pen(Color.Black, 0.5f);
-			var arcBrush = new SolidBrush(Color.Black);
-			
-			// run through each location in the order specified in the chromosome
-			var previousLocation = (IPoint) Point3D.Empty;
-			const int radius = 4;
-			
-			for (int i = 0; i < _points.Count; i++) {
-				
-				var currentLocation = (IPoint) _points[i];
-				
-				if (!previousLocation.IsEmpty) {
-					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X*_scale-radius, (_height-currentLocation.Y)*_scale-radius, radius*2, radius*2 );
-					
-					gfx.DrawLine(straightPen,
-					             previousLocation.X*_scale,
-					             (_height-previousLocation.Y)*_scale,
-					             currentLocation.X*_scale,
-					             (_height-currentLocation.Y)*_scale);
-				}
-
-				previousLocation = currentLocation;
-			}
-
-			// last line and circle
-			var firstLocation = _points[0];
-
-			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*_scale-radius, (_height-firstLocation.Y)*_scale-radius, radius*2, radius*2 );
-
-			// draw last line
-			gfx.DrawLine(straightPen,
-			             previousLocation.X*_scale,
-			             (_height-previousLocation.Y)*_scale,
-			             firstLocation.X*_scale,
-			             (_height-firstLocation.Y)*_scale);
-
-			gfx.Flush();
-			gfx.Dispose();
-			straightPen.Dispose();
-			arcPen.Dispose();
-			arcBrush.Dispose();
-
-			pictureBox1.Image = b;
+		void DrawInitialPoints() {
+			pictureBox1.Image = GetImage(_maxX, _maxY, _scale, _points);
 
 			// print calculated distance
 			label1.Text = string.Format("There are {0} G0 points.",
 			                            _points.Count);
-			
 		}
 
 		#endregion

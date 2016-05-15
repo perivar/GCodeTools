@@ -25,6 +25,7 @@ namespace GCodeOptimizer
 		private System.Windows.Forms.RadioButton radScaleFour;
 		private System.Windows.Forms.Button btnSave;
 		private System.Windows.Forms.Panel pnlBottom;
+		private System.Windows.Forms.RadioButton radScaleEight;
 		
 		/// <summary>
 		/// Disposes resources used by the form.
@@ -58,6 +59,7 @@ namespace GCodeOptimizer
 			this.radScaleFour = new System.Windows.Forms.RadioButton();
 			this.btnSave = new System.Windows.Forms.Button();
 			this.pnlBottom = new System.Windows.Forms.Panel();
+			this.radScaleEight = new System.Windows.Forms.RadioButton();
 			this.pnlTop.SuspendLayout();
 			this.pnlViewer.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -100,10 +102,11 @@ namespace GCodeOptimizer
 			| System.Windows.Forms.AnchorStyles.Left) 
 			| System.Windows.Forms.AnchorStyles.Right)));
 			this.pnlViewer.AutoScroll = true;
+			this.pnlViewer.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.pnlViewer.Controls.Add(this.pictureBox1);
-			this.pnlViewer.Location = new System.Drawing.Point(1, 30);
+			this.pnlViewer.Location = new System.Drawing.Point(12, 37);
 			this.pnlViewer.Name = "pnlViewer";
-			this.pnlViewer.Size = new System.Drawing.Size(642, 311);
+			this.pnlViewer.Size = new System.Drawing.Size(623, 299);
 			this.pnlViewer.TabIndex = 1;
 			// 
 			// pictureBox1
@@ -172,6 +175,7 @@ namespace GCodeOptimizer
 			// 
 			this.pnlBottom.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
 			| System.Windows.Forms.AnchorStyles.Right)));
+			this.pnlBottom.Controls.Add(this.radScaleEight);
 			this.pnlBottom.Controls.Add(this.radScaleHalf);
 			this.pnlBottom.Controls.Add(this.btnSave);
 			this.pnlBottom.Controls.Add(this.radScaleOne);
@@ -181,6 +185,16 @@ namespace GCodeOptimizer
 			this.pnlBottom.Name = "pnlBottom";
 			this.pnlBottom.Size = new System.Drawing.Size(639, 29);
 			this.pnlBottom.TabIndex = 7;
+			// 
+			// radScaleEight
+			// 
+			this.radScaleEight.Location = new System.Drawing.Point(190, 2);
+			this.radScaleEight.Name = "radScaleEight";
+			this.radScaleEight.Size = new System.Drawing.Size(36, 24);
+			this.radScaleEight.TabIndex = 7;
+			this.radScaleEight.Text = "8x";
+			this.radScaleEight.UseVisualStyleBackColor = true;
+			this.radScaleEight.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
 			// 
 			// MainForm
 			// 

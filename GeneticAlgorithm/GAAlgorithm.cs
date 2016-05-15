@@ -135,13 +135,11 @@ namespace GeneticAlgorithm
 		/// </summary>
 		public async Task Run(IProgress<GAAlgorithm> progress, CancellationToken cancellationToken)
 		{
-			int counter = 0;
 			await Task.Run(() =>
 			               {
 			               	while (running) {
-			               		counter++;
 			               		GANextGeneration();
-			               		if (progress != null && counter % 10 == 0) progress.Report(this);
+			               		if (progress != null) progress.Report(this);
 			               		cancellationToken.ThrowIfCancellationRequested();
 			               	}
 			               });
