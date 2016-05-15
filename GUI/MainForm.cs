@@ -198,9 +198,9 @@ namespace GCodeOptimizer
 		void DrawInitialPoints() {
 			pictureBox1.Image = GetImage(_maxX, _maxY, _scale, _points);
 
-			// print calculated distance
-			label1.Text = string.Format("There are {0} G0 points.",
-			                            _points.Count);
+			// print initial distance
+			label1.Text = string.Format("Initially there are {0} G0 points. Best value: {1}",
+			                            _points.Count, _alg.BestValue);
 		}
 
 		#endregion
