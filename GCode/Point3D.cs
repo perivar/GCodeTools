@@ -118,15 +118,31 @@ namespace GCode
 				return point.Y;
 			}
 		}
+		
+		public float Z {
+			set {
+				point.Z = value;
+			}
+			get {
+				return point.Z;
+			}
+		}
 
+		public int BestPathIndex { set; get; }
+		
 		public bool IsEmpty {
 			get {
-				return this.X == 0f && this.Y == 0f;
+				return this.X == 0f && this.Y == 0f && this.Z == 0f;
 			}
 		}
 		
-		public bool EqualCoordinates(Point3DBlock other) {
+		public bool EqualXYCoordinates(Point3DBlock other) {
 			if (other != null && this.X == other.X && this.Y == other.Y) return true;
+			return false;
+		}
+		
+		public bool EqualCoordinates(Point3DBlock other) {
+			if (other != null && this.X == other.X && this.Y == other.Y && this.Z == other.Z) return true;
 			return false;
 		}
 		
@@ -135,14 +151,17 @@ namespace GCode
 		public Point3DBlock(float x, float y) {
 			point.X = x;
 			point.Y = y;
+			point.Z = 0;
 		}
 		
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
-			                     "X={0}, Y={1} - Count: {2}",
+			                     "X={0}, Y={1}, Z={2}, Index: {3} - Count: {4}",
 			                     this.X,
 			                     this.Y,
+			                     this.Z,
+			                     this.BestPathIndex,
 			                     this.gcodeInstructions.Count
 			                    );
 		}

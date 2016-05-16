@@ -143,40 +143,97 @@ namespace GCode
 		public static List<int> SortBlocksByZDepth(List<int> bestPath, List<IPoint> points) {
 			var sortedBestPath = new List<int>();
 			
-			float z = 0.0f;
 			Point3DBlock previousBlock = null;
+			var blocksWithSameXY = new List<Point3DBlock>();
 			
 			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
 				
-				for (int c=0; c < bestPath.Count; c++) {
-					var block = points[bestPath[c]] as Point3DBlock;
+				for (int i = 0; i < bestPath.Count; i++) {
 					
-					if (block.EqualCoordinates(previousBlock)) {
-						// find all blocks with the same X and Y
+					// retrieve correct block using best path index
+					var block = points[bestPath[i]] as Point3DBlock;
+					
+					// if we have blocks available and
+					// we have reached a new block (i.e. different X and Y coordinate)
+					// store it and clear the blocks
+					if (blocksWithSameXY.Count > 0 &&
+					    !block.EqualXYCoordinates(previousBlock)) {
+						// sort the blocks with same xy by z coordinate
+						var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z).ToList();
+
+						// add to return index
+						var indexes = sortedByZ.Select(o => o.BestPathIndex).ToList();
+						sortedBestPath.AddRange(indexes);
 						
-						// and then sort by z
-					} else {
-						// new block
+						// reset block
+						blocksWithSameXY.Clear();
+					}
+
+					// store original index
+					block.BestPathIndex = bestPath[i];
+					
+					// retrieve z and store
+					float z = RetrieveZ(block.GCodeInstructions);
+					if (!float.IsNaN(z)) {
+						block.Z = z;
+
+						// add
+						blocksWithSameXY.Add(block);
 					}
 					
-					var instructions = block.GCodeInstructions;
-					
-					foreach (var instruction in instructions) {
-						if (instruction.CommandEnum == CommandList.NormalMove
-						    && !instruction.X.HasValue
-						    && !instruction.Y.HasValue
-						    && instruction.Z.HasValue) {
-							z = instruction.Z.Value;
-							break;
-						}
-					}
-					
-					//
+					// store previous block
+					previousBlock = block;
 				}
+			}
+			
+			// also store the last block collection
+			// if we have blocks available and
+			// we have reached a new block (i.e. different X and Y coordinate)
+			// store it and clear the blocks
+			if (blocksWithSameXY.Count > 0) {
+				// sort the blocks with same xy by z coordinate
+				var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z).ToList();
+
+				// add to return index
+				var indexes = sortedByZ.Select(o => o.BestPathIndex).ToList();
+				sortedBestPath.AddRange(indexes);
 				
+				// reset block
+				blocksWithSameXY.Clear();
 			}
 			
 			return sortedBestPath;
+		}
+		
+		/// <summary>
+		/// Search for a normal move with only a z-coordinate
+		/// and return the z-coordinate
+		/// </summary>
+		/// <param name="instructions">list of gcode instructions</param>
+		/// <returns>z value or NaN</returns>
+		private static float RetrieveZ(List<GCodeInstruction> instructions) {
+
+			// search for a normal move with only a z-coordinate
+			float z = 0.0f;
+			bool found = false;
+
+			foreach (var instruction in instructions) {
+				if (instruction.CommandEnum == CommandList.NormalMove
+				    && !instruction.X.HasValue
+				    && !instruction.Y.HasValue
+				    && instruction.Z.HasValue) {
+					z = instruction.Z.Value;
+					found = true;
+					break;
+				}
+			}
+			
+			if (!found) {
+				// could not found a normal move at all, return what?!
+				return float.NaN;
+			} else {
+				return z;
+			}
 		}
 		
 		/// <summary>
@@ -193,27 +250,23 @@ namespace GCode
 				// put all the lines back together in the best order
 				var file = new FileInfo(filePath);
 				var tw = new StreamWriter(file.OpenWrite());
+				
 				tw.WriteLine("(File built with GCodeTools)");
 				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
 				tw.WriteLine();
 
-				for (int c=0; c < bestPath.Count; c++) {
-					tw.WriteLine(string.Format("(Start Block_{0})", c));
+				for (int i = 0; i < bestPath.Count; i++) {
 					
-					var block = points[bestPath[c]] as Point3DBlock;
+					var block = points[bestPath[i]] as Point3DBlock;
 					var instructions = block.GCodeInstructions;
+
+					tw.WriteLine(string.Format("(Start Block_{0})", i));
 					foreach (var instruction in instructions) {
 						tw.WriteLine(instruction);
 					}
-
-					tw.WriteLine(string.Format("(End Block_{0})", c));
+					tw.WriteLine(string.Format("(End Block_{0})", i));
 					tw.WriteLine();
-					tw.Flush();
 				}
-
-				tw.WriteLine("(Footer)");
-				tw.WriteLine("(Footer end.)");
-				tw.WriteLine();
 
 				tw.Flush();
 				tw.Close();

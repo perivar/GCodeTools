@@ -68,17 +68,16 @@ namespace GCodeOptimizer
 		
 		void BtnSaveClick(object sender, EventArgs e)
 		{
-			// first sort by z-order
-			//var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
-
 			string newFileName = Path.GetFileNameWithoutExtension(QuickSettings.Get["LastOpenedFile"]) + "_optimized.gcode";
 			sfdSaveDialog.FileName = newFileName;
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == DialogResult.OK)
 			{
+				// first sort by z-order
+				var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
 				
 				// then save
-				GCodeUtils.SaveGCode(_alg.BestPath, _points, sfdSaveDialog.FileName);
+				GCodeUtils.SaveGCode(sortedBestPath, _points, sfdSaveDialog.FileName);
 			}
 		}
 		
