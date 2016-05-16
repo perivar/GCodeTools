@@ -78,6 +78,8 @@ namespace GCodeOptimizer
 				
 				// then save
 				GCodeUtils.SaveGCode(sortedBestPath, _points, sfdSaveDialog.FileName);
+				
+				//GCodeUtils.SaveGCode(_alg.BestPath, _points, sfdSaveDialog.FileName);
 			}
 		}
 		

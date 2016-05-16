@@ -775,34 +775,32 @@ namespace GCodePlotter
 					file.Delete();
 				}
 
-				var tw = new StreamWriter(file.OpenWrite());
+				using (var tw = new StreamWriter(file.OpenWrite())) {
 
-				tw.WriteLine("(File built with GCodeTools)");
-				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
-				tw.WriteLine();
-				tw.WriteLine("(Header)");
-				tw.WriteLine("G90   (set absolute distance mode)");
-				//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
-				tw.WriteLine("G17   (set active plane to XY)");
-				tw.WriteLine("G21   (set units to mm)");
-				tw.WriteLine("(Header end.)");
-				tw.WriteLine();
-				myBlocks.ForEach(x =>
-				                 {
-				                 	tw.WriteLine();
-				                 	tw.Write(x.BuildGCodeOutput(doMultiLayer));
-				                 });
-				tw.Flush();
+					tw.WriteLine("(File built with GCodeTools)");
+					tw.WriteLine("(Generated on " + DateTime.Now + ")");
+					tw.WriteLine();
+					tw.WriteLine("(Header)");
+					tw.WriteLine("G90   (set absolute distance mode)");
+					//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+					tw.WriteLine("G17   (set active plane to XY)");
+					tw.WriteLine("G21   (set units to mm)");
+					tw.WriteLine("(Header end.)");
+					tw.WriteLine();
+					myBlocks.ForEach(x =>
+					                 {
+					                 	tw.WriteLine();
+					                 	tw.Write(x.BuildGCodeOutput(doMultiLayer));
+					                 });
+					tw.Flush();
 
-				tw.WriteLine();
-				tw.WriteLine("(Footer)");
-				tw.WriteLine("G00 Z5");
-				tw.WriteLine("G00 X0 Y0");
-				tw.WriteLine("(Footer end.)");
-				tw.WriteLine();
-
-				tw.Flush();
-				tw.Close();
+					tw.WriteLine();
+					tw.WriteLine("(Footer)");
+					tw.WriteLine("G00 Z5");
+					tw.WriteLine("G00 X0 Y0");
+					tw.WriteLine("(Footer end.)");
+					tw.WriteLine();
+				}
 			}
 		}
 		
@@ -857,35 +855,33 @@ namespace GCodePlotter
 				file.Delete();
 			}
 			
-			var tw = new StreamWriter(file.OpenWrite());
+			using (var tw = new StreamWriter(file.OpenWrite())) {
 
-			tw.WriteLine("(File built with GCodeTools)");
-			tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
-			tw.WriteLine();
-			tw.WriteLine("(Header)");
-			tw.WriteLine("G90   (set absolute distance mode)");
-			//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
-			tw.WriteLine("G17   (set active plane to XY)");
-			tw.WriteLine("G21   (set units to mm)");
-			tw.WriteLine("(Header end.)");
-			tw.WriteLine();
-			
-			blocks.ForEach(x =>
-			               {
-			               	tw.WriteLine();
-			               	tw.Write(x.BuildGCodeOutput(false));
-			               });
-			tw.Flush();
+				tw.WriteLine("(File built with GCodeTools)");
+				tw.WriteLine("(Generated on " + DateTime.Now + ")");
+				tw.WriteLine();
+				tw.WriteLine("(Header)");
+				tw.WriteLine("G90   (set absolute distance mode)");
+				//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+				tw.WriteLine("G17   (set active plane to XY)");
+				tw.WriteLine("G21   (set units to mm)");
+				tw.WriteLine("(Header end.)");
+				tw.WriteLine();
+				
+				blocks.ForEach(x =>
+				               {
+				               	tw.WriteLine();
+				               	tw.Write(x.BuildGCodeOutput(false));
+				               });
+				tw.Flush();
 
-			tw.WriteLine();
-			tw.WriteLine("(Footer)");
-			tw.WriteLine("G00 Z5");
-			tw.WriteLine("G00 X0 Y0");
-			tw.WriteLine("(Footer end.)");
-			tw.WriteLine();
-
-			tw.Flush();
-			tw.Close();
+				tw.WriteLine();
+				tw.WriteLine("(Footer)");
+				tw.WriteLine("G00 Z5");
+				tw.WriteLine("G00 X0 Y0");
+				tw.WriteLine("(Footer end.)");
+				tw.WriteLine();
+			}
 		}
 		#endregion
 	}

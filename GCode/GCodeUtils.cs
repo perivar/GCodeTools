@@ -11,6 +11,8 @@ namespace GCode
 	/// </summary>
 	public static class GCodeUtils
 	{
+		private readonly static Object writerLock = new Object();
+		
 		/// <summary>
 		/// Split the list of gcode instructions into gcode blocks.
 		/// splits a G0 commands that includes either X and/or Y.
@@ -159,10 +161,10 @@ namespace GCode
 					if (blocksWithSameXY.Count > 0 &&
 					    !block.EqualXYCoordinates(previousBlock)) {
 						// sort the blocks with same xy by z coordinate
-						var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z).ToList();
+						var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z);
 
 						// add to return index
-						var indexes = sortedByZ.Select(o => o.BestPathIndex).ToList();
+						var indexes = sortedByZ.Select(o => o.BestPathIndex);
 						sortedBestPath.AddRange(indexes);
 						
 						// reset block
@@ -192,10 +194,10 @@ namespace GCode
 			// store it and clear the blocks
 			if (blocksWithSameXY.Count > 0) {
 				// sort the blocks with same xy by z coordinate
-				var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z).ToList();
+				var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z);
 
 				// add to return index
-				var indexes = sortedByZ.Select(o => o.BestPathIndex).ToList();
+				var indexes = sortedByZ.Select(o => o.BestPathIndex);
 				sortedBestPath.AddRange(indexes);
 				
 				// reset block
@@ -249,27 +251,33 @@ namespace GCode
 				
 				// put all the lines back together in the best order
 				var file = new FileInfo(filePath);
-				var tw = new StreamWriter(file.OpenWrite());
 				
-				tw.WriteLine("(File built with GCodeTools)");
-				tw.WriteLine("(Generated on " + DateTime.Now.ToString() + ")");
-				tw.WriteLine();
-
-				for (int i = 0; i < bestPath.Count; i++) {
-					
-					var block = points[bestPath[i]] as Point3DBlock;
-					var instructions = block.GCodeInstructions;
-
-					tw.WriteLine(string.Format("(Start Block_{0})", i));
-					foreach (var instruction in instructions) {
-						tw.WriteLine(instruction);
-					}
-					tw.WriteLine(string.Format("(End Block_{0})", i));
-					tw.WriteLine();
+				if (file.Exists) {
+					file.Delete();
 				}
+				
+				using (var tw = new StreamWriter(file.OpenWrite())) {
+					
+					lock (writerLock) {
+						
+						tw.WriteLine("(File built with GCodeTools)");
+						tw.WriteLine("(Generated on " + DateTime.Now + ")");
+						tw.WriteLine();
 
-				tw.Flush();
-				tw.Close();
+						for (int i = 0; i < bestPath.Count; i++) {
+							
+							var block = points[bestPath[i]] as Point3DBlock;
+							var instructions = block.GCodeInstructions;
+
+							tw.WriteLine(string.Format("(Start Block_{0})", i));
+							foreach (var instruction in instructions) {
+								tw.WriteLine(instruction);
+							}
+							tw.WriteLine(string.Format("(End Block_{0})", i));
+							tw.WriteLine();
+						}
+					}
+				}
 				
 				return true;
 				
