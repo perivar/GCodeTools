@@ -12,7 +12,6 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using GCode;
-using GeneticAlgorithm;
 
 namespace GCodePlotter
 {
@@ -867,7 +866,14 @@ namespace GCodePlotter
 
 				tw.WriteLine();
 				tw.WriteLine("(Footer)");
-				tw.WriteLine("G00 Z5");
+				
+				float zClearance = 2.0f;
+				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
+					txtZClearance.Text = "2.0";
+					zClearance = 2.0f;
+				}
+				
+				tw.WriteLine("G00 Z{0:0.####}", zClearance);
 				tw.WriteLine("G00 X0 Y0");
 				tw.WriteLine("(Footer end.)");
 				tw.WriteLine();
