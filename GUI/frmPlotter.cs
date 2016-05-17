@@ -295,7 +295,7 @@ namespace GCodePlotter
 		{
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
-			var points = gcodeSplitObject.MainBlocks.ToList<IPoint>();
+			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
 			new GCodeOptimizer.MainForm(points, maxX, maxY).Show();
 		}
 		
@@ -403,6 +403,13 @@ namespace GCodePlotter
 					if (currentInstruction.Comment.StartsWith("Start cutting path id:")
 					    || currentInstruction.Comment == "Footer") {
 
+						if (currentBlock.PlotPoints.Count > 0) {
+							blocks.Add(currentBlock);
+							
+							// Reset block, meaning add new
+							currentBlock = new Block();
+						}
+						
 						if (currentInstruction.Comment == "Footer") {
 							currentBlock.Name = currentInstruction.Comment;
 						} else {
@@ -411,34 +418,17 @@ namespace GCodePlotter
 							}
 						}
 					} else if (currentInstruction.Comment.StartsWith("End cutting path id:")) {
-						// disregards blocks if only one entry which is a rapid up move
-						if (currentBlock.PlotPoints.Count > 1) {
+						if (currentBlock.PlotPoints.Count > 0) {
 							blocks.Add(currentBlock);
 							
 							// Reset block, meaning add new
 							currentBlock = new Block();
-							currentBlock.Name = "Block_" + blockCounter++;
 						}
 					} else {
 						// ignore all comments up to first "Start Cutting", i.e. header
-						// TODO: Handle headers like (Circles) and (Square)
 					}
 					
 				} else if (currentInstruction.CanRender) {
-					
-					// rapid move up = end of block
-					if (currentInstruction.CommandEnum == CommandList.RapidMove
-					    && !currentInstruction.X.HasValue
-					    && !currentInstruction.Y.HasValue
-					    && currentInstruction.Z.HasValue
-					    && currentBlock.PlotPoints.Count > 1) {
-						
-						blocks.Add(currentBlock);
-						
-						// Reset block, meaning add new
-						currentBlock = new Block();
-						currentBlock.Name = "Block_" + blockCounter++;
-					}
 					
 					// this is where the block is put together and where the linepoints is added
 					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
@@ -488,7 +478,7 @@ namespace GCodePlotter
 			//blocks.AddRange(GetBlockElements(point3DList.Header, "Header", ref currentPoint));
 
 			// add main blocks
-			blocks.AddRange(GetBlockElements(gcodeSplitObject.MainBlocks, ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeSplitObject.AllG0Sections, ref currentPoint));
 			
 			// last add footer
 			//blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer", ref currentPoint));

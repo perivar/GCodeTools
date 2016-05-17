@@ -73,13 +73,14 @@ namespace GCodeOptimizer
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == DialogResult.OK)
 			{
+				// save original
+				//GCodeUtils.SaveGCode(_alg.BestPath, _points, sfdSaveDialog.FileName + "_orig.gcode");
+
 				// first sort by z-order
 				var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
 				
 				// then save
 				GCodeUtils.SaveGCode(sortedBestPath, _points, sfdSaveDialog.FileName);
-				
-				//GCodeUtils.SaveGCode(_alg.BestPath, _points, sfdSaveDialog.FileName);
 			}
 		}
 		
@@ -214,7 +215,6 @@ namespace GCodeOptimizer
 			label1.Text = string.Format("Initially there are {0} G0 points. Best value: {1}",
 			                            _points.Count, _alg.BestValue);
 		}
-
 		#endregion
 	}
 }

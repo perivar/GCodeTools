@@ -22,12 +22,13 @@ namespace GCode
 		/// <returns>GCode split object</returns>
 		public static GCodeSplitObject SplitGCodeInstructions(List<GCodeInstruction> instructions) {
 
+			// list that will be returned
 			var allG0 = new List<Point3DBlock>();
-
-			// temporary lists
 			var priorToG0 = new List<GCodeInstruction>();
-			var notG0 = new List<GCodeInstruction>();
 			var eof = new List<GCodeInstruction>();
+
+			// temporary list
+			var notG0 = new List<GCodeInstruction>();
 			
 			foreach (var currentInstruction in instructions) {
 				
@@ -129,9 +130,9 @@ namespace GCode
 			
 			// add header and footer as special blocks
 			var gcodeBlocks = new GCodeSplitObject();
-			gcodeBlocks.MainBlocks = allG0;
-			gcodeBlocks.Header = priorToG0;
-			gcodeBlocks.Footer = eof;
+			gcodeBlocks.AllG0Sections = allG0;
+			gcodeBlocks.PriorToFirstG0Section = priorToG0;
+			gcodeBlocks.AfterLastG0Section = eof;
 			
 			return gcodeBlocks;
 		}
@@ -299,21 +300,33 @@ namespace GCode
 			}
 			 */
 		}
+		
+		public static void DumpGCode(List<GCodeInstruction> instructions, string filePath) {
+			
+			// create or overwrite a file
+			using (FileStream f = File.Create(filePath)) {
+				using (var s = new StreamWriter(f)) {
+					foreach (var gCodeLine in instructions) {
+						s.WriteLine(gCodeLine);
+					}
+				}
+			}
+		}
 	}
 	
 	public class GCodeSplitObject {
 		
-		public List<Point3DBlock> MainBlocks { get; set; }
-		public List<GCodeInstruction> Header { get; set; }
-		public List<GCodeInstruction> Footer { get; set; }
+		public List<Point3DBlock> AllG0Sections { get; set; }
+		public List<GCodeInstruction> PriorToFirstG0Section { get; set; }
+		public List<GCodeInstruction> AfterLastG0Section { get; set; }
 		
 		public override string ToString()
 		{
 			return string.Format(CultureInfo.CurrentCulture,
-			                     "Header: {0}, Blocks: {1}, Footer: {2}",
-			                     this.Header.Count,
-			                     this.MainBlocks.Count,
-			                     this.Footer.Count
+			                     "PriorToG0: {0}, AllG0: {1}, Eof: {2}",
+			                     this.PriorToFirstG0Section.Count,
+			                     this.AllG0Sections.Count,
+			                     this.AfterLastG0Section.Count
 			                    );
 		}
 	}

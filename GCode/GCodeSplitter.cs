@@ -360,18 +360,6 @@ namespace GCode
 			return cleanedList;
 		}
 		
-		public static void DumpGCode(string fileName, List<GCodeInstruction> instructions) {
-			
-			// create or overwrite a file
-			using (FileStream f = File.Create(fileName)) {
-				using (var s = new StreamWriter(f)) {
-					foreach (var gCodeLine in instructions) {
-						s.WriteLine(gCodeLine);
-					}
-				}
-			}
-		}
-		
 		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2) {
 			
 			var output = new List<Point3D>();
@@ -445,6 +433,7 @@ namespace GCode
 			double gamma1 = 0.0f;
 			double gamma2 = 0.0f;
 			
+			// find radius of circle
 			double R = Distance(p1, cent);
 			double Rt = Distance(p2, cent);
 			
@@ -616,7 +605,14 @@ namespace GCode
 			return angle * (180.0 / Math.PI);
 		}
 		
-		private static double Distance(Point3D p1, Point3D p2)
+		/// <summary>
+		/// Calculate the distance between two points in 2D space (x and y)
+		/// (Perform an euclidean calculation of two points)
+		/// </summary>
+		/// <param name="p1">first point</param>
+		/// <param name="p2">second point</param>
+		/// <returns>the euclidean distance between the two points</returns>
+		private static double Distance(IPoint p1, IPoint p2)
 		{
 			return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
 		}
