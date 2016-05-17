@@ -112,6 +112,12 @@ namespace GCode
 				}
 			}
 			
+			// if allG0 at this point is zero, we were unable to parse any
+			// movement intstructions, return empty split object
+			if (allG0.Count == 0) {
+				return null;
+			}
+			
 			// add notG0 to the followingLines for the last entry in allG0
 			// this gets the lines after the last G0 in the file
 			// we also need to check if the commands here are not G0, G1, G2, G3, or G4

@@ -306,7 +306,7 @@ namespace GCodePlotter
 		}
 		#endregion
 		
-		#region Private Methods
+		#region Prive Methods
 		private Rectangle GetVisibleRectangle(Control c)
 		{
 			Rectangle rect = c.RectangleToScreen(c.ClientRectangle);
@@ -319,7 +319,7 @@ namespace GCodePlotter
 			return rect;
 		}
 		
-		void ZoomIn(Point clickPoint) {
+		private void ZoomIn(Point clickPoint) {
 
 			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
 			    (pictureBox1.Height < (MINMAX * panelViewer.Height)))
@@ -335,7 +335,7 @@ namespace GCodePlotter
 			}
 		}
 
-		void ZoomOut(Point clickPoint) {
+		private void ZoomOut(Point clickPoint) {
 
 			if ((pictureBox1.Width > (panelViewer.Width / MINMAX)) &&
 			    (pictureBox1.Height > (panelViewer.Height / MINMAX )))
@@ -356,7 +356,7 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="clickPoint">position under the cursor which is to be retained</param>
 		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
-		void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
+		private void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
 			// http://vilipetek.com/2013/09/07/105/
 			
 			var scrollPosition = panelViewer.AutoScrollPosition;
@@ -387,7 +387,7 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>list of blocks</returns>
-		static List<Block> GetBlocksOld(List<GCodeInstruction> instructions) {
+		private static List<Block> GetBlocksOld(List<GCodeInstruction> instructions) {
 			
 			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
@@ -465,27 +465,29 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>list of blocks</returns>
-		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
-
-			// convert instructions into splitted gcode instructions
-			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(instructions);
+		private static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 
 			var blocks = new List<Block>();
 			var currentPoint = Point3D.Empty;
 
+			// convert instructions into splitted gcode instructions
+			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(instructions);
+
+			if (gcodeSplitObject == null) return blocks;
+			
 			// first add header
-			//blocks.AddRange(GetBlockElements(point3DList.Header, "Header", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
 
 			// add main blocks
 			blocks.AddRange(GetBlockElements(gcodeSplitObject.AllG0Sections, ref currentPoint));
 			
 			// last add footer
-			//blocks.AddRange(GetBlockElements(point3DList.Footer, "Footer", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
 			
 			return blocks;
 		}
 		
-		static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks, ref Point3D currentPoint) {
+		private static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks, ref Point3D currentPoint) {
 			
 			int blockCounter = 1;
 			var blocks = new List<Block>();
@@ -515,7 +517,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name, ref Point3D currentPoint) {
+		private static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name, ref Point3D currentPoint) {
 			
 			var blocks = new List<Block>();
 			
@@ -539,7 +541,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		void ParseText(string text)
+		private void ParseText(string text)
 		{
 			parsedInstructions = SimpleGCodeParser.ParseText(text);
 
@@ -587,7 +589,7 @@ namespace GCodePlotter
 			bDataLoaded = true;
 		}
 		
-		void ResetSplit(int index) {
+		private void ResetSplit(int index) {
 			
 			if (parsedInstructions == null) {
 				MessageBox.Show("No file loaded!");
@@ -623,7 +625,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		Size GetDimensionsFromZoom() {
+		private Size GetDimensionsFromZoom() {
 
 			// set scale variable
 			scale = (10 * multiplier);
@@ -635,7 +637,7 @@ namespace GCodePlotter
 			return new Size(width, height);
 		}
 		
-		void GetEmptyImage() {
+		private void GetEmptyImage() {
 			
 			var imageDimension = GetDimensionsFromZoom();
 			int width = imageDimension.Width;
@@ -661,7 +663,7 @@ namespace GCodePlotter
 			}
 		}
 
-		void RenderBlocks()
+		private void RenderBlocks()
 		{
 			GetEmptyImage();
 			
@@ -749,7 +751,7 @@ namespace GCodePlotter
 			pictureBox1.Refresh();
 		}
 		
-		void SaveGCodes(bool doMultiLayer)
+		private void SaveGCodes(bool doMultiLayer)
 		{
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == DialogResult.OK)
@@ -764,36 +766,26 @@ namespace GCodePlotter
 					file.Delete();
 				}
 
-				using (var tw = new StreamWriter(file.OpenWrite())) {
+				float zSafeHeight = 2.0f;
+				if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
+					txtZClearance.Text = "2.0";
+					zSafeHeight = 2.0f;
+				}
 
-					tw.WriteLine("(File built with GCodeTools)");
-					tw.WriteLine("(Generated on " + DateTime.Now + ")");
-					tw.WriteLine();
-					tw.WriteLine("(Header)");
-					tw.WriteLine("G90   (set absolute distance mode)");
-					//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
-					tw.WriteLine("G17   (set active plane to XY)");
-					tw.WriteLine("G21   (set units to mm)");
-					tw.WriteLine("(Header end.)");
-					tw.WriteLine();
+				using (var tw = new StreamWriter(file.OpenWrite())) {
+					WriteGCodeHeader(tw, zSafeHeight);
 					myBlocks.ForEach(x =>
 					                 {
 					                 	tw.WriteLine();
 					                 	tw.Write(x.BuildGCodeOutput(doMultiLayer));
 					                 });
 					tw.Flush();
-
-					tw.WriteLine();
-					tw.WriteLine("(Footer)");
-					tw.WriteLine("G00 Z5");
-					tw.WriteLine("G00 X0 Y0");
-					tw.WriteLine("(Footer end.)");
-					tw.WriteLine();
+					WriteGCodeFooter(tw, zSafeHeight);
 				}
 			}
 		}
 		
-		void SaveSplittedGCodes(List<List<GCodeInstruction>> split, Point3D splitPoint, string filePath) {
+		private void SaveSplittedGCodes(List<List<GCodeInstruction>> split, Point3D splitPoint, string filePath) {
 			
 			var dirPath = Path.GetDirectoryName(filePath);
 			var fileName = Path.GetFileNameWithoutExtension(filePath);
@@ -809,7 +801,7 @@ namespace GCodePlotter
 			SaveGCodes(cleanedSecond, splitPoint, fileSecond);
 		}
 
-		void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
+		private void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
 		{
 			List<Block> blocks = null;
 			
@@ -844,40 +836,48 @@ namespace GCodePlotter
 				file.Delete();
 			}
 			
+			float zSafeHeight = 2.0f;
+			if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
+				txtZClearance.Text = "2.0";
+				zSafeHeight = 2.0f;
+			}
+			
 			using (var tw = new StreamWriter(file.OpenWrite())) {
-
-				tw.WriteLine("(File built with GCodeTools)");
-				tw.WriteLine("(Generated on " + DateTime.Now + ")");
-				tw.WriteLine();
-				tw.WriteLine("(Header)");
-				tw.WriteLine("G90   (set absolute distance mode)");
-				//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
-				tw.WriteLine("G17   (set active plane to XY)");
-				tw.WriteLine("G21   (set units to mm)");
-				tw.WriteLine("(Header end.)");
-				tw.WriteLine();
-				
+				WriteGCodeHeader(tw, zSafeHeight);
 				blocks.ForEach(x =>
 				               {
 				               	tw.WriteLine();
 				               	tw.Write(x.BuildGCodeOutput(false));
 				               });
 				tw.Flush();
-
-				tw.WriteLine();
-				tw.WriteLine("(Footer)");
-				
-				float zClearance = 2.0f;
-				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
-					txtZClearance.Text = "2.0";
-					zClearance = 2.0f;
-				}
-				
-				tw.WriteLine("G00 Z{0:0.####}", zClearance);
-				tw.WriteLine("G00 X0 Y0");
-				tw.WriteLine("(Footer end.)");
-				tw.WriteLine();
+				WriteGCodeFooter(tw, zSafeHeight);
 			}
+		}
+		
+		private void WriteGCodeHeader(TextWriter tw, float zSafeHeight) {
+			tw.WriteLine("(File built with GCodeTools)");
+			tw.WriteLine("(Generated on " + DateTime.Now + ")");
+			tw.WriteLine();
+			tw.WriteLine("(Header)");
+			tw.WriteLine("G90 (set absolute distance mode)");
+			//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+			tw.WriteLine("G17 (set active plane to XY)");
+			tw.WriteLine("G40 (turn cutter compensation off)");
+			tw.WriteLine("G21 (set units to mm)");
+			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
+			//tw.WriteLine("M3 (start the spindle clockwise at the S speed)");
+			tw.WriteLine("(Header end.)");
+		}
+
+		private void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
+			tw.WriteLine();
+			tw.WriteLine("(Footer)");
+			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
+			//tw.WriteLine("M5 (stop the spindle)");
+			//tw.WriteLine("M30 (program end)");
+			tw.WriteLine("G0 X0 Y0");
+			tw.WriteLine("(Footer end.)");
+			tw.WriteLine();
 		}
 		#endregion
 	}
