@@ -448,26 +448,26 @@ namespace GCode
 			var sb = new StringBuilder();
 			sb.Append(this.Command);
 
-			if (X.HasValue) sb.AppendFormat(" X{0:0.####}", this.X);
-			if (Y.HasValue) sb.AppendFormat(" Y{0:0.####}", this.Y);
+			if (X.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " X{0:0.####}", this.X);
+			if (Y.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " Y{0:0.####}", this.Y);
 
 			if (Z.HasValue) {
 				if (this.Z <= 0) {
 					if (doMultiLayer && zOverride.HasValue) {
-						sb.AppendFormat(" Z{0:0.####}", zOverride.Value);
+						sb.AppendFormat(CultureInfo.InvariantCulture, " Z{0:0.####}", zOverride.Value);
 					} else {
-						sb.AppendFormat(" Z{0:0.####}", this.Z);
+						sb.AppendFormat(CultureInfo.InvariantCulture, " Z{0:0.####}", this.Z);
 					}
 				} else {
-					sb.AppendFormat(" Z{0:0.####}", this.Z);
+					sb.AppendFormat(CultureInfo.InvariantCulture, " Z{0:0.####}", this.Z);
 				}
 			}
-			if (I.HasValue) sb.AppendFormat(" I{0:0.####}", this.I);
-			if (J.HasValue) sb.AppendFormat(" J{0:0.####}", this.J);
-			if (F.HasValue) sb.AppendFormat(" F{0:0.####}", this.F);
-			if (P.HasValue) sb.AppendFormat(" P{0:0.####}", this.P);
-			if (T.HasValue) sb.AppendFormat(" T{0}", this.T);
-			if (M.HasValue) sb.AppendFormat(" M{0}", this.M);
+			if (I.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " I{0:0.####}", this.I);
+			if (J.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " J{0:0.####}", this.J);
+			if (F.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " F{0:0.####}", this.F);
+			if (P.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " P{0:0.####}", this.P);
+			if (T.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " T{0}", this.T);
+			if (M.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " M{0}", this.M);
 
 			if (!string.IsNullOrWhiteSpace(Comment)) {
 				sb.AppendFormat(" ({0})", Comment);
