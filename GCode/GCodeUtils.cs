@@ -318,6 +318,29 @@ namespace GCode
 				}
 			}
 		}
+		
+		public static List<GCodeInstruction> ShiftGCode(List<GCodeInstruction> instructions, float deltaX, float deltaY, float deltaZ) {
+			
+			var shifted = new List<GCodeInstruction>();
+
+			foreach (var gCodeLine in instructions) {
+				if (deltaX != 0 || deltaY != 0 || deltaZ != null) {
+					if (deltaX != 0 && gCodeLine.X.HasValue) {
+						gCodeLine.X = gCodeLine.X + deltaX;
+					}
+					if (deltaY != 0 && gCodeLine.Y.HasValue) {
+						gCodeLine.Y = gCodeLine.Y + deltaY;
+					}
+					if (deltaZ != 0 && gCodeLine.Z.HasValue) {
+						gCodeLine.Z = gCodeLine.Z + deltaZ;
+					}
+					shifted.Add(gCodeLine);
+				}
+			}
+
+			return shifted;
+			
+		}
 	}
 	
 	public class GCodeSplitObject {

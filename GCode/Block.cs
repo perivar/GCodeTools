@@ -155,14 +155,21 @@ namespace GCode
 					bits = new string[] { data };
 				}
 
+				string lastLine = "";
 				foreach(var line in bits) {
 					float f;
 					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start layer: {0:0.####})", f).AppendLine();
+						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start peck drilling: {0:0.####})", f).AppendLine();
 						foreach (var gCodeLine in gCodeInstructions) {
-							sb.AppendLine(gCodeLine.ToString(true, zOverride: f));
+							string newLine = gCodeLine.ToString(true, zOverride: f);
+							
+							// ensure we don't duplicate lines
+							if (!newLine.Equals(lastLine)) {
+								sb.AppendLine(newLine);
+								lastLine = newLine;
+							}
 						}
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(End layer: {0:0.####})", f).AppendLine();
+						sb.AppendFormat(CultureInfo.InvariantCulture, "(End peck drilling: {0:0.####})", f).AppendLine();
 					}
 				}
 			} else {

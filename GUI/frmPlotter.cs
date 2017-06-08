@@ -879,6 +879,12 @@ namespace GCodePlotter
 			tw.WriteLine("(Footer end.)");
 			tw.WriteLine();
 		}
+		
+		void BtnShiftClick(object sender, EventArgs e)
+		{
+			var gcodeShiftObject = GCodeUtils.ShiftGCode(parsedInstructions, 0, -251.85f, 0);	
+			GCodeUtils.DumpGCode(gcodeShiftObject, "shifted.gcode");
+		}
 		#endregion
 	}
 }

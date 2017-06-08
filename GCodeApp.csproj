@@ -64,9 +64,9 @@
     <Compile Include="GUI\frmPlotter.Designer.cs">
       <DependentUpon>frmPlotter.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\MainForm.cs" />
-    <Compile Include="GUI\MainForm.Designer.cs">
-      <DependentUpon>MainForm.cs</DependentUpon>
+    <Compile Include="GUI\frmOptimizer.cs" />
+    <Compile Include="GUI\frmOptimizer.Designer.cs">
+      <DependentUpon>frmOptimizer.cs</DependentUpon>
     </Compile>
     <Compile Include="DataProvider.cs" />
     <Compile Include="GeneticAlgorithm\GAAlgorithm.cs" />
@@ -91,8 +91,8 @@
     <EmbeddedResource Include="GUI\frmPlotter.resx">
       <DependentUpon>frmPlotter.Designer.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="GUI\MainForm.resx">
-      <DependentUpon>MainForm.cs</DependentUpon>
+    <EmbeddedResource Include="GUI\frmOptimizer.resx">
+      <DependentUpon>frmOptimizer.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
