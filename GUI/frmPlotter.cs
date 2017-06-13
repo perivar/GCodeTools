@@ -656,7 +656,7 @@ namespace GCodePlotter
 				
 				try {
 					pictureBox1.Image = renderImage;
-				} catch (OutOfMemoryException ex) {
+				} catch (OutOfMemoryException) {
 					// could draw a red cross like here:
 					// http://stackoverflow.com/questions/22163846/zooming-of-an-image-using-mousewheel
 				}
@@ -882,8 +882,31 @@ namespace GCodePlotter
 		
 		void BtnShiftClick(object sender, EventArgs e)
 		{
-			var gcodeShiftObject = GCodeUtils.ShiftGCode(parsedInstructions, 0, -251.85f, 0);	
+			var gcodeShiftObject = GCodeUtils.ShiftGCode(parsedInstructions, 0, -251.85f, 0);
 			GCodeUtils.DumpGCode(gcodeShiftObject, "shifted.gcode");
+		}
+		
+		void BtnSVGLoadClick(object sender, EventArgs e)
+		{
+			/*
+            var dialog = new OpenFileDialog();
+            string svgFilePath = "";
+            
+            dialog.Filter = "SVG Drawing|*.svg";
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                svgFilePath = dialog.FileName;
+                SVGDocument svg = SVGDocument.LoadFromFile(svgFilePath);
+                foreach (var contour in svg.GetContours()) {
+                	Console.WriteLine(contour);
+                }
+            }
+			 */
+			string path = @"C:\Users\perivar.nerseth\My Projects\PulpitRockCNC3D\PulpitRockCNCModelYPlate.svg";
+			//string path = @"C:\Users\perivar.nerseth\My Projects\lasercam\svg-sample.svg";
+			var svg = SVG.SVGDocument.LoadFromFile(path);
+			var center = SVG.SVGDocument.BoundingBox(svg.GetContours().FirstOrDefault());
+			
 		}
 		#endregion
 	}

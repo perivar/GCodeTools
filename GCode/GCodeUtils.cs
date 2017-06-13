@@ -324,7 +324,7 @@ namespace GCode
 			var shifted = new List<GCodeInstruction>();
 
 			foreach (var gCodeLine in instructions) {
-				if (deltaX != 0 || deltaY != 0 || deltaZ != null) {
+				if (deltaX != 0 || deltaY != 0 || deltaZ != 0) {
 					if (deltaX != 0 && gCodeLine.X.HasValue) {
 						gCodeLine.X = gCodeLine.X + deltaX;
 					}

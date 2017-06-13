@@ -29,8 +29,12 @@ class SVGCommand
 string path = "M70.491,50.826c-2.232,1.152-6.913,2.304-12.817,2.304c-13.682,0-23.906-8.641-23.906-24.626" +
 "c0-15.266,10.297-25.49,25.346-25.49c5.977,0,9.865,1.296,11.521,2.16l-1.584,5.112C66.747,9.134,63.363,8.27,59.33,8.27" +
 "c-11.377,0-18.938,7.272-18.938,20.018c0,11.953,6.841,19.514,18.578,19.514c3.888,0,7.777-0.792,10.297-2.016L70.491,50.826z";
-    string separators = @"(?=[A-Za-z])";
-    var tokens = Regex.Split(path, separators).Where(t => !string.IsNullOrEmpty(t));
+
+    //string separators = @"(?=[A-Za-z])";
+	string separators = @"(?=[MZLHVCSQTAmzlhvcsqta])"; // these letters are valid SVG
+                             // commands. Whenever we find one, a new command is 
+                             // starting. Let's split the string there.
+	var tokens = Regex.Split(path, separators).Where(t => !string.IsNullOrEmpty(t));
 
     // our "interpreter". Runs the list of commands and does something for each of them.
     foreach (string token in tokens){
@@ -39,3 +43,37 @@ string path = "M70.491,50.826c-2.232,1.152-6.913,2.304-12.817,2.304c-13.682,0-23
         SVGCommand c = SVGCommand.Parse(token);
         Console.WriteLine("doing something with command {0}", c.command);
     }
+	
+	
+	https://stackoverflow.com/questions/4259605/problem-getting-xml-elements-in-an-svg-file
+	var adam = SVG_Element.Descendants("{http://www.w3.org/2000/svg}line");
+	
+	
+	
+	
+	https://forums.asp.net/t/2007248.aspx?how+to+read+svg+file+in+c+net+
+	XDocument document = XDocument.Load(@"C:\Users\v-zhilv\documents\visual studio 2013\Projects\SeptemberTest\20140915Test\SVG1.svg");
+            XElement svg_Element = document.Root;
+
+            IEnumerable<XElement> test = from e1 in svg_Element.Elements("{http://www.w3.org/2000/svg}g")
+                                         select e1;
+            StringBuilder sb = new StringBuilder();
+            foreach(XElement ee in test)
+            {
+                // Get "Central" and "Capital"
+                sb.AppendLine(ee.Attribute("id").Value);
+
+                IEnumerable<XElement> test2 = from e2 in ee.Elements("{http://www.w3.org/2000/svg}g")
+                                             select e2;
+                foreach(XElement ee2 in test2)
+                {
+                    sb.AppendLine("     Block No :"+ee2.Attribute("id").Value);
+                    IEnumerable<XElement> test3 = from ee3 in ee2.Elements("{http://www.w3.org/2000/svg}path")
+                                                  select ee3;
+                    foreach(XElement epath in test3)
+                    {
+                        sb.AppendLine("     sPath  :" + epath.Attribute("d").Value);
+                    }
+                }
+            }
+            txtAll.Text = sb.ToString();

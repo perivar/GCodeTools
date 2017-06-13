@@ -46,6 +46,8 @@ namespace GCodePlotter
 			this.panelCheckboxes = new System.Windows.Forms.Panel();
 			this.cbSoloSelect = new System.Windows.Forms.CheckBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.btnLoadSVG = new System.Windows.Forms.Button();
+			this.btnShift = new System.Windows.Forms.Button();
 			this.btnOptimize = new System.Windows.Forms.Button();
 			this.btnSaveSplit = new System.Windows.Forms.Button();
 			this.lblZClearance = new System.Windows.Forms.Label();
@@ -61,7 +63,6 @@ namespace GCodePlotter
 			this.panelZoomFilename = new System.Windows.Forms.Panel();
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.panelViewer = new System.Windows.Forms.Panel();
-			this.btnShift = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.panelCode.SuspendLayout();
 			this.panelCheckboxes.SuspendLayout();
@@ -199,6 +200,7 @@ namespace GCodePlotter
 			// 
 			// panelCommands
 			// 
+			this.panelCommands.Controls.Add(this.btnLoadSVG);
 			this.panelCommands.Controls.Add(this.btnShift);
 			this.panelCommands.Controls.Add(this.btnOptimize);
 			this.panelCommands.Controls.Add(this.btnSaveSplit);
@@ -221,6 +223,28 @@ namespace GCodePlotter
 			this.panelCommands.Name = "panelCommands";
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
+			// 
+			// btnLoadSVG
+			// 
+			this.btnLoadSVG.Location = new System.Drawing.Point(15, 317);
+			this.btnLoadSVG.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.btnLoadSVG.Name = "btnLoadSVG";
+			this.btnLoadSVG.Size = new System.Drawing.Size(153, 34);
+			this.btnLoadSVG.TabIndex = 22;
+			this.btnLoadSVG.Text = "SVG Load";
+			this.btnLoadSVG.UseVisualStyleBackColor = true;
+			this.btnLoadSVG.Click += new System.EventHandler(this.BtnSVGLoadClick);
+			// 
+			// btnShift
+			// 
+			this.btnShift.Location = new System.Drawing.Point(15, 273);
+			this.btnShift.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.btnShift.Name = "btnShift";
+			this.btnShift.Size = new System.Drawing.Size(153, 34);
+			this.btnShift.TabIndex = 21;
+			this.btnShift.Text = "Shift";
+			this.btnShift.UseVisualStyleBackColor = true;
+			this.btnShift.Click += new System.EventHandler(this.BtnShiftClick);
 			// 
 			// btnOptimize
 			// 
@@ -382,17 +406,6 @@ namespace GCodePlotter
 			this.panelViewer.TabIndex = 13;
 			this.panelViewer.Scroll += new System.Windows.Forms.ScrollEventHandler(this.PanelViewerScroll);
 			// 
-			// btnShift
-			// 
-			this.btnShift.Location = new System.Drawing.Point(15, 273);
-			this.btnShift.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.btnShift.Name = "btnShift";
-			this.btnShift.Size = new System.Drawing.Size(153, 34);
-			this.btnShift.TabIndex = 21;
-			this.btnShift.Text = "Shift";
-			this.btnShift.UseVisualStyleBackColor = true;
-			this.btnShift.Click += new System.EventHandler(this.BtnShiftClick);
-			// 
 			// frmPlotter
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -452,6 +465,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button btnOptimize;
 		private System.Windows.Forms.TextBox txtCoordinates;
 		private System.Windows.Forms.Button btnShift;
+		private System.Windows.Forms.Button btnLoadSVG;
 	}
 }
 
