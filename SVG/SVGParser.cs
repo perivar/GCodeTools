@@ -1,4 +1,26 @@
-﻿using System;
+﻿// Most of this comes from the lasercam project made by Chris Yerga
+// Modified by perivar@nerseth.com to support OpenScad SVGs
+// Copyright (c) 2010 Chris Yerga
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -153,6 +175,7 @@ namespace SVG
 				y = float.Parse(reader.GetAttribute("y"), CultureInfo.InvariantCulture);
 			}
 			catch (ArgumentNullException) { }
+			
 			float w = float.Parse(reader.GetAttribute("width"), CultureInfo.InvariantCulture);
 			float h = float.Parse(reader.GetAttribute("height"), CultureInfo.InvariantCulture);
 
@@ -189,6 +212,7 @@ namespace SVG
 		float x = 0;
 		float y = 0;
 		float width, height;
+		
 		public Image bits;
 		public RectangleF DestBounds { get; set; }
 
@@ -206,6 +230,7 @@ namespace SVG
 				y = float.Parse(reader.GetAttribute("y"), CultureInfo.InvariantCulture);
 			}
 			catch { }
+			
 			width = float.Parse(reader.GetAttribute("width"), CultureInfo.InvariantCulture);
 			height = float.Parse(reader.GetAttribute("height"), CultureInfo.InvariantCulture);
 			string path = reader.GetAttribute("xlink:href");
@@ -255,6 +280,7 @@ namespace SVG
 				cy = float.Parse(reader.GetAttribute("cy"), CultureInfo.InvariantCulture);
 			}
 			catch { }
+			
 			float r = float.Parse(reader.GetAttribute("r"), CultureInfo.InvariantCulture);
 
 			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
@@ -288,7 +314,6 @@ namespace SVG
 		private List<List<PointF>> contours = new List<List<PointF>>();
 		private List<PointF> currentContour = new List<PointF>();
 
-
 		public SVGPolygon(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 			: base(reader, styleDictionary)
 		{
@@ -300,7 +325,6 @@ namespace SVG
 				string[] ordinates = textPoint.Split(new char[] { ',' });
 				if (ordinates.Length > 1)
 				{
-
 					currentContour.Add(new PointF(float.Parse(ordinates[0], CultureInfo.InvariantCulture), float.Parse(ordinates[1], CultureInfo.InvariantCulture)));
 				}
 			}
@@ -415,7 +439,7 @@ namespace SVG
 			while (index < data.Length)
 			{
 				SkipSpace(data, ref index);
-				if (index == data.Length) break;
+				if (index == data.Length) break; // handle if very last character is a non ascii character
 
 				char command = data[index];
 				switch (command)
@@ -425,6 +449,7 @@ namespace SVG
 						case 'c': state = ParseState.CurveToRel; ++index; break;
 						case 'l': state = ParseState.LineToRel; ++index; break;
 						case 'L': state = ParseState.LineToAbs; ++index; break;
+					case 'Z':
 						case 'z': state = ParseState.None; ++index;
 						
 						// Close current contour and open a new one
@@ -631,13 +656,16 @@ namespace SVG
 
 		public void SkipSpace(string data, ref int index)
 		{
-			while (index < data.Length && char.IsWhiteSpace(data[index])) {
+			// make sure that we don't skip past the string data length
+			while (index < data.Length && char.IsWhiteSpace(data[index]))
+			{
 				++index;
 			}
 		}
 
 		public void SkipSpaceOrComma(string data, ref int index)
 		{
+			// make sure that we don't skip past the string data length
 			while (index < data.Length && char.IsWhiteSpace(data[index]) || data[index] == ',')
 			{
 				++index;
@@ -888,6 +916,14 @@ namespace SVG
 			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
 		}
 		
+		public static PointF Center(IEnumerable<PointF> points)
+		{
+			var rect = BoundingBox(points);
+			
+			return new PointF(rect.Left + rect.Width/2,
+			                  rect.Top + rect.Height / 2);
+		}
+		
 		/// <summary>
 		/// Given a specific DPI resolution, returns vectors to approximate
 		/// the shapes in the document at that resolution. This allows us to
@@ -945,6 +981,44 @@ namespace SVG
 			}
 
 			Debug.WriteLine("Thinned contour ({0}/{1}) = {2}%", thin, total, (int)((double)thin / (double)total * 100.0));
+		}
+		
+		public string GenerateGCode() {
+			var sb = new StringBuilder();
+			int shapeCounter = 0;
+			int contourCounter = 0;
+
+			// Enumerate each shape in the document
+			foreach (ISVGElement shape in shapes)
+			{
+				shapeCounter++;
+				
+				foreach (var contour in shape.GetContours())
+				{
+					contourCounter++;
+					
+					sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
+					
+					var center = Center(contour);
+					sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0} Y{1}\n", center.X, -center.Y);
+					sb.AppendLine("G1 Z-1.5 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-3 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-4.5 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-6 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-7.5 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-9 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G1 Z-10 F800");
+					sb.AppendLine("G1 Z0 F800");
+					sb.AppendLine("G0 Z2");
+				}
+			}
+			return sb.ToString();
 		}
 	}
 

@@ -888,25 +888,19 @@ namespace GCodePlotter
 		
 		void BtnSVGLoadClick(object sender, EventArgs e)
 		{
-			/*
-            var dialog = new OpenFileDialog();
-            string svgFilePath = "";
-            
-            dialog.Filter = "SVG Drawing|*.svg";
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                svgFilePath = dialog.FileName;
-                SVGDocument svg = SVGDocument.LoadFromFile(svgFilePath);
-                foreach (var contour in svg.GetContours()) {
-                	Console.WriteLine(contour);
-                }
-            }
-			 */
-			string path = @"C:\Users\perivar.nerseth\My Projects\PulpitRockCNC3D\PulpitRockCNCModelYPlate.svg";
-			//string path = @"C:\Users\perivar.nerseth\My Projects\lasercam\svg-sample.svg";
-			var svg = SVG.SVGDocument.LoadFromFile(path);
-			var center = SVG.SVGDocument.BoundingBox(svg.GetContours().FirstOrDefault());
 			
+			var dialog = new OpenFileDialog();
+			string svgFilePath = "";
+			
+			dialog.Filter = "SVG Drawing|*.svg";
+			if (dialog.ShowDialog() == DialogResult.OK)
+			{
+				svgFilePath = dialog.FileName;
+				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\PulpitRockCNC3D\PulpitRockCNCModelYPlate.svg";
+				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\lasercam\svg-sample.svg";
+				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
+				ParseText(svg.GenerateGCode());
+			}
 		}
 		#endregion
 	}
