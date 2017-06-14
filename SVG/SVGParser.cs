@@ -23,7 +23,6 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -32,7 +31,6 @@ using System.Diagnostics;
 
 using System.Text;
 using System.Xml;
-using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Drawing;
 
@@ -774,7 +772,7 @@ namespace SVG
 	public class SVGDocument
 	{
 		private List<ISVGElement> shapes = new List<ISVGElement>();
-		private double GLOBAL_DPI;
+		private float GLOBAL_DPI;
 
 		public List<ISVGElement> Shapes {
 			get {
@@ -901,11 +899,12 @@ namespace SVG
 		}
 		
 		/// <summary>
-		/// Scale the contours using the min x and min y coordinate
-		/// This fixes the issue where the coordinates are negative
+		/// Scale the contours using the correct DPI,
+		/// as well as the min x and min y coordinates.
+		/// This fixes the issue where coordinates are negative
 		/// </summary>
 		/// <returns>a scaled contour list</returns>
-		public IEnumerable<IEnumerable<PointF>> ScaleContours() {
+		public IEnumerable<IEnumerable<PointF>> ScaledContours() {
 			
 			var contours = new List<List<PointF>>();
 			
@@ -914,7 +913,9 @@ namespace SVG
 			float minX = points.Min(point => point.X);
 			float minY = points.Min(point => point.Y);
 
-			// Now fix the points by removing space at the left and top
+			// Scale by the DPI
+			// and
+			// Fix the points by removing space at the left and top
 			foreach (ISVGElement shape in shapes)
 			{
 				foreach (var contour in shape.GetContours())
@@ -922,7 +923,7 @@ namespace SVG
 					var scaledPoints = new List<PointF>();
 					foreach (PointF point in contour)
 					{
-						var scaledPoint = new PointF(point.X - minX, point.Y - minY);
+						var scaledPoint = new PointF((point.X - minX)/GLOBAL_DPI, (point.Y - minY)/GLOBAL_DPI);
 						scaledPoints.Add(scaledPoint);
 					}
 					contours.Add(scaledPoints);
@@ -931,14 +932,14 @@ namespace SVG
 			return contours;
 		}
 
-		static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out double number, out string unit) {
+		static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out float number, out string unit) {
 			
 			var match = Regex.Match(stringWithOptionalUnit, @"([0-9]+(?:\.[0-9]+)?)(\w*)");
 			if (match.Success) {
 				string numberString = match.Groups[1].Value;
 				string unitString = match.Groups[2].Value;
 				
-				number = double.Parse(numberString, CultureInfo.InvariantCulture);
+				number = float.Parse(numberString, CultureInfo.InvariantCulture);
 				unit = unitString;
 			} else {
 				number = -1;
@@ -946,91 +947,11 @@ namespace SVG
 			}
 		}
 
-		void SetSVGSizeParameters(XElement svgRootElement) {
-			
-			double realW = 0;
-			double realH = 0;
-			double realDPI = 0;
-
-			if (svgRootElement != null)
-			{
-				// width="8.5in"
-				// height="11in"
-				// viewBox="0 0 765.00001 990.00002"
-
-				// Read these numbers to determine the scale of the data inside the file.
-				// width and height are the real-world widths and heights
-				// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is inches
-				
-				string widthValue = svgRootElement.Attribute("width").Value;
-				string widthUnit;
-				ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
-
-				// Read the unit
-				switch (widthUnit.ToLower())
-				{
-					case "in": // no conversion needed
-						break;
-					case "mm":
-					case "": // convert from mm
-						realW = realW / 25.4;
-						break;
-					case "cm": // convert from cm
-						realW = realW / 2.54;
-						break;
-				}
-
-				string heightValue = svgRootElement.Attribute("height").Value;
-				string heightUnit;
-				ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
-
-				// Read the unit
-				switch (heightUnit.ToLower())
-				{
-					case "in": // no conversion needed
-						break;
-					case "mm":
-					case "": // convert from mm
-						realH = realH / 25.4;
-						break;
-					case "cm": // convert from cm
-						realH = realH / 2.54;
-						break;
-				}
-				Debug.WriteLine("Size in inches: {0}, {1}", realW, realH);
-
-				
-				// The 'ViewBox' is how we scale an inch to a pixel.
-				// The default is 90dpi but it may not be.
-				var viewboxValue = svgRootElement.Attribute("viewBox").Value;
-
-				var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
-				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
-				
-				if (viewBoxArgs.Count() == 4)
-				{
-					// Get the width in pixels
-					if (realW == 0) {
-						realDPI = 300;
-					} else {
-						realDPI = viewBoxFloatArgs[2] / realW;
-					}
-				}
-
-				if (realDPI == 1) {
-					realDPI = 72;
-				}
-
-				// set the Global DPI variable
-				GLOBAL_DPI = realDPI;
-			}
-		}
-
 		void SetSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
 		{
-			double realW = 0;
-			double realH = 0;
-			double realDPI = 0;
+			float realW = 0;
+			float realH = 0;
+			float realDPI = 0;
 
 			// width="8.5in"
 			// height="11in"
@@ -1038,7 +959,7 @@ namespace SVG
 
 			// Read these numbers to determine the scale of the data inside the file.
 			// width and height are the real-world widths and heights
-			// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is inches
+			// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is mm
 			
 			string widthUnit;
 			ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
@@ -1046,14 +967,14 @@ namespace SVG
 			// Read the unit
 			switch (widthUnit.ToLower())
 			{
-				case "in": // no conversion needed
+				case "in": // convert to mm
+					realW = realW * 25.4f;
 					break;
-				case "mm":
-				case "": // convert from mm
-					realW = realW / 25.4;
+				case "mm": // no conversion needed
+				case "":
 					break;
 				case "cm": // convert from cm
-					realW = realW / 2.54;
+					realW = realW * 10;
 					break;
 			}
 
@@ -1063,19 +984,19 @@ namespace SVG
 			// Read the unit
 			switch (heightUnit.ToLower())
 			{
-				case "in": // no conversion needed
+				case "in": // convert to mm
+					realH = realH * 25.4f;
 					break;
-				case "mm":
-				case "": // convert from mm
-					realH = realH / 25.4;
+				case "mm": // no conversion needed
+				case "":
 					break;
 				case "cm": // convert from cm
-					realH = realH / 2.54;
+					realH = realH * 10;
 					break;
 			}
-			Debug.WriteLine("Size in inches: {0}, {1}", realW, realH);
+			Debug.WriteLine("Size in mm: {0}, {1}", realW, realH);
 			
-			// The 'ViewBox' is how we scale an inch to a pixel.
+			// The 'ViewBox' is how we scale an mm to a pixel.
 			// The default is 90dpi but it may not be.
 			var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
 			float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
@@ -1084,14 +1005,10 @@ namespace SVG
 			{
 				// Get the width in pixels
 				if (realW == 0) {
-					realDPI = 300;
+					realDPI = 25.4f;
 				} else {
 					realDPI = viewBoxFloatArgs[2] / realW;
 				}
-			}
-
-			if (realDPI == 1) {
-				realDPI = 72;
 			}
 
 			// set the Global DPI variable
@@ -1201,7 +1118,7 @@ namespace SVG
 				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
 				
 				var center = Center(contour);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0} Y{1}\n", center.X, center.Y);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
 				sb.AppendLine("G1 Z-1.5 F800");
 				sb.AppendLine("G1 Z0 F800");
 				sb.AppendLine("G1 Z-3 F800");
@@ -1221,76 +1138,4 @@ namespace SVG
 			return sb.ToString();
 		}
 	}
-
-
-
-	/// <summary>
-	/// Description of SVGParser.
-	/// </summary>
-	public class SVGParser
-	{
-		public SVGParser()
-		{
-			string path = "M70.491,50.826c-2.232,1.152-6.913,2.304-12.817,2.304c-13.682,0-23.906-8.641-23.906-24.626" +
-				"c0-15.266,10.297-25.49,25.346-25.49c5.977,0,9.865,1.296,11.521,2.16l-1.584,5.112C66.747,9.134,63.363,8.27,59.33,8.27" +
-				"c-11.377,0-18.938,7.272-18.938,20.018c0,11.953,6.841,19.514,18.578,19.514c3.888,0,7.777-0.792,10.297-2.016L70.491,50.826z";
-		}
-		
-		class SVGCommand
-		{
-			public char command {get; private set;}
-			public float[] arguments {get; private set;}
-
-			public SVGCommand(char command, params float[] arguments)
-			{
-				this.command = command;
-				this.arguments = arguments;
-			}
-
-			public static SVGCommand Parse(string SVGpathstring)
-			{
-				var cmd = SVGpathstring.Take(1).Single();
-				string remainingArgs = SVGpathstring.Substring(1);
-
-				string argSeparators = @"[\s,]|(?=-)";
-				var splitArgs = Regex.Split(remainingArgs, argSeparators).Where(t => !string.IsNullOrEmpty(t));
-
-				float[] floatArgs = splitArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
-				return new SVGCommand(cmd, floatArgs);
-			}
-		}
-		
-		public static void ParseSvg(string inputFilePath)
-		{
-			XDocument svgDocument = XDocument.Load(inputFilePath);
-			XElement svgRootElement = svgDocument.Root;
-			var width = svgRootElement.Attribute("width").Value;
-			var height = svgRootElement.Attribute("height").Value;
-			var viewbox = svgRootElement.Attribute("viewBox").Value;
-			
-			var svgPaths = svgRootElement.Descendants("{http://www.w3.org/2000/svg}path");
-			foreach (var svgPath in svgPaths) {
-				ParseSvgPath(svgPath.Attribute("d").Value);
-			}
-		}
-		
-		public static void ParseSvgPath(string path) {
-			
-			const string separators = @"(?=[MZLHVCSQTAmzlhvcsqta])"; // these letters are valid SVG
-			// commands. Whenever we find one, a new command is
-			// starting. Let's split the string there.
-			var tokens = Regex.Split(path, separators).
-				Select(t => t.Trim()).
-				Where(t => !string.IsNullOrEmpty(t));
-
-			// Our "interpreter". Runs the list of commands and does something for each of them.
-			foreach (string token in tokens){
-				// note that Parse could throw an exception
-				// if the path is not correct
-				SVGCommand c = SVGCommand.Parse(token);
-				Debug.WriteLine("doing something with command {0}", c.command);
-			}
-		}
-	}
-
 }

@@ -896,10 +896,8 @@ namespace GCodePlotter
 			if (dialog.ShowDialog() == DialogResult.OK)
 			{
 				svgFilePath = dialog.FileName;
-				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\PulpitRockCNC3D\PulpitRockCNCModelYPlate.svg";
-				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\lasercam\svg-sample.svg";
 				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
-				var contours = svg.ScaleContours();
+				var contours = svg.ScaledContours();
 				ParseText(SVG.SVGDocument.GenerateGCode(contours));
 			}
 		}
