@@ -774,6 +774,7 @@ namespace SVG
 	public class SVGDocument
 	{
 		private List<ISVGElement> shapes = new List<ISVGElement>();
+		private double GLOBAL_DPI;
 
 		public List<ISVGElement> Shapes {
 			get {
@@ -819,6 +820,13 @@ namespace SVG
 							}
 
 						};
+					}
+					else if (reader.Name == "svg")
+					{
+						string widthValue = reader.GetAttribute("width");
+						string heightValue = reader.GetAttribute("height");
+						string viewBoxValue = reader.GetAttribute("viewBox");
+						doc.SetSVGSizeParameters(widthValue, heightValue, viewBoxValue);
 					}
 					else if (reader.Name == "rect")
 					{
@@ -872,7 +880,7 @@ namespace SVG
 				}
 			}
 		}
-
+		
 		/// <summary>
 		/// Get the points for all contours in all shapes.
 		/// </summary>
@@ -891,7 +899,205 @@ namespace SVG
 				}
 			}
 		}
+		
+		/// <summary>
+		/// Scale the contours using the min x and min y coordinate
+		/// This fixes the issue where the coordinates are negative
+		/// </summary>
+		/// <returns>a scaled contour list</returns>
+		public IEnumerable<IEnumerable<PointF>> ScaleContours() {
+			
+			var contours = new List<List<PointF>>();
+			
+			// Calculate the extents for all contours
+			var points = GetPoints();
+			float minX = points.Min(point => point.X);
+			float minY = points.Min(point => point.Y);
 
+			// Now fix the points by removing space at the left and top
+			foreach (ISVGElement shape in shapes)
+			{
+				foreach (var contour in shape.GetContours())
+				{
+					var scaledPoints = new List<PointF>();
+					foreach (PointF point in contour)
+					{
+						var scaledPoint = new PointF(point.X - minX, point.Y - minY);
+						scaledPoints.Add(scaledPoint);
+					}
+					contours.Add(scaledPoints);
+				}
+			}
+			return contours;
+		}
+
+		static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out double number, out string unit) {
+			
+			var match = Regex.Match(stringWithOptionalUnit, @"([0-9]+(?:\.[0-9]+)?)(\w*)");
+			if (match.Success) {
+				string numberString = match.Groups[1].Value;
+				string unitString = match.Groups[2].Value;
+				
+				number = double.Parse(numberString, CultureInfo.InvariantCulture);
+				unit = unitString;
+			} else {
+				number = -1;
+				unit = "FAIL";
+			}
+		}
+
+		void SetSVGSizeParameters(XElement svgRootElement) {
+			
+			double realW = 0;
+			double realH = 0;
+			double realDPI = 0;
+
+			if (svgRootElement != null)
+			{
+				// width="8.5in"
+				// height="11in"
+				// viewBox="0 0 765.00001 990.00002"
+
+				// Read these numbers to determine the scale of the data inside the file.
+				// width and height are the real-world widths and heights
+				// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is inches
+				
+				string widthValue = svgRootElement.Attribute("width").Value;
+				string widthUnit;
+				ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
+
+				// Read the unit
+				switch (widthUnit.ToLower())
+				{
+					case "in": // no conversion needed
+						break;
+					case "mm":
+					case "": // convert from mm
+						realW = realW / 25.4;
+						break;
+					case "cm": // convert from cm
+						realW = realW / 2.54;
+						break;
+				}
+
+				string heightValue = svgRootElement.Attribute("height").Value;
+				string heightUnit;
+				ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
+
+				// Read the unit
+				switch (heightUnit.ToLower())
+				{
+					case "in": // no conversion needed
+						break;
+					case "mm":
+					case "": // convert from mm
+						realH = realH / 25.4;
+						break;
+					case "cm": // convert from cm
+						realH = realH / 2.54;
+						break;
+				}
+				Debug.WriteLine("Size in inches: {0}, {1}", realW, realH);
+
+				
+				// The 'ViewBox' is how we scale an inch to a pixel.
+				// The default is 90dpi but it may not be.
+				var viewboxValue = svgRootElement.Attribute("viewBox").Value;
+
+				var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
+				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
+				
+				if (viewBoxArgs.Count() == 4)
+				{
+					// Get the width in pixels
+					if (realW == 0) {
+						realDPI = 300;
+					} else {
+						realDPI = viewBoxFloatArgs[2] / realW;
+					}
+				}
+
+				if (realDPI == 1) {
+					realDPI = 72;
+				}
+
+				// set the Global DPI variable
+				GLOBAL_DPI = realDPI;
+			}
+		}
+
+		void SetSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
+		{
+			double realW = 0;
+			double realH = 0;
+			double realDPI = 0;
+
+			// width="8.5in"
+			// height="11in"
+			// viewBox="0 0 765.00001 990.00002"
+
+			// Read these numbers to determine the scale of the data inside the file.
+			// width and height are the real-world widths and heights
+			// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is inches
+			
+			string widthUnit;
+			ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
+
+			// Read the unit
+			switch (widthUnit.ToLower())
+			{
+				case "in": // no conversion needed
+					break;
+				case "mm":
+				case "": // convert from mm
+					realW = realW / 25.4;
+					break;
+				case "cm": // convert from cm
+					realW = realW / 2.54;
+					break;
+			}
+
+			string heightUnit;
+			ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
+
+			// Read the unit
+			switch (heightUnit.ToLower())
+			{
+				case "in": // no conversion needed
+					break;
+				case "mm":
+				case "": // convert from mm
+					realH = realH / 25.4;
+					break;
+				case "cm": // convert from cm
+					realH = realH / 2.54;
+					break;
+			}
+			Debug.WriteLine("Size in inches: {0}, {1}", realW, realH);
+			
+			// The 'ViewBox' is how we scale an inch to a pixel.
+			// The default is 90dpi but it may not be.
+			var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
+			float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
+			
+			if (viewBoxArgs.Count() == 4)
+			{
+				// Get the width in pixels
+				if (realW == 0) {
+					realDPI = 300;
+				} else {
+					realDPI = viewBoxFloatArgs[2] / realW;
+				}
+			}
+
+			if (realDPI == 1) {
+				realDPI = 72;
+			}
+
+			// set the Global DPI variable
+			GLOBAL_DPI = realDPI;
+		}
+		
 		public static double Distance(PointF a, PointF b)
 		{
 			double xd = Math.Abs(a.X - b.X);
@@ -946,7 +1152,7 @@ namespace SVG
 
 				foreach (var contour in shape.GetContours())
 				{
-					List<PointF> thinnedContour = new List<PointF>();
+					var thinnedContour = new List<PointF>();
 					PointF lastPoint = contour.First();
 					bool first = true;
 
@@ -983,45 +1189,38 @@ namespace SVG
 			Debug.WriteLine("Thinned contour ({0}/{1}) = {2}%", thin, total, (int)((double)thin / (double)total * 100.0));
 		}
 		
-		public string GenerateGCode() {
+		public static string GenerateGCode(IEnumerable<IEnumerable<PointF>>contours) {
 			var sb = new StringBuilder();
-			int shapeCounter = 0;
 			int contourCounter = 0;
 
-			// Enumerate each shape in the document
-			foreach (ISVGElement shape in shapes)
+			// Enumerate each contour in the document
+			foreach (var contour in contours)
 			{
-				shapeCounter++;
+				contourCounter++;
 				
-				foreach (var contour in shape.GetContours())
-				{
-					contourCounter++;
-					
-					sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
-					
-					var center = Center(contour);
-					sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0} Y{1}\n", center.X, -center.Y);
-					sb.AppendLine("G1 Z-1.5 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-3 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-4.5 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-6 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-7.5 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-9 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G1 Z-10 F800");
-					sb.AppendLine("G1 Z0 F800");
-					sb.AppendLine("G0 Z2");
-				}
+				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
+				
+				var center = Center(contour);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0} Y{1}\n", center.X, center.Y);
+				sb.AppendLine("G1 Z-1.5 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-3 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-4.5 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-6 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-7.5 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-9 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G1 Z-10 F800");
+				sb.AppendLine("G1 Z0 F800");
+				sb.AppendLine("G0 Z2");
 			}
 			return sb.ToString();
 		}
 	}
-
 
 
 
@@ -1061,7 +1260,6 @@ namespace SVG
 			}
 		}
 		
-		/*
 		public static void ParseSvg(string inputFilePath)
 		{
 			XDocument svgDocument = XDocument.Load(inputFilePath);
@@ -1074,132 +1272,6 @@ namespace SVG
 			foreach (var svgPath in svgPaths) {
 				ParseSvgPath(svgPath.Attribute("d").Value);
 			}
-		}
-		 */
-		
-		static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out double number, out string unit) {
-			
-			var match = Regex.Match(stringWithOptionalUnit, @"([0-9]+(?:\.[0-9]+)?)(\w*)");
-			if (match.Success) {
-				string numberString = match.Groups[1].Value;
-				string unitString = match.Groups[2].Value;
-				
-				number = double.Parse(numberString, CultureInfo.InvariantCulture);
-				unit = unitString;
-			} else {
-				number = -1;
-				unit = "FAIL";
-			}
-		}
-		
-		public static void ParseSvg(string inFile)
-		{
-			// global
-			double GLOBAL_DPI = 0;
-			
-			
-			long i = 0;
-			long j = 0;
-
-			double realW = 0;
-			double realH = 0;
-			double realDPI = 0;
-
-			XDocument svgDocument = XDocument.Load(inFile);
-
-			if (svgDocument == null)
-			{
-				//MsgBox "Could not load SVG";
-				return;
-			}
-
-			XElement svgRootElement = svgDocument.Root;
-			if (svgRootElement != null)
-			{
-				// width="8.5in"
-				// height="11in"
-				// viewBox="0 0 765.00001 990.00002"
-
-				// Read these numbers to determine the scale of the data inside the file.
-				// width and height are the real-world widths and heights
-				// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is inches
-				
-				string widthValue = svgRootElement.Attribute("width").Value;
-				string widthUnit;
-				ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
-
-				// Read the unit
-				switch (widthUnit.ToLower())
-				{
-					case "in": // no conversion needed
-						break;
-					case "mm":
-					case "": // convert from mm
-						realW = realW / 25.4;
-						break;
-					case "cm": // convert from cm
-						realW = realW / 2.54;
-						break;
-				}
-
-				string heightValue = svgRootElement.Attribute("height").Value;
-				string heightUnit;
-				ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
-
-				// Read the unit
-				switch (heightUnit.ToLower())
-				{
-					case "in": // no conversion needed
-						break;
-					case "mm":
-					case "": // convert from mm
-						realH = realH / 25.4;
-						break;
-					case "cm": // convert from cm
-						realH = realH / 2.54;
-						break;
-				}
-				//MsgBox "Size in inches: " & realW & ", " & realH
-
-				
-				// The 'ViewBox' is how we scale an inch to a pixel.
-				// The default is 90dpi but it may not be.
-				var viewbox = svgRootElement.Attribute("viewBox").Value;
-
-				var viewBoxArgs = viewbox.Split(' ').Where(t => !string.IsNullOrEmpty(t));
-				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
-				
-				if (viewBoxArgs.Count() == 4)
-				{
-					// Get the width in pixels
-					if (realW == 0) {
-						realDPI = 300;
-					} else {
-						realDPI = viewBoxFloatArgs[2] / realW;
-					}
-				}
-
-				if (realDPI == 1) {
-					realDPI = 72;
-				}
-
-				GLOBAL_DPI = realDPI;
-
-				//parseSVGKids SVG;
-			}
-
-			// Scale by the DPI
-			
-			// Fix the extents
-			double minX = 0;
-			double minY = 0;
-
-			minX = 1000000;
-			minY = 1000000;
-
-			// Calculate the extents
-			
-			// Now fix the points by removing space at the left and top
 		}
 		
 		public static void ParseSvgPath(string path) {

@@ -899,7 +899,8 @@ namespace GCodePlotter
 				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\PulpitRockCNC3D\PulpitRockCNCModelYPlate.svg";
 				//string svgFilePath = @"C:\Users\perivar.nerseth\My Projects\lasercam\svg-sample.svg";
 				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
-				ParseText(svg.GenerateGCode());
+				var contours = svg.ScaleContours();
+				ParseText(SVG.SVGDocument.GenerateGCode(contours));
 			}
 		}
 		#endregion
