@@ -292,20 +292,36 @@ namespace GCode
 			} else {
 				return false;
 			}
+		}
+		
+		public static String GetGCode(List<int> bestPath, List<IPoint> points) {
 			
-			/*
-			for (FIXME_VAR_TYPE c=0; c<priorToG0.Length; c++) {
-				fout += priorToG0[c] + '\n';
-			}
-			for (FIXME_VAR_TYPE c=0; c<best.Length; c++) {
-				for (FIXME_VAR_TYPE n=0; n<points[best[c]].followingLines.Length; n++) {
-					fout += points[best[c]].followingLines[n] + '\n';
+			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
+				
+				using (var tw = new StringWriter()) {
+					
+					tw.WriteLine("(File built with GCodeTools)");
+					tw.WriteLine("(Generated on " + DateTime.Now + ")");
+					tw.WriteLine();
+
+					for (int i = 0; i < bestPath.Count; i++) {
+						
+						var block = points[bestPath[i]] as Point3DBlock;
+						var instructions = block.GCodeInstructions;
+
+						tw.WriteLine(string.Format("(Start Block_{0})", i));
+						foreach (var instruction in instructions) {
+							tw.WriteLine(instruction);
+						}
+						tw.WriteLine(string.Format("(End Block_{0})", i));
+						tw.WriteLine();
+					}
+					
+					return tw.ToString();
 				}
 			}
-			for (FIXME_VAR_TYPE c=0; c<eof.Length; c++) {
-				fout += eof[c] + '\n';
-			}
-			 */
+			
+			return null;
 		}
 		
 		public static void DumpGCode(List<GCodeInstruction> instructions, string filePath) {

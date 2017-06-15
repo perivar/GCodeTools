@@ -6,7 +6,9 @@ using System.Windows.Forms;
 using System.Threading;
 using GeneticAlgorithm;
 using System.IO;
+
 using GCode;
+using GCodePlotter;
 
 namespace GCodeOptimizer
 {
@@ -15,8 +17,9 @@ namespace GCodeOptimizer
 	/// </summary>
 	public partial class MainForm : Form
 	{
-		private GAAlgorithm _alg;
-		private List<IPoint> _points;
+		GAAlgorithm _alg;
+		List<IPoint> _points;
+		frmPlotter _plotter;
 		
 		float _maxX = 0.0f;
 		float _maxY = 0.0f;
@@ -26,7 +29,7 @@ namespace GCodeOptimizer
 		
 		private DateTime previousTime = DateTime.Now;
 		
-		public MainForm(List<IPoint> points, float maxX, float maxY)
+		public MainForm(frmPlotter plotter, List<IPoint> points, float maxX, float maxY)
 		{
 			//
 			// The InitializeComponent() call is required for Windows Forms designer support.
@@ -36,6 +39,7 @@ namespace GCodeOptimizer
 			_points = points;
 			this._maxX = maxX;
 			this._maxY = maxY;
+			this._plotter = plotter;
 			
 			//_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			//this._width = 900;
@@ -82,6 +86,15 @@ namespace GCodeOptimizer
 				// then save
 				GCodeUtils.SaveGCode(sortedBestPath, _points, sfdSaveDialog.FileName);
 			}
+		}
+		
+		void BtnUseClick(object sender, EventArgs e)
+		{
+			// first sort by z-order
+			var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
+			string gCode = GCodeUtils.GetGCode(sortedBestPath, _points);
+			_plotter.ParseText(gCode);
+			this.Close();
 		}
 		
 		async void BtnStartStopClick(object sender, EventArgs e)

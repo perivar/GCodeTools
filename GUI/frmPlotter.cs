@@ -17,10 +17,10 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		private const float DEFAULT_MULTIPLIER = 4.0f;
+		const float DEFAULT_MULTIPLIER = 4.0f;
 
-		private float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
-		private int MINMAX = 8;             // Times bigger or smaller than the ctrl
+		float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
+		int MINMAX = 8;             // Times bigger or smaller than the ctrl
 		
 		float scale = 1.0f;
 		float multiplier = DEFAULT_MULTIPLIER;
@@ -45,7 +45,7 @@ namespace GCodePlotter
 
 		Image renderImage = null;
 		
-		private Point MouseDownLocation;
+		Point MouseDownLocation;
 
 		public frmPlotter()
 		{
@@ -295,7 +295,7 @@ namespace GCodePlotter
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
 			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
-			new GCodeOptimizer.MainForm(points, maxX, maxY).Show();
+			new GCodeOptimizer.MainForm(this, points, maxX, maxY).Show();
 		}
 		
 		void PanelViewerScroll(object sender, ScrollEventArgs e)
@@ -306,8 +306,8 @@ namespace GCodePlotter
 		}
 		#endregion
 		
-		#region Prive Methods
-		private Rectangle GetVisibleRectangle(Control c)
+		#region Methods
+		Rectangle GetVisibleRectangle(Control c)
 		{
 			Rectangle rect = c.RectangleToScreen(c.ClientRectangle);
 			while (c != null)
@@ -319,7 +319,7 @@ namespace GCodePlotter
 			return rect;
 		}
 		
-		private void ZoomIn(Point clickPoint) {
+		void ZoomIn(Point clickPoint) {
 
 			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
 			    (pictureBox1.Height < (MINMAX * panelViewer.Height)))
@@ -335,7 +335,7 @@ namespace GCodePlotter
 			}
 		}
 
-		private void ZoomOut(Point clickPoint) {
+		void ZoomOut(Point clickPoint) {
 
 			if ((pictureBox1.Width > (panelViewer.Width / MINMAX)) &&
 			    (pictureBox1.Height > (panelViewer.Height / MINMAX )))
@@ -356,7 +356,7 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="clickPoint">position under the cursor which is to be retained</param>
 		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
-		private void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
+		void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
 			// http://vilipetek.com/2013/09/07/105/
 			
 			var scrollPosition = panelViewer.AutoScrollPosition;
@@ -387,7 +387,7 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>list of blocks</returns>
-		private static List<Block> GetBlocksOld(List<GCodeInstruction> instructions) {
+		static List<Block> GetBlocksOld(List<GCodeInstruction> instructions) {
 			
 			var currentPoint = Point3D.Empty;
 			var blocks = new List<Block>();
@@ -465,7 +465,7 @@ namespace GCodePlotter
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>list of blocks</returns>
-		private static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
+		static List<Block> GetBlocks(List<GCodeInstruction> instructions) {
 
 			var blocks = new List<Block>();
 			var currentPoint = Point3D.Empty;
@@ -487,7 +487,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		private static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks, ref Point3D currentPoint) {
+		static List<Block> GetBlockElements(List<Point3DBlock> point3DBlocks, ref Point3D currentPoint) {
 			
 			int blockCounter = 1;
 			var blocks = new List<Block>();
@@ -517,7 +517,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		private static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name, ref Point3D currentPoint) {
+		static List<Block> GetBlockElements(List<GCodeInstruction> instructions, string name, ref Point3D currentPoint) {
 			
 			var blocks = new List<Block>();
 			
@@ -541,55 +541,7 @@ namespace GCodePlotter
 			return blocks;
 		}
 		
-		private void ParseText(string text)
-		{
-			parsedInstructions = SimpleGCodeParser.ParseText(text);
-
-			treeView.Nodes.Clear();
-
-			// turn the instructions into blocks
-			myBlocks = GetBlocks(parsedInstructions);
-			
-			// calculate max values for X, Y and Z
-			// while finalizing the blocks and adding them to the lstPlot
-			maxX = 0.0f;
-			maxY = 0.0f;
-			maxZ = 0.0f;
-			minX = 0.0f;
-			minY = 0.0f;
-			minZ = 0.0f;
-			foreach (Block block in myBlocks)
-			{
-				block.CalculateMinAndMax();
-				
-				maxX = Math.Max(maxX, block.MaxX);
-				maxY = Math.Max(maxY, block.MaxY);
-				maxZ = Math.Max(maxZ, block.MaxZ);
-
-				minX = Math.Min(minX, block.MinX);
-				minY = Math.Min(minY, block.MinY);
-				minZ = Math.Min(minZ, block.MinZ);
-				
-				// build node tree
-				var node = new TreeNode(block.ToString());
-				node.Tag = block;
-				foreach (var instruction in block.GCodeInstructions) {
-					var childNode = new TreeNode();
-					childNode.Text = instruction.ToString();
-					childNode.Tag = instruction;
-					node.Nodes.Add(childNode);
-				}
-				treeView.Nodes.Add(node);
-			}
-			
-			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
-			                                  maxX, minX, maxY, minY, maxZ, minZ);
-			
-			RenderBlocks();
-			bDataLoaded = true;
-		}
-		
-		private void ResetSplit(int index) {
+		void ResetSplit(int index) {
 			
 			if (parsedInstructions == null) {
 				MessageBox.Show("No file loaded!");
@@ -625,7 +577,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		private Size GetDimensionsFromZoom() {
+		Size GetDimensionsFromZoom() {
 
 			// set scale variable
 			scale = (10 * multiplier);
@@ -637,7 +589,7 @@ namespace GCodePlotter
 			return new Size(width, height);
 		}
 		
-		private void GetEmptyImage() {
+		void GetEmptyImage() {
 			
 			var imageDimension = GetDimensionsFromZoom();
 			int width = imageDimension.Width;
@@ -663,7 +615,7 @@ namespace GCodePlotter
 			}
 		}
 
-		private void RenderBlocks()
+		void RenderBlocks()
 		{
 			GetEmptyImage();
 			
@@ -751,7 +703,7 @@ namespace GCodePlotter
 			pictureBox1.Refresh();
 		}
 		
-		private void SaveGCodes(bool doMultiLayer)
+		void SaveGCodes(bool doMultiLayer)
 		{
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == DialogResult.OK)
@@ -785,7 +737,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		private void SaveSplittedGCodes(List<List<GCodeInstruction>> split, Point3D splitPoint, string filePath) {
+		void SaveSplittedGCodes(List<List<GCodeInstruction>> split, Point3D splitPoint, string filePath) {
 			
 			var dirPath = Path.GetDirectoryName(filePath);
 			var fileName = Path.GetFileNameWithoutExtension(filePath);
@@ -801,7 +753,7 @@ namespace GCodePlotter
 			SaveGCodes(cleanedSecond, splitPoint, fileSecond);
 		}
 
-		private void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
+		void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
 		{
 			List<Block> blocks = null;
 			
@@ -854,7 +806,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		private void WriteGCodeHeader(TextWriter tw, float zSafeHeight) {
+		void WriteGCodeHeader(TextWriter tw, float zSafeHeight) {
 			tw.WriteLine("(File built with GCodeTools)");
 			tw.WriteLine("(Generated on " + DateTime.Now + ")");
 			tw.WriteLine();
@@ -869,7 +821,7 @@ namespace GCodePlotter
 			tw.WriteLine("(Header end.)");
 		}
 
-		private void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
+		void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
 			tw.WriteLine();
 			tw.WriteLine("(Footer)");
 			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
@@ -902,5 +854,53 @@ namespace GCodePlotter
 			}
 		}
 		#endregion
+		
+		public void ParseText(string text)
+		{
+			parsedInstructions = SimpleGCodeParser.ParseText(text);
+
+			treeView.Nodes.Clear();
+
+			// turn the instructions into blocks
+			myBlocks = GetBlocks(parsedInstructions);
+			
+			// calculate max values for X, Y and Z
+			// while finalizing the blocks and adding them to the lstPlot
+			maxX = 0.0f;
+			maxY = 0.0f;
+			maxZ = 0.0f;
+			minX = 0.0f;
+			minY = 0.0f;
+			minZ = 0.0f;
+			foreach (Block block in myBlocks)
+			{
+				block.CalculateMinAndMax();
+				
+				maxX = Math.Max(maxX, block.MaxX);
+				maxY = Math.Max(maxY, block.MaxY);
+				maxZ = Math.Max(maxZ, block.MaxZ);
+
+				minX = Math.Min(minX, block.MinX);
+				minY = Math.Min(minY, block.MinY);
+				minZ = Math.Min(minZ, block.MinZ);
+				
+				// build node tree
+				var node = new TreeNode(block.ToString());
+				node.Tag = block;
+				foreach (var instruction in block.GCodeInstructions) {
+					var childNode = new TreeNode();
+					childNode.Text = instruction.ToString();
+					childNode.Tag = instruction;
+					node.Nodes.Add(childNode);
+				}
+				treeView.Nodes.Add(node);
+			}
+			
+			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
+			                                  maxX, minX, maxY, minY, maxZ, minZ);
+			
+			RenderBlocks();
+			bDataLoaded = true;
+		}
 	}
 }

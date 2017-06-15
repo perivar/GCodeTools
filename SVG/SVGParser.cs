@@ -447,7 +447,7 @@ namespace SVG
 						case 'c': state = ParseState.CurveToRel; ++index; break;
 						case 'l': state = ParseState.LineToRel; ++index; break;
 						case 'L': state = ParseState.LineToAbs; ++index; break;
-					case 'Z':
+						case 'Z':
 						case 'z': state = ParseState.None; ++index;
 						
 						// Close current contour and open a new one
@@ -626,7 +626,8 @@ namespace SVG
 					PointF p1 = pointList[pointIndex];
 					PointF p2 = pointList[pointIndex + 1];
 					PointF p3 = pointList[pointIndex + 2];
-					PointF pb = new PointF((p1.X + p3.X) / 2, (p1.Y + p3.Y) / 2);
+					
+					var pb = new PointF((p1.X + p3.X) / 2, (p1.Y + p3.Y) / 2);
 
 					double err = Math.Sqrt(Math.Abs(p2.X - pb.X) * Math.Abs(p2.X - pb.X) +
 					                       Math.Abs(p2.Y - pb.Y) * Math.Abs(p2.Y - pb.Y));
@@ -824,7 +825,7 @@ namespace SVG
 						string widthValue = reader.GetAttribute("width");
 						string heightValue = reader.GetAttribute("height");
 						string viewBoxValue = reader.GetAttribute("viewBox");
-						doc.SetSVGSizeParameters(widthValue, heightValue, viewBoxValue);
+						doc.SetDPIFromSVGSizeParameters(widthValue, heightValue, viewBoxValue);
 					}
 					else if (reader.Name == "rect")
 					{
@@ -933,6 +934,10 @@ namespace SVG
 		}
 
 		static void ParseNumberWithOptionalUnit(string stringWithOptionalUnit, out float number, out string unit) {
+
+			// Read numbers with optional units like this:
+			// width="8.5in"
+			// height="11in"
 			
 			var match = Regex.Match(stringWithOptionalUnit, @"([0-9]+(?:\.[0-9]+)?)(\w*)");
 			if (match.Success) {
@@ -947,7 +952,27 @@ namespace SVG
 			}
 		}
 
-		void SetSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
+		static float ScaleValueWithUnit(float value, string unit) {
+			
+			// Read the unit
+			// default is mm
+			switch (unit.ToLower())
+			{
+				case "in": // convert to mm
+					value *= 25.4f;
+					break;
+				case "mm": // no conversion needed
+				case "":
+					break;
+				case "cm": // convert from cm
+					value *= 10.0f;
+					break;
+			}
+			
+			return value;
+		}
+		
+		void SetDPIFromSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
 		{
 			float realW = 0;
 			float realH = 0;
@@ -963,37 +988,12 @@ namespace SVG
 			
 			string widthUnit;
 			ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
-
-			// Read the unit
-			switch (widthUnit.ToLower())
-			{
-				case "in": // convert to mm
-					realW = realW * 25.4f;
-					break;
-				case "mm": // no conversion needed
-				case "":
-					break;
-				case "cm": // convert from cm
-					realW = realW * 10;
-					break;
-			}
-
+			realW = ScaleValueWithUnit(realW, widthUnit);
+			
 			string heightUnit;
 			ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
+			realH = ScaleValueWithUnit(realH, heightUnit);
 
-			// Read the unit
-			switch (heightUnit.ToLower())
-			{
-				case "in": // convert to mm
-					realH = realH * 25.4f;
-					break;
-				case "mm": // no conversion needed
-				case "":
-					break;
-				case "cm": // convert from cm
-					realH = realH * 10;
-					break;
-			}
 			Debug.WriteLine("Size in mm: {0}, {1}", realW, realH);
 			
 			// The 'ViewBox' is how we scale an mm to a pixel.
@@ -1045,6 +1045,39 @@ namespace SVG
 			
 			return new PointF(rect.Left + rect.Width/2,
 			                  rect.Top + rect.Height / 2);
+		}
+
+		public void Render(Graphics gc, bool rasterOnly)
+		{
+			foreach (ISVGElement shape in shapes)
+			{
+				if (shape is SVGImage)
+				{
+					// Polymorphism? What's that?
+					var img = shape as SVGImage;
+
+					gc.DrawImage(img.bits, img.DestBounds);
+				}
+
+				if (shape.OutlineWidth < .01 && shape.FillColor.A == 0 && rasterOnly)
+				{
+					continue;
+				}
+
+				GraphicsPath p = shape.GetPath();
+				if (shape.FillColor.A > 0)
+				{
+					Brush b = new SolidBrush(shape.FillColor);
+					gc.FillPath(b, p);
+					b.Dispose();
+				}
+				if (shape.OutlineWidth > 0 && shape.OutlineColor.A > 0)
+				{
+					var pen = new Pen(shape.OutlineColor, (float)shape.OutlineWidth);
+					gc.DrawPath(pen, p);
+					pen.Dispose();
+				}
+			}
 		}
 		
 		/// <summary>
