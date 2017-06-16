@@ -111,7 +111,7 @@ namespace SVG
 
 			if (styleText != null)
 			{
-				string[] styleNames = styleText.Split(new char[] { ' ', '\t' });
+				string[] styleNames = styleText.Split(new [] { ' ', '\t' });
 
 				foreach (string styleName in styleNames)
 				{
@@ -139,8 +139,8 @@ namespace SVG
 				{
 					xfs = xfs.Substring(6);
 				}
-				xfs = xfs.Trim(new char[] { '(', ')' });
-				string[] elements = xfs.Split(new char[] { ' ', '\t' });
+				xfs = xfs.Trim(new [] { '(', ')' });
+				string[] elements = xfs.Split(new [] { ' ', '\t' });
 
 				matrix = new Matrix(
 					float.Parse(elements[0], CultureInfo.InvariantCulture),
@@ -849,9 +849,10 @@ namespace SVG
 			OutlineWidthPresent = false;
 			FillColorPresent = false;
 
-			style = style.Trim(new char[] { '{', '}' });
-			string[] stylePairs = style.Split(new char[] { ':', ';' });
+			style = style.Trim(new [] { '{', '}' });
+			string[] stylePairs = style.Split(new [] { ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
+			// check we have pairs (can divide by 2)
 			if ((stylePairs.Count() & 1) != 0)
 			{
 				throw new ArgumentException("Failed to parse style");
@@ -913,13 +914,15 @@ namespace SVG
 						string styleData = reader.ReadElementContentAsString();
 						var styleReader = new StringReader(styleData);
 						string line;
-
+						
 						while ((line = styleReader.ReadLine()) != null)
 						{
 							string[] splitLine;
 
 							line = line.Trim();
-							splitLine = line.Split(new char[] { ' ', '\t' });
+							if (line == "") continue;
+							
+							splitLine = line.Split(new [] { ' ', '\t', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
 
 							string name = splitLine[0];
 							if (name.StartsWith("."))
@@ -1132,6 +1135,9 @@ namespace SVG
 			// Read these numbers to determine the scale of the data inside the file.
 			// width and height are the real-world widths and heights
 			// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is mm
+			
+			// if we don't have a width value, we cannot set the DPI automatically
+			if (widthValue == null) return;
 			
 			string widthUnit;
 			ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
