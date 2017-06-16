@@ -82,7 +82,6 @@
     <Compile Include="GeneticAlgorithm\GAAlgorithm.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SVG\SVG.cs" />
     <Compile Include="SVG\SVGParser.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Collections.Generic;
+using System.Drawing;
+using SVG;
 
 namespace GCode
 {
@@ -336,6 +338,44 @@ namespace GCode
 			}
 		}
 		
+		public static string GenerateGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+			var sb = new StringBuilder();
+			int contourCounter = 0;
+
+			// Enumerate each contour in the document
+			foreach (var contour in contours)
+			{
+				contourCounter++;
+				
+				sb.AppendFormat("Contour {0}\n", contourCounter);
+				
+				var center = SVGDocument.Center(contour);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
+			}
+			return sb.ToString();
+		}
+
+		public static string GenerateGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+			var sb = new StringBuilder();
+			int contourCounter = 0;
+
+			// Enumerate each contour in the document
+			foreach (var contour in contours)
+			{
+				contourCounter++;
+				
+				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
+				
+				var center = SVGDocument.Center(contour);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
+			}
+			return sb.ToString();
+		}
+		
 		public static List<GCodeInstruction> ShiftGCode(List<GCodeInstruction> instructions, float deltaX, float deltaY, float deltaZ) {
 			
 			var shifted = new List<GCodeInstruction>();
@@ -356,7 +396,6 @@ namespace GCode
 			}
 
 			return shifted;
-			
 		}
 	}
 	

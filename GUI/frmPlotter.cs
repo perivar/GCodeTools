@@ -703,6 +703,15 @@ namespace GCodePlotter
 			pictureBox1.Refresh();
 		}
 		
+		float GetZSafeHeight() {
+			float zSafeHeight = 2.0f;
+			if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
+				txtZClearance.Text = "2.0";
+				zSafeHeight = 2.0f;
+			}
+			return zSafeHeight;
+		}
+		
 		void SaveGCodes(bool doMultiLayer)
 		{
 			var result = sfdSaveDialog.ShowDialog();
@@ -718,11 +727,7 @@ namespace GCodePlotter
 					file.Delete();
 				}
 
-				float zSafeHeight = 2.0f;
-				if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
-					txtZClearance.Text = "2.0";
-					zSafeHeight = 2.0f;
-				}
+				float zSafeHeight = GetZSafeHeight();
 
 				using (var tw = new StreamWriter(file.OpenWrite())) {
 					WriteGCodeHeader(tw, zSafeHeight);
@@ -788,11 +793,7 @@ namespace GCodePlotter
 				file.Delete();
 			}
 			
-			float zSafeHeight = 2.0f;
-			if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
-				txtZClearance.Text = "2.0";
-				zSafeHeight = 2.0f;
-			}
+			float zSafeHeight = GetZSafeHeight();
 			
 			using (var tw = new StreamWriter(file.OpenWrite())) {
 				WriteGCodeHeader(tw, zSafeHeight);
@@ -850,7 +851,10 @@ namespace GCodePlotter
 				svgFilePath = dialog.FileName;
 				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
 				var contours = svg.ScaledContours();
-				ParseText(SVG.SVGDocument.GenerateGCode(contours));
+				float zSafeHeight = GetZSafeHeight();
+				string gCode = GCodeUtils.GenerateGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
+				//string gCode = svg.EmitGCode(true, 90, 800, true, 90, 800, false, null);
+				ParseText(gCode);
 			}
 		}
 		#endregion

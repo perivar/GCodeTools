@@ -21,18 +21,17 @@
 // THE SOFTWARE.
 
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Xml.Linq;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Globalization;
-using System.Diagnostics;
-
-using System.Text;
-using System.Xml;
+using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml;
+using System.Globalization;
+using System.Diagnostics;
 
 namespace SVG
 {
@@ -447,7 +446,7 @@ namespace SVG
 						case 'c': state = ParseState.CurveToRel; ++index; break;
 						case 'l': state = ParseState.LineToRel; ++index; break;
 						case 'L': state = ParseState.LineToAbs; ++index; break;
-						case 'Z':
+					case 'Z':
 						case 'z': state = ParseState.None; ++index;
 						
 						// Close current contour and open a new one
@@ -1080,6 +1079,258 @@ namespace SVG
 			}
 		}
 		
+		string GCodeHeader =
+			@"(paperpixels SVG to GCode v0.1)
+N30 G17 (active plane)
+N35 G40 (turn compensation off)
+N40 G20 (inch mode)
+N45 G90 (Absolute mode, current coordinates)
+N50 G61 (Exact stop mode for raster scanning)";
+
+		string GCodeFooter =
+			@"M5 (Laser Off)
+E1P0 (Program End)
+G0 X0 Y0 Z1 (Home and really turn off laser)
+M30 (End)";
+
+		/// <summary>
+		/// This emits GCode suitable for driving a laser cutter to vector/raster
+		/// the document. There are numerous assumptions made here so that it
+		/// works exactly with my cheap Chinese laser cutter, my controller board
+		/// and my Mach3 config. You may need to fiddle with things here to
+		/// get the axes directions correct, etc.
+		/// </summary>
+		/// <param name="path">Output path for GCode file</param>
+		/// <param name="raster">If true a raster path is emitted</param>
+		/// <param name="rasterDpi">DPI resolution for raster</param>
+		/// <param name="rasterFeedRate">IPS feed for raster scan</param>
+		/// <param name="vector">If true a vector cut is emitted</param>
+		/// <param name="vectorDpi">DPI resolution for vector cut</param>
+		/// <param name="vectorFeedRate">IPS feed for vector cut</param>
+		/// <param name="vectorCV">Use constant velocity mode? Smooths out
+		/// discontinuities that occur at polygon vertices/corners using
+		/// lookahead. Mach3 does all this, this simply emits a GCode to
+		/// turn this on. This, plus sufficient lookahead configured in
+		/// Mach3 made my laser perform much smoother.</param>
+		/// <param name="progressDelegate">Callback for progress notification</param>
+		public string EmitGCode(bool raster, int rasterDpi, int rasterFeedRate, bool vector, int vectorDpi, int vectorFeedRate, bool vectorCV, Action<double> progressDelegate)
+		{
+			// Open up file for writing
+			var gcode = new StringWriter();
+
+			// Emit header
+			gcode.WriteLine(GCodeHeader);
+
+			// BUGBUG: Should read size from SVG file header. But we usually are doing 11x11
+			//         This always assumes an 11" x 11" document.
+			double docWidth = 11.0;
+			double docHeight = 11.0;
+			double bandHeight = 0.5;
+			double totalProgress = docHeight / bandHeight + 1.0;
+			double progress = 0;
+
+			// First pass is raster engraving
+			if (raster)
+			{
+				// Create a bitmap image used for banding
+				var band = new Bitmap(
+					(int)(docWidth * rasterDpi),    // Band Width in px
+					(int)(bandHeight * rasterDpi),  // Band Height in px
+					PixelFormat.Format32bppArgb);
+				Graphics gc = Graphics.FromImage(band);
+
+				// Now render each band of the image
+				for (double bandTop = 0.0; bandTop <= docHeight - bandHeight; bandTop += bandHeight)
+				{
+					// Call progress method once per band
+					if (progressDelegate != null)
+					{
+						progressDelegate(progress / totalProgress);
+					}
+
+					// Set up the GC transform to render this band
+					gc.ResetTransform();
+					gc.FillRectangle(Brushes.White, 0, 0, 99999, 99999);
+					gc.ScaleTransform(-rasterDpi, -rasterDpi);
+					gc.TranslateTransform((float)-docWidth, (float)-bandTop);
+
+					// Erase whatever was there before
+					gc.FillRectangle(Brushes.White, -50, -50, 50, 50);
+
+					// Render just the raster shapes into the band
+					this.Render(gc, true);
+
+					// Now scan the band and emit gcode. We access the bitmap data
+					// directly for higher performance. The use of unsafe pointer
+					// access here sped up perf significantly over GetPixel() which
+					// is obvious but they don't teach PhD's this so I mention it here.
+					unsafe
+					{
+						BitmapData lockedBits = band.LockBits(
+							Rectangle.FromLTRB(0, 0, band.Width, band.Height),
+							ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+						bool laserOn = false;
+						int onStart = 0;
+						for (int y = 0; y < band.Height; ++y)
+						{
+							if (laserOn)
+							{
+								throw new ApplicationException("Expected laser off");
+							}
+
+							// Get the bits for this scanline using something I call a "pointer"
+							byte* pScanline = (byte*)((int)lockedBits.Scan0 + ((band.Height - 1) - y) * lockedBits.Stride);
+							for (int x = 0; x < band.Width; ++x)
+							{
+								int b = *pScanline++;
+								int g = *pScanline++;
+								int r = *pScanline++;
+								int a = *pScanline++;
+								int luma = r + g + b;
+
+								if (luma < 400)
+								{
+									if (!laserOn)
+									{
+										// Found an "on" edge
+										onStart = x;
+										laserOn = true;
+									}
+								}
+								else
+								{
+									if (laserOn)
+									{
+										// Found an "off" edge
+										double fx = (double)onStart / (double)rasterDpi;
+										double fy = ((double)y / (double)rasterDpi) + bandTop;
+										fy = docHeight - fy + bandHeight;
+										fx = docWidth - fx;
+										gcode.WriteLine(string.Format("G1 X{0:0.0000} Y{1:0.0000} F{2}", fx, fy, rasterFeedRate));
+										fx = (double)x / (double)rasterDpi;
+										fx = docWidth - fx;
+										gcode.WriteLine("G1 Z0 (Laser On)");
+										gcode.WriteLine(string.Format("X{0:0.0000}", fx));
+										gcode.WriteLine("Z0.002 (Laser Off)");
+
+										laserOn = false;
+									}
+								}
+							}
+
+							// If we get here and laser is still on then we
+							// turn it off at the edge here.
+							if (laserOn && false)
+							{
+								double fx = (double)onStart / (double)rasterDpi;
+								double fy = ((double)y / (double)rasterDpi) + bandTop;
+								gcode.WriteLine(string.Format("G1 X{0:0.0000} Y{1:0.0000}", fx, fy));
+								fx = (double)band.Width / (double)rasterDpi;
+								fx = docWidth - fx;
+								gcode.WriteLine("G1 Z0 (Laser On)");
+								gcode.WriteLine(string.Format("X{0:0.0000} F{1:0.0000}", fx, rasterFeedRate));
+								gcode.WriteLine("Z0.002 (Laser Off)");
+
+								laserOn = false;
+							}
+						}
+
+						// Unlock band bits
+						band.UnlockBits(lockedBits);
+
+						// Increment progress
+						progress += 1.0;
+					}
+				}
+			}
+
+			// Pause inbetween for the operator to adjust power
+			// You need to create a M995 custom macro in Mach3 to
+			// stick up a dialog that says "Adjust Power for Vector"
+			gcode.WriteLine("(=================================================================================)");
+			gcode.WriteLine("(Pause for operator power adjustment)");
+			gcode.WriteLine("(Depends on macro M995 set up to prompt operator)");
+			gcode.WriteLine("(=================================================================================)");
+			gcode.WriteLine("M995");
+
+			// Second pass is vector cuts
+			double contourIncrement = 1.0 / GetVectorContours(100).Count();
+			if (vectorCV)
+			{
+				gcode.WriteLine("G64 (Constant velocity mode for vector cuts)");
+			}
+			foreach (var contour in GetVectorContours(vectorDpi))
+			{
+				int contourFeed;
+
+				if (vectorFeedRate > 0)
+				{
+					contourFeed = vectorFeedRate;
+				}
+				else
+				{
+					// This is trying to be overly cute and is probably
+					// not useful. It maps colors to different speeds.
+					contourFeed = (int)((1.0 - contour.Brightness) * 1000);
+					if (contour.Color.Name == "Blue")
+					{
+						contourFeed = 50;
+					}
+					else if (contour.Color.Name == "Aqua")
+					{
+						contourFeed = 40;
+					}
+					else if (contour.Color.Name == "Lime")
+					{
+						contourFeed = 30;
+					}
+					else if (contour.Color.Name == "Yellow")
+					{
+						contourFeed = 20;
+					}
+					else if (contour.Color.Name == "Red")
+					{
+						contourFeed = 10;
+					}
+				}
+
+				bool first = true;
+				foreach (var point in contour.Points)
+				{
+					// Transform point to laser coordinate system
+					double laserX = point.X;
+					double laserY = 11.0 - point.Y;
+
+					if (first)
+					{
+						// Rapid to the start of the contour
+						gcode.WriteLine(string.Format("G0 X{0:0.0000} Y{1:0.0000}", laserX, laserY));
+						gcode.WriteLine(string.Format("G1 Z-0.002 F{0} (Turn on laser. Set feed for this contour)", contourFeed));
+						first = false;
+					}
+					else
+					{
+						// Next point in contour
+						gcode.WriteLine(string.Format("X{0:0.0000} Y{1:0.0000}", laserX, laserY));
+					}
+				}
+				gcode.WriteLine("Z0 (Turn off laser)");
+
+				progress += contourIncrement;
+				if (progressDelegate != null)
+				{
+					progressDelegate(progress / totalProgress);
+				}
+			}
+
+			// Shut down
+			gcode.WriteLine(GCodeFooter);
+			gcode.Flush();
+			gcode.Close();
+			
+			return gcode.ToString();
+		}
+		
 		/// <summary>
 		/// Given a specific DPI resolution, returns vectors to approximate
 		/// the shapes in the document at that resolution. This allows us to
@@ -1139,36 +1390,5 @@ namespace SVG
 			Debug.WriteLine("Thinned contour ({0}/{1}) = {2}%", thin, total, (int)((double)thin / (double)total * 100.0));
 		}
 		
-		public static string GenerateGCode(IEnumerable<IEnumerable<PointF>>contours) {
-			var sb = new StringBuilder();
-			int contourCounter = 0;
-
-			// Enumerate each contour in the document
-			foreach (var contour in contours)
-			{
-				contourCounter++;
-				
-				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
-				
-				var center = Center(contour);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
-				sb.AppendLine("G1 Z-1.5 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-3 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-4.5 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-6 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-7.5 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-9 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G1 Z-10 F800");
-				sb.AppendLine("G1 Z0 F800");
-				sb.AppendLine("G0 Z2");
-			}
-			return sb.ToString();
-		}
 	}
 }
