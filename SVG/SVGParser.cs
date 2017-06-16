@@ -1,6 +1,8 @@
 ﻿// Most of this comes from the lasercam project made by Chris Yerga
-// Modified by perivar@nerseth.com to support OpenScad SVGs
 // Copyright (c) 2010 Chris Yerga
+
+// Modified by perivar@nerseth.com to support OpenScad SVGs
+// Also leaned heavily on the SVG-to-GCode project https://github.com/avwuff/SVG-to-GCode
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +37,28 @@ using System.Diagnostics;
 
 namespace SVG
 {
+	/// <summary>
+	/// A collection of static SVG Util methods
+	/// </summary>
+	public static class SVGUtils {
+
+		/// <summary>
+		/// Read a float value from the reader
+		/// </summary>
+		/// <param name="reader">reader</param>
+		/// <param name="attributeName">name of attribute</param>
+		/// <returns>a float value or zero</returns>
+		public static float ReadFloat (XmlTextReader reader, string attributeName) {
+			float value = 0;
+			try
+			{
+				value = float.Parse(reader.GetAttribute("attributeName"), CultureInfo.InvariantCulture);
+			}
+			catch (ArgumentNullException) { }
+			return value;
+		}
+	}
+	
 	/// <summary>
 	/// Interface for a drawable object found in an SVG file. This
 	/// is not a general-purpose SVG library -- it only does the
@@ -150,31 +174,107 @@ namespace SVG
 	}
 
 	/// <summary>
+	/// SVG Line
+	/// </summary>
+	public class SVGLine : SVGShapeBase, ISVGElement
+	{
+		List<PointF> points = new List<PointF>();
+
+		public SVGLine(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
+			: base(reader, styleDictionary)
+		{
+			float x1 = SVGUtils.ReadFloat(reader, "x1");
+			float y1 = SVGUtils.ReadFloat(reader, "y1");
+			float x2 = SVGUtils.ReadFloat(reader, "x2");
+			float y2 = SVGUtils.ReadFloat(reader, "y2");
+			
+			points.Add(new PointF(x1, y1));
+			points.Add(new PointF(x2, y2));
+
+			points = Transform(points);
+
+			_path = new GraphicsPath();
+			_path.AddLine(points[0], points[1]);
+		}
+
+		public List<List<PointF>> GetContours()
+		{
+			var result = new List<List<PointF>>();
+			result.Add(points);
+
+			return result;
+		}
+	}
+	
+	/// <summary>
+	/// SVG Ellipse
+	/// </summary>
+	public class SVGEllipse : SVGShapeBase, ISVGElement
+	{
+		List<PointF> points = new List<PointF>();
+
+		public SVGEllipse(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
+			: base(reader, styleDictionary)
+		{
+
+			//   cx="245.46707"
+			//   cy = "469.48389"
+			//   rx = "13.131983"
+			//   ry="14.142136" />
+
+			float cx = SVGUtils.ReadFloat(reader, "cx");
+			float cy = SVGUtils.ReadFloat(reader, "cy");
+			float rx = SVGUtils.ReadFloat(reader, "rx");
+			float ry = SVGUtils.ReadFloat(reader, "ry");
+			
+			double A = 0;
+			double x = 0;
+			double y = 0;
+			long rr = 0;
+
+			rr = 2;
+			if (rx > 100 | ry > 100)
+			{
+				rr = 1;
+			}
+
+			for (A = 0; A <= 360; A += rr)
+			{
+				x = Math.Cos(A * (Math.PI / 180)) * rx + cx;
+				y = Math.Sin(A * (Math.PI / 180)) * ry + cy;
+
+				points.Add(new PointF((float)x, (float)y));
+			}
+			
+			points = Transform(points);
+
+			_path = new GraphicsPath();
+			_path.AddLine(points[0], points[1]);
+		}
+
+		public List<List<PointF>> GetContours()
+		{
+			var result = new List<List<PointF>>();
+			result.Add(points);
+
+			return result;
+		}
+	}
+
+	/// <summary>
 	/// SVG Rectangle
 	/// </summary>
 	public class SVGRect : SVGShapeBase, ISVGElement
 	{
-		private List<PointF> points = new List<PointF>();
+		List<PointF> points = new List<PointF>();
 
 		public SVGRect(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 			: base(reader, styleDictionary)
 		{
-			float x = 0;
-			try
-			{
-				x = float.Parse(reader.GetAttribute("x"), CultureInfo.InvariantCulture);
-			}
-			catch (ArgumentNullException) { }
-
-			float y = 0;
-			try
-			{
-				y = float.Parse(reader.GetAttribute("y"), CultureInfo.InvariantCulture);
-			}
-			catch (ArgumentNullException) { }
-			
-			float w = float.Parse(reader.GetAttribute("width"), CultureInfo.InvariantCulture);
-			float h = float.Parse(reader.GetAttribute("height"), CultureInfo.InvariantCulture);
+			float x = SVGUtils.ReadFloat(reader, "x");
+			float y = SVGUtils.ReadFloat(reader, "y");
+			float w = SVGUtils.ReadFloat(reader, "width");
+			float h = SVGUtils.ReadFloat(reader, "height");
 
 			points.Add(new PointF(x, y));
 			points.Add(new PointF(x + w, y));
@@ -216,20 +316,11 @@ namespace SVG
 		public SVGImage(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary, string baseDocPath)
 			: base(reader, styleDictionary)
 		{
-			try
-			{
-				x = float.Parse(reader.GetAttribute("x"), CultureInfo.InvariantCulture);
-			}
-			catch { }
-
-			try
-			{
-				y = float.Parse(reader.GetAttribute("y"), CultureInfo.InvariantCulture);
-			}
-			catch { }
+			float x = SVGUtils.ReadFloat(reader, "x");
+			float y = SVGUtils.ReadFloat(reader, "y");
+			float w = SVGUtils.ReadFloat(reader, "width");
+			float h = SVGUtils.ReadFloat(reader, "height");
 			
-			width = float.Parse(reader.GetAttribute("width"), CultureInfo.InvariantCulture);
-			height = float.Parse(reader.GetAttribute("height"), CultureInfo.InvariantCulture);
 			string path = reader.GetAttribute("xlink:href");
 
 			string dir = Path.GetDirectoryName(baseDocPath);
@@ -239,8 +330,8 @@ namespace SVG
 			var pts = new PointF[2];
 			pts[0].X = x;
 			pts[0].Y = y;
-			pts[1].X = x+width;
-			pts[1].Y = y+height;
+			pts[1].X = x+w;
+			pts[1].Y = y+h;
 			matrix.TransformPoints(pts);
 
 			DestBounds = new RectangleF(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
@@ -259,26 +350,14 @@ namespace SVG
 	/// </summary>
 	public class SVGCircle : SVGShapeBase, ISVGElement
 	{
-		private List<PointF> points = new List<PointF>();
+		List<PointF> points = new List<PointF>();
 
 		public SVGCircle(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 			: base(reader, styleDictionary)
 		{
-			float cx = 0;
-			try
-			{
-				cx = float.Parse(reader.GetAttribute("cx"), CultureInfo.InvariantCulture);
-			}
-			catch { }
-
-			float cy = 0;
-			try
-			{
-				cy = float.Parse(reader.GetAttribute("cy"), CultureInfo.InvariantCulture);
-			}
-			catch { }
-			
-			float r = float.Parse(reader.GetAttribute("r"), CultureInfo.InvariantCulture);
+			float cx = SVGUtils.ReadFloat(reader, "cx");
+			float cy = SVGUtils.ReadFloat(reader, "cy");
+			float r = SVGUtils.ReadFloat(reader, "r");
 
 			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
 			{
@@ -308,24 +387,40 @@ namespace SVG
 	/// </summary>
 	public class SVGPolygon : SVGShapeBase, ISVGElement
 	{
-		private List<List<PointF>> contours = new List<List<PointF>>();
-		private List<PointF> currentContour = new List<PointF>();
+		List<List<PointF>> contours = new List<List<PointF>>();
+		List<PointF> currentContour = new List<PointF>();
 
 		public SVGPolygon(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 			: base(reader, styleDictionary)
 		{
+			// Support
+			// <polygon points="50 160 55 180 70 180 60 190 65 205 50 195 35 205 40 190 30 180 45 180" />
+			// <polyline points="60 110, 65 120, 70 115, 75 130, 80 125, 85 140, 90 135, 95 150, 100 145"/>
+			// <polygon points="850,75  958,137.5 958,262.5 850,325 742,262.6 742,137.5" />
+			
 			string data = reader.GetAttribute("points");
-			string[] textPoints = data.Split(new char[] { ' ', '\t' });
-
-			foreach (string textPoint in textPoints)
-			{
-				string[] ordinates = textPoint.Split(new char[] { ',' });
-				if (ordinates.Length > 1)
-				{
-					currentContour.Add(new PointF(float.Parse(ordinates[0], CultureInfo.InvariantCulture), float.Parse(ordinates[1], CultureInfo.InvariantCulture)));
-				}
+			
+			// split the data string into elements
+			var parts = data.Split(new [] { ' ', '\t', ',' } ).
+				Select(tag => tag.Trim()).
+				Where( tag => !string.IsNullOrEmpty(tag));
+			
+			// group into elements of two
+			int i = 0;
+			var query = from s in parts
+				let num = i++
+				group s by num / 2 into g
+				select g.ToArray();
+			
+			var pairs = query.ToArray();
+			
+			foreach (var pair in pairs) {
+				currentContour.Add(
+					new PointF(float.Parse(pair[0], CultureInfo.InvariantCulture),
+					           float.Parse(pair[1], CultureInfo.InvariantCulture)));
 			}
-
+			
+			// Close the shape
 			if (currentContour.Count > 2)
 			{
 				float deltaX = currentContour[0].X - currentContour[currentContour.Count - 1].X;
@@ -360,18 +455,30 @@ namespace SVG
 	/// </summary>
 	public class SVGPath : SVGShapeBase, ISVGElement
 	{
-		private List<List<PointF>> contours = new List<List<PointF>>();
-		private List<PointF> currentContour = new List<PointF>();
+		List<List<PointF>> contours = new List<List<PointF>>();
+		List<PointF> currentContour = new List<PointF>();
 
 		enum ParseState
 		{
 			None,
 			MoveToAbs,
 			MoveToRel,
+			LineToAbs,
+			LineToRel,
+			VerticalLineToAbs,
+			VerticalLineToRel,
+			HorizontalLineToAbs,
+			HorizontalLineToRel,
+			PartialArcToAbs, // PARTIAL ARC TO
+			PartialArcToRel,
 			CurveToAbs,
 			CurveToRel,
-			LineToAbs,
-			LineToRel
+			Curve3ToAbs, // CURVE TO with 3 points
+			Curve3ToRel,
+			QuadToAbs, // Quadratic Bezier TO with 3 points
+			QuadToRel,
+			QuadReflectionToAbs, // Quadratic Bezier TO with 3 points, but use reflection of last
+			QuadReflectionToRel
 		};
 		ParseState state = ParseState.None;
 
@@ -443,9 +550,22 @@ namespace SVG
 				{
 						case 'M': state = ParseState.MoveToAbs; ++index; break;
 						case 'm': state = ParseState.MoveToRel; ++index; break;
-						case 'c': state = ParseState.CurveToRel; ++index; break;
-						case 'l': state = ParseState.LineToRel; ++index; break;
 						case 'L': state = ParseState.LineToAbs; ++index; break;
+						case 'l': state = ParseState.LineToRel; ++index; break;
+						case 'C': state = ParseState.CurveToAbs; ++index; break;
+						case 'c': state = ParseState.CurveToRel; ++index; break;
+						case 'V': state = ParseState.VerticalLineToAbs; ++index; break;
+						case 'v': state = ParseState.VerticalLineToRel; ++index; break;
+						case 'A': state = ParseState.PartialArcToAbs; ++index; break;
+						case 'a': state = ParseState.PartialArcToRel; ++index; break;
+						case 'H': state = ParseState.HorizontalLineToAbs; ++index; break;
+						case 'h': state = ParseState.HorizontalLineToRel; ++index; break;
+						case 'S': state = ParseState.Curve3ToAbs; ++index; break;
+						case 's': state = ParseState.Curve3ToRel; ++index; break;
+						case 'Q': state = ParseState.QuadToAbs; ++index; break;
+						case 'q': state = ParseState.QuadToRel; ++index; break;
+						case 'T': state = ParseState.QuadReflectionToAbs; ++index; break;
+						case 't': state = ParseState.QuadReflectionToRel; ++index; break;
 					case 'Z':
 						case 'z': state = ParseState.None; ++index;
 						
@@ -574,7 +694,7 @@ namespace SVG
 			}
 		}
 
-		private PointF PreviousPoint()
+		PointF PreviousPoint()
 		{
 			if (currentContour.Count > 0)
 			{
@@ -587,7 +707,7 @@ namespace SVG
 			return new PointF(0, 0);
 		}
 
-		private void AddBezierPoints(float x1, float y1, float cx1, float cy1, float cx2, float cy2, float x3, float y3)
+		void AddBezierPoints(float x1, float y1, float cx1, float cy1, float cx2, float cy2, float x3, float y3)
 		{
 			var pointList = new List<PointF>();
 
@@ -597,19 +717,13 @@ namespace SVG
 			// fairly big and then the polygon gets thinned in two separate stages afterwards. Many
 			// of these get reduced to just a handful of vertices by the time we emit GCode.
 			pointList.Add(new PointF(x1, y1));
+			
 			float stepDelta = 1.0f / 250.0f;
-
 			for (float t = stepDelta; t < 1.0f; t += stepDelta) // Parametric value
 			{
-				float fW = 1 - t;
-				float fA = fW * fW * fW;
-				float fB = 3 * t * fW * fW;
-				float fC = 3 * t * t * fW;
-				float fD = t * t * t;
-
-				float fX = fA * x1 + fB * cx1 + fC * cx2 + fD * x3;
-				float fY = fA * y1 + fB * cy1 + fC * cy2 + fD * y3;
-
+				float fX = Bezier.Cubic(t, x1, cx1, cx2, x3);
+				float fY = Bezier.Cubic(t, y1, cy1, cy2, y3);
+				
 				pointList.Add(new PointF(fX, fY));
 			}
 			pointList.Add(new PointF(x3, y3));
@@ -771,8 +885,8 @@ namespace SVG
 	/// </summary>
 	public class SVGDocument
 	{
-		private List<ISVGElement> shapes = new List<ISVGElement>();
-		private float GLOBAL_DPI;
+		List<ISVGElement> shapes = new List<ISVGElement>();
+		float GLOBAL_DPI;
 
 		public List<ISVGElement> Shapes {
 			get {
@@ -826,6 +940,26 @@ namespace SVG
 						string viewBoxValue = reader.GetAttribute("viewBox");
 						doc.SetDPIFromSVGSizeParameters(widthValue, heightValue, viewBoxValue);
 					}
+					else if (reader.Name == "g") {
+						// <g id="g3023" transform="translate(269.81467,-650.62904)">
+						// <g id="Layer_x0020_1">
+						string layerName = "";
+						
+						string inkscapeLabel = reader.GetAttribute("inkscape:label");
+						if (inkscapeLabel != null) {
+							layerName = inkscapeLabel;
+						} else {
+							string idValue = reader.GetAttribute("id");
+							if (idValue != null) {
+								if (idValue.ToLower().StartsWith("layer")) {
+									layerName = idValue;
+								}
+							}
+						}
+
+						string transformValue = reader.GetAttribute("transform");
+						// TODO: use the transform value for something!
+					}
 					else if (reader.Name == "rect")
 					{
 						if (reader.GetAttribute("class") != null)
@@ -833,21 +967,29 @@ namespace SVG
 							doc.AddShape(new SVGRect(reader, styleDictionary));
 						}
 					}
-					else if (reader.Name == "circle")
+					else if (reader.Name == "path")
 					{
-						doc.AddShape(new SVGCircle(reader, styleDictionary));
+						doc.AddShape(new SVGPath(reader, styleDictionary));
 					}
-					else if (reader.Name == "polygon")
+					else if (reader.Name == "line")
 					{
-						doc.AddShape(new SVGPolygon(reader, styleDictionary));
+						doc.AddShape(new SVGLine(reader, styleDictionary));
 					}
 					else if (reader.Name == "polyline")
 					{
 						doc.AddShape(new SVGPolygon(reader, styleDictionary));
 					}
-					else if (reader.Name == "path")
+					else if (reader.Name == "polygon")
 					{
-						doc.AddShape(new SVGPath(reader, styleDictionary));
+						doc.AddShape(new SVGPolygon(reader, styleDictionary));
+					}
+					else if (reader.Name == "circle")
+					{
+						doc.AddShape(new SVGCircle(reader, styleDictionary));
+					}
+					else if (reader.Name == "ellipse")
+					{
+						doc.AddShape(new SVGEllipse(reader, styleDictionary));
 					}
 					else if (reader.Name == "image")
 					{
@@ -966,6 +1108,12 @@ namespace SVG
 				case "cm": // convert from cm
 					value *= 10.0f;
 					break;
+				case "pt": // 1 point = 1/72 in
+					value = value * 25.4f / 72f;
+					break;
+				case "pc": // 1 pica = 1/6 in
+					value = value * 25.4f / 6f;
+					break;
 			}
 			
 			return value;
@@ -997,21 +1145,23 @@ namespace SVG
 			
 			// The 'ViewBox' is how we scale an mm to a pixel.
 			// The default is 90dpi but it may not be.
-			var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
-			float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
-			
-			if (viewBoxArgs.Count() == 4)
-			{
-				// Get the width in pixels
-				if (realW == 0) {
-					realDPI = 25.4f;
-				} else {
-					realDPI = viewBoxFloatArgs[2] / realW;
+			if (viewboxValue != null) {
+				var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
+				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
+				
+				if (viewBoxArgs.Count() == 4)
+				{
+					// Get the width in pixels
+					if (realW == 0) {
+						realDPI = 25.4f;
+					} else {
+						realDPI = viewBoxFloatArgs[2] / realW;
+					}
 				}
-			}
 
-			// set the Global DPI variable
-			GLOBAL_DPI = realDPI;
+				// set the Global DPI variable
+				GLOBAL_DPI = realDPI;
+			}
 		}
 		
 		public static double Distance(PointF a, PointF b)

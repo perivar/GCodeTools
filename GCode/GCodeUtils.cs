@@ -326,6 +326,16 @@ namespace GCode
 			return null;
 		}
 		
+		public static String GetGCode(List<GCodeInstruction> instructions) {
+			
+			using (var tw = new StringWriter()) {
+				foreach (var gCodeLine in instructions) {
+					tw.WriteLine(gCodeLine);
+				}
+				return tw.ToString();
+			}
+		}
+		
 		public static void DumpGCode(List<GCodeInstruction> instructions, string filePath) {
 			
 			// create or overwrite a file
@@ -348,10 +358,17 @@ namespace GCode
 				contourCounter++;
 				
 				sb.AppendFormat("Contour {0}\n", contourCounter);
-				
-				var center = SVGDocument.Center(contour);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+
+				bool first = true;
+				foreach (var point in contour) {
+					if (first) {
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X, point.Y);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+					} else {
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{1:0.##}\n", point.X, point.Y, feed);
+					}
+					first = false;
+				}
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
 			}
 			return sb.ToString();
@@ -391,8 +408,8 @@ namespace GCode
 					if (deltaZ != 0 && gCodeLine.Z.HasValue) {
 						gCodeLine.Z = gCodeLine.Z + deltaZ;
 					}
-					shifted.Add(gCodeLine);
 				}
+				shifted.Add(gCodeLine);
 			}
 
 			return shifted;

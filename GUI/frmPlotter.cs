@@ -2,7 +2,7 @@
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  *
  * See LICENCE in the project directory for licence information
- * Modified by perivar@nerseth.com
+ * Heaviliy Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
@@ -11,12 +11,16 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 using GCode;
 
 namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
+		NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+		CultureInfo culture = CultureInfo.InvariantCulture;
+		
 		const float DEFAULT_MULTIPLIER = 4.0f;
 
 		float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
@@ -199,18 +203,14 @@ namespace GCodePlotter
 			}
 
 			float xSplit = 0.0f;
-			if (float.TryParse(txtSplit.Text, out xSplit)) {
+			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
 				
 				btnParseData.Enabled = true;
 				btnParseData.PerformClick();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				
-				float zClearance = 2.0f;
-				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
-					txtZClearance.Text = "2.0";
-					zClearance = 2.0f;
-				}
+				float zClearance = GetZSafeHeight();
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
@@ -554,18 +554,14 @@ namespace GCodePlotter
 			}
 
 			float xSplit = 0.0f;
-			if (float.TryParse(txtSplit.Text, out xSplit)) {
+			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
 				
 				btnParseData.Enabled = true;
 				btnParseData.PerformClick();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				
-				float zClearance = 2.0f;
-				if (!float.TryParse(txtZClearance.Text, out zClearance)) {
-					txtZClearance.Text = "2.0";
-					zClearance = 2.0f;
-				}
+				float zClearance = GetZSafeHeight();
 				
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
 				
@@ -704,12 +700,36 @@ namespace GCodePlotter
 		}
 		
 		float GetZSafeHeight() {
+			style = NumberStyles.AllowDecimalPoint;
 			float zSafeHeight = 2.0f;
-			if (!float.TryParse(txtZClearance.Text, out zSafeHeight)) {
+			if (!float.TryParse(txtZClearance.Text, style, culture, out zSafeHeight)) {
 				txtZClearance.Text = "2.0";
 				zSafeHeight = 2.0f;
 			}
 			return zSafeHeight;
+		}
+
+		float GetShiftValue(TextBox txtBox) {
+			float shiftValue = 0.0f;
+			if (!float.TryParse(txtBox.Text, style, culture, out shiftValue)) {
+				txtBox.Text = "0.0";
+				shiftValue = 0.0f;
+			} else {
+				txtBox.Text = "0.0";
+			}
+			return shiftValue;
+		}
+		
+		float GetShiftX() {
+			return GetShiftValue(txtShiftX);
+		}
+
+		float GetShiftY() {
+			return GetShiftValue(txtShiftY);
+		}
+
+		float GetShiftZ() {
+			return GetShiftValue(txtShiftZ);
 		}
 		
 		void SaveGCodes(bool doMultiLayer)
@@ -835,8 +855,13 @@ namespace GCodePlotter
 		
 		void BtnShiftClick(object sender, EventArgs e)
 		{
-			var gcodeShiftObject = GCodeUtils.ShiftGCode(parsedInstructions, 0, -251.85f, 0);
-			GCodeUtils.DumpGCode(gcodeShiftObject, "shifted.gcode");
+			float deltaX = GetShiftX();
+			float deltaY = GetShiftY();
+			float deltaZ = GetShiftZ();
+			var gcodeInstructions = GCodeUtils.ShiftGCode(parsedInstructions, deltaX, deltaY, deltaZ);
+			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
+			//GCodeUtils.DumpGCode(gcodeShiftObject, "shifted.gcode");
+			ParseText(gCode);
 		}
 		
 		void BtnSVGLoadClick(object sender, EventArgs e)
@@ -852,7 +877,12 @@ namespace GCodePlotter
 				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
 				var contours = svg.ScaledContours();
 				float zSafeHeight = GetZSafeHeight();
-				string gCode = GCodeUtils.GenerateGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
+				string gCode = "";
+				if (radSVGCenter.Checked) {
+					gCode = GCodeUtils.GenerateGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
+				} else {
+					gCode = GCodeUtils.GenerateGCode(contours, -2.0f, 800.0f, zSafeHeight);
+				}
 				//string gCode = svg.EmitGCode(true, 90, 800, true, 90, 800, false, null);
 				ParseText(gCode);
 			}
