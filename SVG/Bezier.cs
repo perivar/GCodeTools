@@ -39,7 +39,7 @@ namespace SVG
 		}
 		
 		/// <summary>
-		/// Quadratic curves (or For degree-two curves)
+		/// Quadratic curves (or degree-two curves)
 		/// </summary>
 		/// <param name="t">Time, between 0 and 1</param>
 		/// <param name="p0">Source</param>
@@ -63,18 +63,14 @@ namespace SVG
 		}
 		
 		//  Draw the Bezier curve.
-		public static void DrawBezier(Graphics gr, float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
+		public static void DrawBezier(Graphics g, float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
 			
-			/*
 			//  Draw the control lines.
-			gr.ForeColor = vbRed;
-			(gr.Line(pt0.X, pt0.Y) - pt1.X);
-			pt1.Y;
-			(gr.Line(pt1.X, pt1.Y) - pt2.X);
-			pt2.Y;
-			(gr.Line(pt2.X, pt2.Y) - pt3.X);
-			pt3.Y;
-			gr.ForeColor = vbBlack;
+			g.Clear(Color.White);
+			
+			g.DrawLine(Pens.Black, pt0.X, pt0.Y, pt1.X, pt1.Y);
+			g.DrawLine(Pens.Black, pt1.X, pt1.Y, pt2.X, pt2.Y);
+			g.DrawLine(Pens.Black, pt2.X, pt2.Y, pt3.X, pt3.Y);
 			
 			//  Draw the curve.
 			float t;
@@ -82,17 +78,20 @@ namespace SVG
 			float y0;
 			float x1;
 			float y1;
+			
 			t = 0;
-			x1 = bezX(t, pt0.X, pt1.X, pt2.X, pt3.X);
-			y1 = bezY(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
+			x1 = Cubic(t, pt0.X, pt1.X, pt2.X, pt3.X);
+			y1 = Cubic(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
+			
 			t = (t + dt);
 			while ((t < 1)) {
 				x0 = x1;
 				y0 = y1;
-				x1 = bezX(t, pt0.X, pt1.X, pt2.X, pt3.X);
-				y1 = bezY(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
-				(gr.Line(x0, y0) - x1);
-				y1;
+				x1 = Cubic(t, pt0.X, pt1.X, pt2.X, pt3.X);
+				y1 = Cubic(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
+				
+				g.DrawLine(Pens.Orange, x0, y0, x1, y1);
+
 				t = (t + dt);
 			}
 			
@@ -100,13 +99,22 @@ namespace SVG
 			t = 1;
 			x0 = x1;
 			y0 = y1;
-			x1 = bezX(t, pt0.X, pt1.X, pt2.X, pt3.X);
-			y1 = bezY(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
-			(gr.Line(x0, y0) - x1);
-			y1;
-			 */
+			
+			x1 = Cubic(t, pt0.X, pt1.X, pt2.X, pt3.X);
+			y1 = Cubic(t, pt0.Y, pt1.Y, pt2.Y, pt3.Y);
+			
+			g.DrawLine(Pens.Orange, x0, y0, x1, y1);
 		}
 		
+		/// <summary>
+		/// Add Cubic Bezier Points (Degree-three curves)
+		/// </summary>
+		/// <param name="dt">delta step (1.0 / number of segements)</param>
+		/// <param name="pt0">point</param>
+		/// <param name="pt1">point</param>
+		/// <param name="pt2">point</param>
+		/// <param name="pt3">point</param>
+		/// <returns>list of segmented bezier curves</returns>
 		public static List<PointF> AddBezier(float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
 			
 			var points = new List<PointF>();
@@ -148,6 +156,14 @@ namespace SVG
 			return points;
 		}
 		
+		/// <summary>
+		/// Add Quadratic Bezier Points (Degree-two curves)
+		/// </summary>
+		/// <param name="dt">delta step (1.0 / number of segements)</param>
+		/// <param name="pt0">point</param>
+		/// <param name="pt1">point</param>
+		/// <param name="pt2">point</param>
+		/// <returns></returns>
 		public static List<PointF> AddQuadBezier(float dt, PointF pt0, PointF pt1, PointF pt2) {
 
 			var points = new List<PointF>();
