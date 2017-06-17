@@ -9,7 +9,7 @@ namespace SVG
 	/// http://devmag.org.za/2011/04/05/bzier-curves-a-tutorial/
 	/// https://gist.github.com/valryon/b782bb76f543354f11f7
 	/// </summary>
-	public class Bezier
+	public static class Bezier
 	{
 		/// <summary>
 		/// Cubic curves (or degree-three curves)
@@ -63,7 +63,7 @@ namespace SVG
 		}
 		
 		//  Draw the Bezier curve.
-		public void DrawBezier(Graphics gr, float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
+		public static void DrawBezier(Graphics gr, float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
 			
 			/*
 			//  Draw the control lines.
@@ -107,7 +107,7 @@ namespace SVG
 			 */
 		}
 		
-		public List<PointF> AddBezier(float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
+		public static List<PointF> AddBezier(float dt, PointF pt0, PointF pt1, PointF pt2, PointF pt3) {
 			
 			var points = new List<PointF>();
 			
@@ -148,7 +148,7 @@ namespace SVG
 			return points;
 		}
 		
-		public List<PointF> AddQuadBezier(float dt, PointF pt0, PointF pt1, PointF pt2) {
+		public static List<PointF> AddQuadBezier(float dt, PointF pt0, PointF pt1, PointF pt2) {
 
 			var points = new List<PointF>();
 

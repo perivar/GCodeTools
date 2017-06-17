@@ -42,6 +42,38 @@ namespace SVG
 	/// </summary>
 	public static class SVGUtils {
 
+		public static double Distance(PointF a, PointF b)
+		{
+			double xd = Math.Abs(a.X - b.X);
+			double yd = Math.Abs(a.Y - b.Y);
+
+			xd = xd * xd;
+			yd = yd * yd;
+
+			return Math.Sqrt(xd + yd);
+		}
+
+		public static RectangleF BoundingBox(IEnumerable<PointF> points)
+		{
+			var x_query = from PointF p in points select p.X;
+			float xmin = x_query.Min();
+			float xmax = x_query.Max();
+
+			var y_query = from PointF p in points select p.Y;
+			float ymin = y_query.Min();
+			float ymax = y_query.Max();
+
+			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
+		}
+		
+		public static PointF Center(IEnumerable<PointF> points)
+		{
+			var rect = BoundingBox(points);
+			
+			return new PointF(rect.Left + rect.Width/2,
+			                  rect.Top + rect.Height / 2);
+		}
+
 		/// <summary>
 		/// Read a float value from the reader
 		/// </summary>
@@ -56,6 +88,252 @@ namespace SVG
 			}
 			catch (ArgumentNullException) { }
 			return value;
+		}
+		
+		public static double GetPinSeg(PointF pStart, PointF pEnd, float globalDPI)
+		{
+			double D = SVGUtils.Distance(pStart, pEnd) / globalDPI;
+
+			// with a resolution of 500 dpi, the curve should be split into 500 segments per inch. so a distance of 1 should be 500 segments, which is 0.002
+			double segments = 0;
+			segments = 250 * D;
+
+			return Math.Max(0.01, 1 / segments);
+		}
+		
+		public static PointF ReflectAbout(PointF ptReflect, PointF ptOrigin)
+		{
+			PointF tempReflectAbout = Point.Empty;
+			
+			// Reflect ptReflect 180 degrees around ptOrigin
+			tempReflectAbout.X = (-(ptReflect.X - ptOrigin.X)) + ptOrigin.X;
+			tempReflectAbout.Y = (-(ptReflect.Y - ptOrigin.Y)) + ptOrigin.Y;
+			return tempReflectAbout;
+		}
+		
+		public static PointF RotatePoint(PointF inPoint, double Theta, PointF centerPoint)
+		{
+			PointF temprotatePoint = PointF.Empty;
+
+			temprotatePoint = inPoint;
+
+			temprotatePoint.X = temprotatePoint.X - centerPoint.X;
+			temprotatePoint.Y = temprotatePoint.Y - centerPoint.Y;
+
+			temprotatePoint.X = (float)((Math.Cos(Theta) * temprotatePoint.X) + (-Math.Sin(Theta) * temprotatePoint.Y));
+			temprotatePoint.Y = (float)((Math.Sin(Theta) * temprotatePoint.X) + (Math.Cos(Theta) * temprotatePoint.Y));
+
+			temprotatePoint.X = temprotatePoint.X + centerPoint.X;
+			temprotatePoint.Y = temprotatePoint.Y + centerPoint.Y;
+
+			return temprotatePoint;
+		}
+		
+		public static double Rad2Deg(double inRad)
+		{
+			return inRad * (180 / Math.PI);
+		}
+
+		public static double Deg2Rad(double inDeg)
+		{
+			return inDeg / (180 / Math.PI);
+		}
+		
+		public static double AngleFromVector(double vTop, double vBot, double diffX, double diffY)
+		{
+			double tempangleFromVect = 0;
+			
+			// Not sure if this working
+			if (vBot == 0)
+			{
+				tempangleFromVect = ((vTop > 0) ? Math.PI / 2 : -Math.PI / 2);
+			}
+			else if (diffX >= 0)
+			{
+				tempangleFromVect = Math.Atan(vTop / vBot);
+			}
+			else
+			{
+				tempangleFromVect = Math.Atan(vTop / vBot) - Math.PI;
+			}
+
+			return tempangleFromVect;
+		}
+
+		public static double AngleFromPoint(PointF pCenter, PointF pPoint)
+		{
+			double tempangleFromPoint = 0;
+			
+			// Calculate the angle of a point relative to the center
+			// Slope is rise over run
+			double slope = 0;
+
+			if (pPoint.X == pCenter.X)
+			{
+				// Either 90 or 270
+				tempangleFromPoint = ((pPoint.Y > pCenter.Y) ? Math.PI / 2 : -Math.PI / 2);
+
+			}
+			else if (pPoint.X > pCenter.X)
+			{
+				// 0 - 90 and 270-360
+				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
+				tempangleFromPoint = Math.Atan(slope);
+			}
+			else
+			{
+				// 180-270
+				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
+				tempangleFromPoint = Math.Atan(slope) + Math.PI;
+			}
+
+			if (tempangleFromPoint < 0)
+			{
+				tempangleFromPoint = tempangleFromPoint + (Math.PI * 2);
+			}
+			
+			return tempangleFromPoint;
+		}
+		
+		public static List<PointF> ParseArcSegment(float RX, float RY, float rotAng, PointF P1, PointF P2, bool largeArcFlag, bool sweepFlag)
+		{
+			// Parse "A" command in SVG, which is segments of an arc
+			// P1 is start point
+			// P2 is end point
+
+			var points = new List<PointF>();
+			
+			PointF centerPoint = PointF.Empty;
+			double Theta = 0;
+			PointF P1Prime = PointF.Empty;
+			PointF P2Prime = PointF.Empty;
+
+			PointF CPrime = PointF.Empty;
+			double Q = 0;
+			double qTop = 0;
+			double qBot = 0;
+			double c = 0;
+
+			double startAng = 0;
+			double endAng = 0;
+			double Ang = 0;
+			double AngStep = 0;
+
+			PointF tempPoint = PointF.Empty;
+			double tempAng = 0;
+			double tempDist = 0;
+
+			double Theta1 = 0;
+			double ThetaDelta = 0;
+
+			// Turn the degrees of rotation into radians
+			Theta = Deg2Rad(rotAng);
+
+			// Calculate P1Prime
+			P1Prime.X = (float)((Math.Cos(Theta) * ((P1.X - P2.X) / 2)) + (Math.Sin(Theta) * ((P1.Y - P2.Y) / 2)));
+			P1Prime.Y = (float)((-Math.Sin(Theta) * ((P1.X - P2.X) / 2)) + (Math.Cos(Theta) * ((P1.Y - P2.Y) / 2)));
+
+			P2Prime.X = (float)((Math.Cos(Theta) * ((P2.X - P1.X) / 2)) + (Math.Sin(Theta) * ((P2.Y - P1.Y) / 2)));
+			P2Prime.Y = (float)((-Math.Sin(Theta) * ((P2.X - P1.X) / 2)) + (Math.Cos(Theta) * ((P2.Y - P1.Y) / 2)));
+
+			qTop = (((Math.Pow(RX, 2))) * ((Math.Pow(RY, 2)))) - (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) - (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
+
+			if (qTop < 0) // We've been given an invalid arc. Calculate the correct value.
+			{
+				c = Math.Sqrt((((Math.Pow(P1Prime.Y, 2))) / ((Math.Pow(RY, 2)))) + (((Math.Pow(P1Prime.X, 2))) / ((Math.Pow(RX, 2)))));
+
+				RX = (float) (RX * c);
+				RY = (float) (RY * c);
+
+				qTop = 0;
+			}
+
+			qBot = (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) + (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
+			if (qBot != 0)
+			{
+				Q = Math.Sqrt((qTop) / (qBot));
+			}
+			else
+			{
+				Q = 0;
+			}
+
+			// Q is negative
+			if (largeArcFlag == sweepFlag)
+			{
+				Q = -Q;
+			}
+
+			// Calculate Center Prime
+			CPrime.X = 0;
+
+			if (RY != 0)
+			{
+				CPrime.X = (float)(Q * ((RX * P1Prime.Y) / RY));
+			}
+			if (RX != 0)
+			{
+				CPrime.Y = (float)(Q * -((RY * P1Prime.X) / RX));
+			}
+
+			// Calculate center point
+			centerPoint.X = (float)(((Math.Cos(Theta) * CPrime.X) - (Math.Sin(Theta) * CPrime.Y)) + ((P1.X + P2.X) / 2));
+			centerPoint.Y = (float)(((Math.Sin(Theta) * CPrime.X) + (Math.Cos(Theta) * CPrime.Y)) + ((P1.Y + P2.Y) / 2));
+
+			// Calculate Theta1
+			Theta1 = AngleFromPoint(P1Prime, CPrime);
+			ThetaDelta = AngleFromPoint(P2Prime, CPrime);
+
+			Theta1 = Theta1 - Math.PI;
+			ThetaDelta = ThetaDelta - Math.PI;
+
+			if (sweepFlag) // Sweep is POSITIV
+			{
+				if (ThetaDelta < Theta1)
+				{
+					ThetaDelta = ThetaDelta + (Math.PI * 2);
+				}
+			}
+			else // Sweep is NEGATIVE
+			{
+				if (ThetaDelta > Theta1)
+				{
+					ThetaDelta = ThetaDelta - (Math.PI * 2);
+				}
+			}
+
+			startAng = Theta1;
+			endAng = ThetaDelta;
+
+			AngStep = (Math.PI / 180);
+			if (! sweepFlag) // Sweep flag indicates a positive step
+			{
+				AngStep = -AngStep;
+			}
+
+			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Rad2Deg(startAng), Rad2Deg(endAng), Rad2Deg(AngStep));
+
+			Ang = startAng;
+			do
+			{
+				tempPoint.X = (float)((RX * Math.Cos(Ang)) + centerPoint.X);
+				tempPoint.Y = (float)((RY * Math.Sin(Ang)) + centerPoint.Y);
+
+				tempAng = AngleFromPoint(centerPoint, tempPoint) + Theta;
+				tempDist = Distance(centerPoint, tempPoint);
+
+				tempPoint.X = (float)((tempDist * Math.Cos(tempAng)) + centerPoint.X);
+				tempPoint.Y = (float)((tempDist * Math.Sin(tempAng)) + centerPoint.Y);
+
+				points.Add(tempPoint);
+
+				Ang = Ang + AngStep;
+			} while ( ! ((Ang >= endAng && AngStep > 0) | (Ang <= endAng && AngStep < 0)));
+
+			// Add the final point
+			points.Add(P2);
+
+			return points;
 		}
 	}
 	
@@ -458,40 +736,16 @@ namespace SVG
 		List<List<PointF>> contours = new List<List<PointF>>();
 		List<PointF> currentContour = new List<PointF>();
 
-		enum ParseState
-		{
-			None,
-			MoveToAbs,
-			MoveToRel,
-			LineToAbs,
-			LineToRel,
-			VerticalLineToAbs,
-			VerticalLineToRel,
-			HorizontalLineToAbs,
-			HorizontalLineToRel,
-			PartialArcToAbs, // PARTIAL ARC TO
-			PartialArcToRel,
-			CurveToAbs,
-			CurveToRel,
-			Curve3ToAbs, // CURVE TO with 3 points
-			Curve3ToRel,
-			QuadToAbs, // Quadratic Bezier TO with 3 points
-			QuadToRel,
-			QuadReflectionToAbs, // Quadratic Bezier TO with 3 points, but use reflection of last
-			QuadReflectionToRel
-		};
-		ParseState state = ParseState.None;
-
 		public float GetFloat(string data, ref int index)
 		{
 			var builder = new StringBuilder();
-			bool isnum = true;
+			bool isNum = true;
 
-			while (isnum)
+			while (isNum)
 			{
 				if (index >= data.Length)
 				{
-					isnum = false;
+					isNum = false;
 				}
 				else
 				{
@@ -512,11 +766,11 @@ namespace SVG
 							case 'e': break;
 							case '+': break;
 
-							default: isnum = false; break;
+							default: isNum = false; break;
 					}
 				}
 
-				if (isnum)
+				if (isNum)
 				{
 					builder.Append(data[index]);
 					++index;
@@ -526,7 +780,64 @@ namespace SVG
 			return float.Parse(builder.ToString(), CultureInfo.InvariantCulture);
 		}
 
-		public SVGPath(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
+		public string ExtractToken(string data, ref int index)
+		{
+			// Extract until we get a space or a comma
+			var builder = new StringBuilder();
+
+			int startIndex = 0;
+			char character;
+			bool seenMinus = false;
+			bool seenE = false;
+
+			startIndex = index;
+
+			while (index < data.Length) {
+				character = data[index];
+
+				switch (character) {
+						// Only accept numbers
+					case '-':
+						if (seenE) {
+							builder.Append(character);
+							++index;
+						} else if (seenMinus || index > startIndex) {
+							// We already saw a minus sign
+							return builder.ToString();
+						} else {
+							seenMinus = true;
+							builder.Append(character);
+							++index;
+						}
+						break;
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
+					case '.':
+						builder.Append(character);
+						++index;
+						//,6.192 -10e-4,12.385
+						break;
+					case 'e': // Exponent
+						seenE = true;
+						builder.Append(character);
+						++index;
+						break;
+					default:
+						return builder.ToString();
+				}
+			}
+			return builder.ToString();
+		}
+		
+		public SVGPath(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary, float globalDPI)
 			: base(reader, styleDictionary)
 		{
 			_path = new GraphicsPath();
@@ -537,146 +848,554 @@ namespace SVG
 				return;
 			}
 
+			// Parse an SVG path.
 			int index = 0;
-			bool done = false;
+			string character = null;
+			string lastCharacter = null;
 
-			while (index < data.Length)
-			{
-				SkipSpace(data, ref index);
-				if (index == data.Length) break; // handle if very last character is a non ascii character
+			bool isRelative = false;
+			bool gotFirstItem = false;
 
-				char command = data[index];
-				switch (command)
-				{
-						case 'M': state = ParseState.MoveToAbs; ++index; break;
-						case 'm': state = ParseState.MoveToRel; ++index; break;
-						case 'L': state = ParseState.LineToAbs; ++index; break;
-						case 'l': state = ParseState.LineToRel; ++index; break;
-						case 'C': state = ParseState.CurveToAbs; ++index; break;
-						case 'c': state = ParseState.CurveToRel; ++index; break;
-						case 'V': state = ParseState.VerticalLineToAbs; ++index; break;
-						case 'v': state = ParseState.VerticalLineToRel; ++index; break;
-						case 'A': state = ParseState.PartialArcToAbs; ++index; break;
-						case 'a': state = ParseState.PartialArcToRel; ++index; break;
-						case 'H': state = ParseState.HorizontalLineToAbs; ++index; break;
-						case 'h': state = ParseState.HorizontalLineToRel; ++index; break;
-						case 'S': state = ParseState.Curve3ToAbs; ++index; break;
-						case 's': state = ParseState.Curve3ToRel; ++index; break;
-						case 'Q': state = ParseState.QuadToAbs; ++index; break;
-						case 'q': state = ParseState.QuadToRel; ++index; break;
-						case 'T': state = ParseState.QuadReflectionToAbs; ++index; break;
-						case 't': state = ParseState.QuadReflectionToRel; ++index; break;
-					case 'Z':
-						case 'z': state = ParseState.None; ++index;
+			float startX = 0;
+			float startY = 0;
+			float curX = 0;
+			float curY = 0;
+
+			PointF pt0 = PointF.Empty;
+			PointF pt1 = PointF.Empty;
+			PointF pt2 = PointF.Empty;
+			PointF pt3 = PointF.Empty;
+			PointF pt4 = PointF.Empty;
+			PointF pt5 = PointF.Empty;
+			
+			string token1 = null;
+			string token2 = null;
+			string token3 = null;
+			string token4 = null;
+			string token5 = null;
+			string token6 = null;
+			string token7 = null;
+
+			PointF prevPoint = PointF.Empty;
+			bool hasPrevPoint = false;
+
+			double pInSeg = 0;
+
+			//M209.1,187.65c-0.3-0.2-0.7-0.4-1-0.4c-0.3,0-0.7,0.2-0.9,0.4c-0.3,0.3-0.4,0.6-0.4,0.9c0,0.4,0.1,0.7,0.4,1
+			//c0.2,0.2,0.6,0.4,0.9,0.4c0.3,0,0.7-0.2,1-0.4c0.2-0.3,0.3-0.6,0.3-1C209.4,188.25,209.3,187.95,209.1,187.65z
+
+			// Get rid of enter presses
+			data = data.Replace("\r", " ");
+			data = data.Replace("\n", " ");
+			data = data.Replace("\t", " ");
+
+			// Start parsing
+			index = 0;
+			while (index < data.Length) {
+				character = "" + data[index];
+				++index;
+				isRelative = false;
+
+				switch (character) {
+					case "M":
+					case "m":
+					case "L":
+					case "l":
+					case "C":
+					case "c":
+					case "V":
+					case "v":
+					case "A":
+					case "a":
+					case "H":
+					case "h":
+					case "S":
+					case "s":
+					case "Z":
+					case "z":
+					case "Q":
+					case "q":
+					case "T":
+					case "t":
+						// Accepted character.
+						lastCharacter = character;
+						break;
+					case " ":
+						// Ignore whitespace
+						break;
+					default:
+						// Not accepted, must be a continuation.
+						if (lastCharacter != null) {
+							character = lastCharacter;
+							if (character == "m") { // Continuous moveto becomes lineto
+								character = "l";
+							}
+							if (character == "M") { // Continuous moveto becomes lineto not relative
+								character = "L";
+							}
+							index = index - 1;
+						}
+						break;
+				}
+
+				switch (character) {
+					case " ": // Skip spaces
+						break;
+					case "M":
+					case "m": // MOVE TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set our "current" co-ordinates to this
+						if (isRelative) {
+							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
+							curY = curY + float.Parse(token2, CultureInfo.InvariantCulture);
+						} else {
+							curX = float.Parse(token1, CultureInfo.InvariantCulture);
+							curY = float.Parse(token2, CultureInfo.InvariantCulture);
+						}
+
+						// Start a new line, since we moved
+						//newLine currentLayer;
+
+						// Add the start point to this line
+						currentContour.Add(new PointF(curX, curY));
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Move to " + currX + ", " + currY + System.Environment.NewLine;
+
+						startX = curX;
+						startY = curY;
+						gotFirstItem = true;
+						hasPrevPoint = false;
+
+						break;
+					case "L":
+					case "l": // LINE TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set our "current" co-ordinates to this
+						if (isRelative) {
+							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
+							curY = curY + float.Parse(token2, CultureInfo.InvariantCulture);
+						} else {
+							curX = float.Parse(token1, CultureInfo.InvariantCulture);
+							curY = float.Parse(token2, CultureInfo.InvariantCulture);
+						}
+
+						// Add this point to the line
+						currentContour.Add(new PointF(curX, curY));
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Line to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+						hasPrevPoint = false;
+
+						break;
+					case "V":
+					case "v": // VERTICAL LINE TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						// Extract one co-ordinate
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+
+						// Set our "current" co-ordinates to this
+						if (isRelative) {
+							curY = curY + float.Parse(token1, CultureInfo.InvariantCulture);
+						} else {
+							curY = float.Parse(token1, CultureInfo.InvariantCulture);
+						}
+
+						// Add this point to the line
+						currentContour.Add(new PointF(curX, curY));
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Vertical to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+						hasPrevPoint = false;
+
+						break;
+					case "H":
+					case "h": // HORIZONTAL LINE TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						// Extract one co-ordinate
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+
+						// Set our "current" co-ordinates to this
+						if (isRelative) {
+							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
+						} else {
+							curX = float.Parse(token1, CultureInfo.InvariantCulture);
+						}
+
+						// Add this point to the line
+						currentContour.Add(new PointF(curX, curY));
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Horiz to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+						hasPrevPoint = false;
+
+						break;
+					case "A":
+					case "a": // PARTIAL ARC TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						// Radii X and Y
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// X axis rotation
+						SkipWhiteSpace(data, ref index);
+						token3 = ExtractToken(data, ref index);
+
+						// Large arc flag
+						SkipWhiteSpace(data, ref index);
+						token4 = ExtractToken(data, ref index);
+
+						// Sweep flag
+						SkipWhiteSpace(data, ref index);
+						token5 = ExtractToken(data, ref index);
+
+						// X and Y
+						SkipWhiteSpace(data, ref index);
+						token6 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token7 = ExtractToken(data, ref index);
+
+						// Start point
+						pt0.X = curX;
+						pt0.Y = curY;
+
+						// Set our "current" co-ordinates to this
+						if (isRelative) {
+							curX = curX + float.Parse(token6, CultureInfo.InvariantCulture);
+							curY = curY + float.Parse(token7, CultureInfo.InvariantCulture);
+						} else {
+							curX = float.Parse(token6, CultureInfo.InvariantCulture);
+							curY = float.Parse(token7, CultureInfo.InvariantCulture);
+						}
+
+						pt1.X = curX;
+						pt1.Y = curY;
+
+						//parseArcSegment
+						// float.Parse(token1, CultureInfo.InvariantCulture),
+						// float.Parse(token2, CultureInfo.InvariantCulture),
+						// float.Parse(token3, CultureInfo.InvariantCulture),
+						// pt0, pt1, (token4 == "1"), (token5 == "1");
+						var points = SVGUtils.ParseArcSegment(
+							float.Parse(token1, CultureInfo.InvariantCulture),
+							float.Parse(token2, CultureInfo.InvariantCulture),
+							float.Parse(token3, CultureInfo.InvariantCulture),
+							pt0, pt1, (token4 == "1"), (token5 == "1")
+						);
+						currentContour.AddRange(points);
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Partial Arc to " + currX + ", " + currY + System.Environment.NewLine;
+						// TODO: Implement
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+						hasPrevPoint = false;
+
+						break;
+					case "C":
+					case "c": // CURVE TO
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						pt0.X = curX;
+						pt0.Y = curY;
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 0
+						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+
+						// Extract next two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 1
+						pt2.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						pt2.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+
+						// Extract next two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 2
+						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+						pt3.X = curX;
+						pt3.Y = curY;
+
+						pInSeg = SVGUtils.GetPinSeg(pt0, pt3, globalDPI);
+
+						// Run the bezier code
+						currentContour.AddRange(Bezier.AddBezier((float)pInSeg, pt0, pt1, pt2, pt3));
 						
+						// Reflect this point
+						prevPoint = SVGUtils.ReflectAbout(pt2, pt3);
+						hasPrevPoint = true;
+
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Bezier to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+
+						break;
+					case "S":
+					case "s": // CURVE TO with 3 points
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						pt0.X = curX;
+						pt0.Y = curY;
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 0
+						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+
+						// Extract next two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 1
+						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+						pt2.X = curX;
+						pt2.Y = curY;
+
+						pInSeg = SVGUtils.GetPinSeg(pt0, pt2, globalDPI);
+
+						if (!hasPrevPoint) {
+							// Same as pt1
+							prevPoint = pt1;
+						}
+
+						// Run the bezier code
+						currentContour.AddRange(Bezier.AddBezier((float)pInSeg, pt0, prevPoint, pt1, pt2));
+
+						// Reflect this point
+						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
+						hasPrevPoint = true;
+
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+
+						break;
+					case "Q":
+					case "q": // Quadratic Bezier TO with 3 points
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						pt0.X = curX;
+						pt0.Y = curY;
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 0
+						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+
+						// Extract next two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 1
+						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+						pt2.X = curX;
+						pt2.Y = curY;
+
+						pInSeg = SVGUtils.GetPinSeg(pt0, pt2, globalDPI);
+
+						// Run the bezier code
+						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSeg, pt0, pt1, pt2));
+						
+						// Reflect this point
+						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
+
+						hasPrevPoint = true;
+
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+
+						break;
+					case "T":
+					case "t": // Quadratic Bezier TO with 3 points, but use reflection of last
+						if (character.ToLower() == character) { // Lowercase means relative co-ordinates
+							isRelative = true;
+						}
+						if (!gotFirstItem) { // Relative not valid for first item
+							isRelative = false;
+						}
+
+						pt0.X = curX;
+						pt0.Y = curY;
+
+						// Extract two co-ordinates
+						SkipWhiteSpace(data, ref index);
+						token1 = ExtractToken(data, ref index);
+						SkipWhiteSpace(data, ref index);
+						token2 = ExtractToken(data, ref index);
+
+						// Set into point 0
+						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
+						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
+
+						pInSeg = SVGUtils.GetPinSeg(pt0, pt2, globalDPI);
+
+						if (!hasPrevPoint) {
+							// Same as pt1
+							prevPoint = pt0; // SHOULD NEVER HAPPEN
+						}
+
+						// Run the bezier code
+						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSeg, pt0, prevPoint, pt1));
+						
+						// Reflect this point
+						prevPoint = SVGUtils.ReflectAbout(prevPoint, pt1);
+						hasPrevPoint = true;
+
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
+
+						if (!gotFirstItem) {
+							startX = curX;
+							startY = curY;
+						}
+						gotFirstItem = true;
+
+						break;
+					case "Z":
+					case "z":
+						hasPrevPoint = false;
+
+						// z means end the shape
+						// Draw a line back to start of shape
+						//addPoint startX, startY;
+						curX = startX;
+						curY = startY;
+
+						// Since this is a closed path, mark it as fillable.
+						//pData(currentLine).Fillable = true;
+
+						//pData(currentLine).PathCode = pData(currentLine).PathCode + "End Shape" + System.Environment.NewLine;
+
 						// Close current contour and open a new one
 						currentContour.Add(currentContour.First());
 						currentContour = Transform(currentContour);
 						contours.Add(currentContour);
 						_path.AddPolygon(currentContour.ToArray());
 						currentContour = new List<PointF>();
-						continue;
-
-						case '0': break;
-						case '1': break;
-						case '2': break;
-						case '3': break;
-						case '4': break;
-						case '5': break;
-						case '6': break;
-						case '7': break;
-						case '8': break;
-						case '9': break;
-						case '-': break;
-						case ' ': break;
-
-						default: throw new ApplicationException(string.Format("Unexpected input {0}", data[index]));
-				}
-
-				if (done)
-				{
-					break;
-				}
-
-				SkipSpace(data, ref index);
-
-				if (state == ParseState.MoveToAbs)
-				{
-					float x = GetFloat(data, ref index);
-					SkipSpaceOrComma(data, ref index);
-					float y = GetFloat(data, ref index);
-
-					currentContour.Add(new PointF(x, y));
-				}
-				else if (state == ParseState.MoveToRel)
-				{
-					float x = GetFloat(data, ref index);
-					SkipSpaceOrComma(data, ref index);
-					float y = GetFloat(data, ref index);
-
-					currentContour.Add(new PointF(PreviousPoint().X + x, PreviousPoint().Y + y));
-				}
-				else if (state == ParseState.LineToRel)
-				{
-					float x = GetFloat(data, ref index);
-					SkipSpaceOrComma(data, ref index);
-					float y = GetFloat(data, ref index);
-
-					currentContour.Add(new PointF(PreviousPoint().X + x, PreviousPoint().Y + y));
-				}
-				else if (state == ParseState.LineToAbs)
-				{
-					float x = GetFloat(data, ref index);
-					SkipSpaceOrComma(data, ref index);
-					float y = GetFloat(data, ref index);
-
-					currentContour.Add(new PointF(x, y));
-				}
-				else if (state == ParseState.CurveToRel)
-				{
-					float cx1 = GetFloat(data, ref index);
-					if (data[index] != ',')
-					{
-						throw new ApplicationException("Expected comma");
-					}
-					++index;
-					float cy1 = GetFloat(data, ref index);
-
-					if (data[index] != ' ')
-					{
-						throw new ApplicationException("Expected space");
-					}
-					++index;
-
-					float cx2 = GetFloat(data, ref index);
-					if (data[index] != ',')
-					{
-						throw new ApplicationException("Expected comma");
-					}
-					++index;
-					float cy2 = GetFloat(data, ref index);
-
-					if (data[index] != ' ')
-					{
-						throw new ApplicationException("Expected space");
-					}
-					++index;
-
-					float x = GetFloat(data, ref index);
-					if (data[index] != ',')
-					{
-						throw new ApplicationException("Expected comma");
-					}
-					++index;
-					float y = GetFloat(data, ref index);
-
-					float lx = PreviousPoint().X;
-					float ly = PreviousPoint().Y;
-
-					AddBezierPoints(lx, ly, lx + cx1, ly + cy1, lx + cx2, ly + cy2, lx + x, ly + y);
+						
+						break;
+					default:
+						Debug.WriteLine("UNSUPPORTED PATH CODE: {0}", character);
+						break;
 				}
 			}
-
+			
 			if (currentContour.Count > 0)
 			{
 				if (currentContour.Count <= 2)
@@ -765,23 +1484,23 @@ namespace SVG
 				currentContour.Add(point);
 			}
 		}
-
-		public void SkipSpace(string data, ref int index)
+		
+		public void SkipWhiteSpace(string data, ref int index)
 		{
-			// make sure that we don't skip past the string data length
-			while (index < data.Length && char.IsWhiteSpace(data[index]))
-			{
+			// Skip any white space.
+			while (index < data.Length) {
+				char character = data[index];
+
+				// List all white space characters here
+				if (char.IsWhiteSpace(character) || character == ',')
+				{
+					// Continue
+				} else {
+					return;
+				}
 				++index;
 			}
-		}
-
-		public void SkipSpaceOrComma(string data, ref int index)
-		{
-			// make sure that we don't skip past the string data length
-			while (index < data.Length && char.IsWhiteSpace(data[index]) || data[index] == ',')
-			{
-				++index;
-			}
+			return;
 		}
 		
 		public List<List<PointF>> GetContours()
@@ -887,7 +1606,7 @@ namespace SVG
 	public class SVGDocument
 	{
 		List<ISVGElement> shapes = new List<ISVGElement>();
-		float GLOBAL_DPI;
+		float GLOBAL_DPI = 1.0f; // mm?
 
 		public List<ISVGElement> Shapes {
 			get {
@@ -972,7 +1691,7 @@ namespace SVG
 					}
 					else if (reader.Name == "path")
 					{
-						doc.AddShape(new SVGPath(reader, styleDictionary));
+						doc.AddShape(new SVGPath(reader, styleDictionary, doc.GLOBAL_DPI));
 					}
 					else if (reader.Name == "line")
 					{
@@ -1055,6 +1774,9 @@ namespace SVG
 			
 			// Calculate the extents for all contours
 			var points = GetPoints();
+			
+			if (points.Count() == 0) return contours;
+			
 			float minX = points.Min(point => point.X);
 			float minY = points.Min(point => point.Y);
 
@@ -1170,38 +1892,6 @@ namespace SVG
 			}
 		}
 		
-		public static double Distance(PointF a, PointF b)
-		{
-			double xd = Math.Abs(a.X - b.X);
-			double yd = Math.Abs(a.Y - b.Y);
-
-			xd = xd * xd;
-			yd = yd * yd;
-
-			return Math.Sqrt(xd + yd);
-		}
-
-		public static RectangleF BoundingBox(IEnumerable<PointF> points)
-		{
-			var x_query = from PointF p in points select p.X;
-			float xmin = x_query.Min();
-			float xmax = x_query.Max();
-
-			var y_query = from PointF p in points select p.Y;
-			float ymin = y_query.Min();
-			float ymax = y_query.Max();
-
-			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
-		}
-		
-		public static PointF Center(IEnumerable<PointF> points)
-		{
-			var rect = BoundingBox(points);
-			
-			return new PointF(rect.Left + rect.Width/2,
-			                  rect.Top + rect.Height / 2);
-		}
-
 		public void Render(Graphics gc, bool rasterOnly)
 		{
 			foreach (ISVGElement shape in shapes)
@@ -1525,7 +2215,7 @@ M30 (End)";
 						}
 						else
 						{
-							if (Distance(point, lastPoint) > threshhold)
+							if (SVGUtils.Distance(point, lastPoint) > threshhold)
 							{
 								++thin;
 								thinnedContour.Add(point);

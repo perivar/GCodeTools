@@ -385,7 +385,7 @@ namespace GCode
 				
 				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
 				
-				var center = SVGDocument.Center(contour);
+				var center = SVGUtils.Center(contour);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
