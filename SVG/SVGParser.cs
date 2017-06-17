@@ -1571,8 +1571,11 @@ namespace SVG
 	public class SVGDocument
 	{
 		List<ISVGElement> shapes = new List<ISVGElement>();
-		float GLOBAL_DPI = 1.0f; // mm?
-
+		
+		float GLOBAL_DPI = 1.0f; // define mm as the default unit
+		float GLOBAL_WIDTH;
+		float GLOBAL_HEIGHT;
+		
 		public List<ISVGElement> Shapes {
 			get {
 				return shapes;
@@ -1625,7 +1628,7 @@ namespace SVG
 						string widthValue = reader.GetAttribute("width");
 						string heightValue = reader.GetAttribute("height");
 						string viewBoxValue = reader.GetAttribute("viewBox");
-						doc.SetDPIFromSVGSizeParameters(widthValue, heightValue, viewBoxValue);
+						doc.SetDPIAndSVGSizeParameters(widthValue, heightValue, viewBoxValue);
 					}
 					else if (reader.Name == "g") {
 						// <g id="g3023" transform="translate(269.81467,-650.62904)">
@@ -1730,7 +1733,7 @@ namespace SVG
 		/// This fixes the issue where coordinates are negative
 		/// </summary>
 		/// <returns>a scaled contour list</returns>
-		public IEnumerable<IEnumerable<PointF>> ScaledContours() {
+		public IEnumerable<IEnumerable<PointF>> GetScaledContours() {
 			
 			var contours = new List<List<PointF>>();
 			
@@ -1740,24 +1743,49 @@ namespace SVG
 			if (points.Count() == 0) return contours;
 			
 			float minX = points.Min(point => point.X);
+			float maxX = points.Max(point => point.X);
 			float minY = points.Min(point => point.Y);
-
-			// Scale by the DPI
-			// and
-			// Fix the points by removing space at the left and top
-			foreach (ISVGElement shape in shapes)
-			{
-				foreach (var contour in shape.GetContours())
+			float maxY = points.Max(point => point.Y);
+			
+			bool DoScaleAndShift = false;
+			
+			if (DoScaleAndShift) {
+				// Scale by the DPI
+				// And fix the points by removing space at the left and top
+				foreach (ISVGElement shape in shapes)
 				{
-					var scaledPoints = new List<PointF>();
-					foreach (PointF point in contour)
+					foreach (var contour in shape.GetContours())
 					{
-						var scaledPoint = new PointF((point.X - minX)/GLOBAL_DPI, (point.Y - minY)/GLOBAL_DPI);
-						scaledPoints.Add(scaledPoint);
+						var scaledPoints = new List<PointF>();
+						foreach (PointF point in contour)
+						{
+							// Scale using DPI and remove space left and bottom
+							// (point.X - minX)/GLOBAL_DPI 	=> removes space on the left
+							// (point.Y - minY)/GLOBAL_DPI 	=> removes space on the bottom
+							// (maxY - point.Y)/GLOBAL_DPI 	=> flips up-side down and scales using DPI
+							var scaledPoint = new PointF((point.X - minX)/GLOBAL_DPI, (point.Y - minY)/GLOBAL_DPI);
+							scaledPoints.Add(scaledPoint);
+						}
+						contours.Add(scaledPoints);
 					}
-					contours.Add(scaledPoints);
+				}
+			} else {
+				// Only scale using DPI
+				foreach (ISVGElement shape in shapes)
+				{
+					foreach (var contour in shape.GetContours())
+					{
+						var scaledPoints = new List<PointF>();
+						foreach (PointF point in contour)
+						{
+							var scaledPoint = new PointF( point.X/GLOBAL_DPI, point.Y/GLOBAL_DPI );
+							scaledPoints.Add(scaledPoint);
+						}
+						contours.Add(scaledPoints);
+					}
 				}
 			}
+			
 			return contours;
 		}
 
@@ -1806,7 +1834,7 @@ namespace SVG
 			return value;
 		}
 		
-		void SetDPIFromSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
+		void SetDPIAndSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
 		{
 			float realW = 0;
 			float realH = 0;
@@ -1849,8 +1877,10 @@ namespace SVG
 					}
 				}
 
-				// set the Global DPI variable
+				// set the global variables
 				GLOBAL_DPI = realDPI;
+				GLOBAL_WIDTH = realW;
+				GLOBAL_HEIGHT = realH;
 			}
 		}
 		

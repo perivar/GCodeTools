@@ -348,9 +348,40 @@ namespace GCode
 			}
 		}
 		
+		/// <summary>
+		/// Get the points for all contours in all shapes.
+		/// </summary>
+		/// <returns></returns>
+		public static IEnumerable<PointF> GetPoints(IEnumerable<IEnumerable<PointF>>contours)
+		{
+			// Enumerate each shape in the document
+			foreach (var contour in contours)
+			{
+				foreach (PointF point in contour)
+				{
+					yield return point;
+				}
+			}
+		}
+		
 		public static string GenerateGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
+			
+			// find min and max
+			var points = GetPoints(contours);
+			
+			if (points.Count() == 0) return null;
+			
+			// Assuming these points come from a SVG
+			// we need to shift the Y pos since
+			// the SVG origin is upper left, while on
+			// this GCode setup it is assumed to be lower left.
+			float minX = points.Min(point => point.X);
+			//float maxX = points.Max(point => point.X);
+			//float minY = points.Min(point => point.Y);
+			float maxY = points.Max(point => point.Y);
 
 			// Enumerate each contour in the document
 			foreach (var contour in contours)
@@ -362,10 +393,10 @@ namespace GCode
 				bool first = true;
 				foreach (var point in contour) {
 					if (first) {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X, point.Y);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X - minX, maxY - point.Y);
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
 					} else {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{1:0.##}\n", point.X, point.Y, feed);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{1:0.##}\n", point.X - minX, maxY - point.Y, feed);
 					}
 					first = false;
 				}
@@ -375,9 +406,24 @@ namespace GCode
 		}
 
 		public static string GenerateGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
 
+			// find min and max
+			var points = GetPoints(contours);
+			
+			if (points.Count() == 0) return null;
+			
+			// Assuming these points come from a SVG
+			// we need to shift the Y pos since
+			// the SVG origin is upper left, while on
+			// this GCode setup it is assumed to be lower left.
+			float minX = points.Min(point => point.X);
+			//float maxX = points.Max(point => point.X);
+			//float minY = points.Min(point => point.Y);
+			float maxY = points.Max(point => point.Y);
+			
 			// Enumerate each contour in the document
 			foreach (var contour in contours)
 			{
@@ -386,7 +432,8 @@ namespace GCode
 				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
 				
 				var center = SVGUtils.Center(contour);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X, center.Y);
+
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X - minX, maxY - center.Y);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
 			}

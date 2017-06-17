@@ -875,7 +875,7 @@ namespace GCodePlotter
 			{
 				svgFilePath = dialog.FileName;
 				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
-				var contours = svg.ScaledContours();
+				var contours = svg.GetScaledContours();
 				//var contours = svg.GetContours();
 				float zSafeHeight = GetZSafeHeight();
 				string gCode = "";
