@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using GCode;
+using SVG;
 
 namespace GCodePlotter
 {
@@ -295,6 +296,10 @@ namespace GCodePlotter
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
 			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
+			
+			// TODO: add an origin at 0,0
+			//points.Add(new Point3D(0, 0, 0));
+			
 			new GCodeOptimizer.MainForm(this, points, maxX, maxY).Show();
 		}
 		
@@ -874,7 +879,21 @@ namespace GCodePlotter
 			if (dialog.ShowDialog() == DialogResult.OK)
 			{
 				svgFilePath = dialog.FileName;
-				var svg = SVG.SVGDocument.LoadFromFile(svgFilePath);
+				
+				// store data
+				var fileInfo = new FileInfo(svgFilePath);
+				if (fileInfo.Exists)
+				{
+					txtFile.Text = fileInfo.Name;
+					txtFile.Tag = fileInfo.FullName;
+					this.Text = fileInfo.Name;
+					
+					// Cannot store with QuickSettings since the last opened file is
+					// opened with another load method than SVGs 
+					//QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
+				}
+				
+				var svg = SVGDocument.LoadFromFile(svgFilePath);
 				var contours = svg.GetScaledContours();
 				//var contours = svg.GetContours();
 				float zSafeHeight = GetZSafeHeight();

@@ -430,6 +430,105 @@ namespace SVG
 
 			return points;
 		}
+		
+		public static Matrix ParseTransformText(string transformText)
+		{
+			// Parse the transform text
+			int e = 0;
+			int f = 0;
+
+			string functionName = null;
+			string functionParams = null;
+			string[] splitParams = null;
+
+			float p0, p1, p2, p3, p4, p5;
+			
+			// E.g. transform="translate(269.81467,-650.62904)"
+			
+			e = (transformText.IndexOf("(", 0) + 1);
+			if (e > 0)
+			{
+				functionName = transformText.Substring(0, e - 1);
+				f = (transformText.IndexOf(")", e) + 1);
+				if (f > 0)
+				{
+					functionParams = transformText.Substring(e, f - e - 1);
+				}
+
+				switch (functionName.ToLower())
+				{
+					case "translate":
+						// Just move everything
+						splitParams = functionParams.Split(',');
+
+						// Translate is
+						// [ 1  0  tx ]
+						// [ 0  1  ty ]
+						// [ 0  0  1  ]
+
+						if (splitParams.GetUpperBound(0) == 0)
+						{
+							p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
+							//MultiplyLineByMatrix(shape, 1, 0, 0, 1, p0, 0);
+							return new Matrix(1, 0, 0, 1, p0, 0);
+						}
+						else
+						{
+							p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
+							p1 = float.Parse(splitParams[1], CultureInfo.InvariantCulture);
+							//MultiplyLineByMatrix(shape, 1, 0, 0, 1, p0, p1);
+							return new Matrix(1, 0, 0, 1, p0, p1);
+						}
+						break;
+						
+					case "matrix":
+						splitParams = functionParams.Split(',');
+						if (splitParams.GetUpperBound(0) == 0)
+						{
+							splitParams = functionParams.Split(' ');
+						}
+						p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
+						p1 = float.Parse(splitParams[1], CultureInfo.InvariantCulture);
+						p2 = float.Parse(splitParams[2], CultureInfo.InvariantCulture);
+						p3 = float.Parse(splitParams[3], CultureInfo.InvariantCulture);
+						p4 = float.Parse(splitParams[4], CultureInfo.InvariantCulture);
+						p5 = float.Parse(splitParams[5], CultureInfo.InvariantCulture);
+						//MultiplyLineByMatrix(shape, p0, p1, p2, p3, p4, p5);
+						return new Matrix(p0, p1, p2, p3, p4, p5);
+						break;
+						
+					case "rotate":
+						splitParams = functionParams.Split(',');
+						p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
+						double angle = Deg2Rad(p0);
+						//MultiplyLineByMatrix(shape, Math.Cos(angle), Math.Sin(angle), -Math.Sin(angle), Math.Cos(angle), 0, 0);
+						return new Matrix((float)Math.Cos(angle), (float)Math.Sin(angle), (float)-Math.Sin(angle), (float)Math.Cos(angle), 0, 0);
+						break;
+						
+					case "scale": // scale(-1,-1)
+						splitParams = functionParams.Split(',');
+						if (splitParams.GetUpperBound(0) == 0)
+						{
+							splitParams = functionParams.Split(' ');
+						}
+						p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
+						p1 = float.Parse(splitParams[1], CultureInfo.InvariantCulture);
+						//MultiplyLineByMatrix(shape, p0, 0, 0, p1, 0, 0);
+						return new Matrix(p0, 0, 0, p1, 0, 0);
+						break;
+				}
+			}
+			return null;
+
+			// Multiply a line/poly by a transformation matrix
+			// [ A C E ]
+			// [ B D F ]
+			// [ 0 0 1 ]
+
+			// http://www.w3.org/TR/SVG11/coords.html#TransformMatrixDefined
+			// X1 = AX + CY + E
+			// Y1 = BX + DY + F
+		}
 	}
 	
 	/// <summary>
@@ -788,7 +887,7 @@ namespace SVG
 					           float.Parse(parts[i+1], CultureInfo.InvariantCulture)));
 			}
 			
-			// Close the shape
+			// Close the shape (We only support closed shapes
 			if (currentContour.Count > 2)
 			{
 				float deltaX = currentContour[0].X - currentContour[currentContour.Count - 1].X;
@@ -1648,7 +1747,8 @@ namespace SVG
 						}
 
 						string transformValue = reader.GetAttribute("transform");
-						// TODO: use the transform value for something!
+						var matrix = SVGUtils.ParseTransformText(transformValue);
+						// TODO: use the transform matrix for something!
 					}
 					else if (reader.Name == "rect")
 					{
@@ -1740,7 +1840,8 @@ namespace SVG
 			// Calculate the extents for all contours
 			var points = GetPoints();
 			
-			if (points.Count() == 0) return contours;
+			if (!points.Any())
+				return contours;
 			
 			float minX = points.Min(point => point.X);
 			float maxX = points.Max(point => point.X);

@@ -396,7 +396,7 @@ namespace GCode
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X - minX, maxY - point.Y);
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
 					} else {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{1:0.##}\n", point.X - minX, maxY - point.Y, feed);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", point.X - minX, maxY - point.Y, feed);
 					}
 					first = false;
 				}
