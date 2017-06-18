@@ -1,7 +1,7 @@
 ﻿// Most of this comes from the lasercam project made by Chris Yerga
 // Copyright (c) 2010 Chris Yerga
 
-// Modified by perivar@nerseth.com to support OpenScad SVGs
+// Modified heavily by perivar@nerseth.com to amongst others support OpenScad SVGs import
 // Also leaned heavily on the SVG-to-GCode project https://github.com/avwuff/SVG-to-GCode
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -166,7 +166,7 @@ namespace SVG
 		/// <param name="reader">reader</param>
 		/// <param name="attributeName">name of attribute</param>
 		/// <returns>a float value or zero</returns>
-		public static float ReadFloat (XmlTextReader reader, string attributeName) {
+		public static float ReadFloat(XmlTextReader reader, string attributeName) {
 			float value = 0;
 			try
 			{
@@ -196,6 +196,12 @@ namespace SVG
 			return Math.Max(0.01, 1.0 / segments);
 		}
 		
+		/// <summary>
+		/// Reflect the point 180 degrees around the origin
+		/// </summary>
+		/// <param name="ptReflect">point to reflect</param>
+		/// <param name="ptOrigin">origin point</param>
+		/// <returns>new reflected point</returns>
 		public static PointF ReflectAbout(PointF ptReflect, PointF ptOrigin)
 		{
 			PointF tempReflectAbout = Point.Empty;
@@ -206,22 +212,36 @@ namespace SVG
 			return tempReflectAbout;
 		}
 		
-		public static PointF RotatePoint(PointF inPoint, double Theta, PointF centerPoint)
+		/// <summary>
+		/// Rotate point around a center point
+		/// </summary>
+		/// <param name="inPoint">point to rotate</param>
+		/// <param name="theta">theta angle</param>
+		/// <param name="centerPoint">center point</param>
+		/// <returns>rotated point</returns>
+		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
+		public static PointF RotatePoint(PointF inPoint, double theta, PointF centerPoint)
 		{
-			PointF temprotatePoint = PointF.Empty;
+			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
+			// the coordinates of the new point would be located at (x',y').
+			// x′= xcosθ − ysinθ
+			// x′= xcos⁡θ − ysin⁡θ
+			// y′= ycosθ + xsinθ
+			
+			PointF tempRotatePoint = PointF.Empty;
 
-			temprotatePoint = inPoint;
+			tempRotatePoint = inPoint;
 
-			temprotatePoint.X = temprotatePoint.X - centerPoint.X;
-			temprotatePoint.Y = temprotatePoint.Y - centerPoint.Y;
+			tempRotatePoint.X = tempRotatePoint.X - centerPoint.X;
+			tempRotatePoint.Y = tempRotatePoint.Y - centerPoint.Y;
 
-			temprotatePoint.X = (float)((Math.Cos(Theta) * temprotatePoint.X) + (-Math.Sin(Theta) * temprotatePoint.Y));
-			temprotatePoint.Y = (float)((Math.Sin(Theta) * temprotatePoint.X) + (Math.Cos(Theta) * temprotatePoint.Y));
+			tempRotatePoint.X = (float)((Math.Cos(theta) * tempRotatePoint.X) + (-Math.Sin(theta) * tempRotatePoint.Y));
+			tempRotatePoint.Y = (float)((Math.Sin(theta) * tempRotatePoint.X) + (Math.Cos(theta) * tempRotatePoint.Y));
 
-			temprotatePoint.X = temprotatePoint.X + centerPoint.X;
-			temprotatePoint.Y = temprotatePoint.Y + centerPoint.Y;
+			tempRotatePoint.X = tempRotatePoint.X + centerPoint.X;
+			tempRotatePoint.Y = tempRotatePoint.Y + centerPoint.Y;
 
-			return temprotatePoint;
+			return tempRotatePoint;
 		}
 		
 		public static double Rad2Deg(double inRad)
@@ -236,28 +256,28 @@ namespace SVG
 		
 		public static double AngleFromVector(double vTop, double vBot, double diffX, double diffY)
 		{
-			double tempangleFromVect = 0;
+			double tempAngleFromVect = 0;
 			
 			// Not sure if this working
 			if (vBot == 0)
 			{
-				tempangleFromVect = ((vTop > 0) ? Math.PI / 2 : -Math.PI / 2);
+				tempAngleFromVect = ((vTop > 0) ? Math.PI / 2 : -Math.PI / 2);
 			}
 			else if (diffX >= 0)
 			{
-				tempangleFromVect = Math.Atan(vTop / vBot);
+				tempAngleFromVect = Math.Atan(vTop / vBot);
 			}
 			else
 			{
-				tempangleFromVect = Math.Atan(vTop / vBot) - Math.PI;
+				tempAngleFromVect = Math.Atan(vTop / vBot) - Math.PI;
 			}
 
-			return tempangleFromVect;
+			return tempAngleFromVect;
 		}
 
 		public static double AngleFromPoint(PointF pCenter, PointF pPoint)
 		{
-			double tempangleFromPoint = 0;
+			double tempAngleFromPoint = 0;
 			
 			// Calculate the angle of a point relative to the center
 			// Slope is rise over run
@@ -266,28 +286,28 @@ namespace SVG
 			if (pPoint.X == pCenter.X)
 			{
 				// Either 90 or 270
-				tempangleFromPoint = ((pPoint.Y > pCenter.Y) ? Math.PI / 2 : -Math.PI / 2);
+				tempAngleFromPoint = ((pPoint.Y > pCenter.Y) ? Math.PI / 2 : -Math.PI / 2);
 
 			}
 			else if (pPoint.X > pCenter.X)
 			{
 				// 0 - 90 and 270-360
 				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
-				tempangleFromPoint = Math.Atan(slope);
+				tempAngleFromPoint = Math.Atan(slope);
 			}
 			else
 			{
-				// 180-270
+				// 180 - 270
 				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
-				tempangleFromPoint = Math.Atan(slope) + Math.PI;
+				tempAngleFromPoint = Math.Atan(slope) + Math.PI;
 			}
 
-			if (tempangleFromPoint < 0)
+			if (tempAngleFromPoint < 0)
 			{
-				tempangleFromPoint = tempangleFromPoint + (Math.PI * 2);
+				tempAngleFromPoint = tempAngleFromPoint + (Math.PI * 2);
 			}
 			
-			return tempangleFromPoint;
+			return tempAngleFromPoint;
 		}
 		
 		public static List<PointF> ParseArcSegment(float RX, float RY, float rotAng, PointF P1, PointF P2, bool largeArcFlag, bool sweepFlag)
@@ -299,7 +319,7 @@ namespace SVG
 			var points = new List<PointF>();
 			
 			PointF centerPoint = PointF.Empty;
-			double Theta = 0;
+			double theta = 0;
 			PointF P1Prime = PointF.Empty;
 			PointF P2Prime = PointF.Empty;
 
@@ -311,25 +331,25 @@ namespace SVG
 
 			double startAng = 0;
 			double endAng = 0;
-			double Ang = 0;
-			double AngStep = 0;
+			double ang = 0;
+			double angStep = 0;
 
 			PointF tempPoint = PointF.Empty;
 			double tempAng = 0;
 			double tempDist = 0;
 
-			double Theta1 = 0;
-			double ThetaDelta = 0;
+			double theta1 = 0;
+			double thetaDelta = 0;
 
 			// Turn the degrees of rotation into radians
-			Theta = Deg2Rad(rotAng);
+			theta = Deg2Rad(rotAng);
 
 			// Calculate P1Prime
-			P1Prime.X = (float)((Math.Cos(Theta) * ((P1.X - P2.X) / 2)) + (Math.Sin(Theta) * ((P1.Y - P2.Y) / 2)));
-			P1Prime.Y = (float)((-Math.Sin(Theta) * ((P1.X - P2.X) / 2)) + (Math.Cos(Theta) * ((P1.Y - P2.Y) / 2)));
+			P1Prime.X = (float)((Math.Cos(theta) * ((P1.X - P2.X) / 2)) + (Math.Sin(theta) * ((P1.Y - P2.Y) / 2)));
+			P1Prime.Y = (float)((-Math.Sin(theta) * ((P1.X - P2.X) / 2)) + (Math.Cos(theta) * ((P1.Y - P2.Y) / 2)));
 
-			P2Prime.X = (float)((Math.Cos(Theta) * ((P2.X - P1.X) / 2)) + (Math.Sin(Theta) * ((P2.Y - P1.Y) / 2)));
-			P2Prime.Y = (float)((-Math.Sin(Theta) * ((P2.X - P1.X) / 2)) + (Math.Cos(Theta) * ((P2.Y - P1.Y) / 2)));
+			P2Prime.X = (float)((Math.Cos(theta) * ((P2.X - P1.X) / 2)) + (Math.Sin(theta) * ((P2.Y - P1.Y) / 2)));
+			P2Prime.Y = (float)((-Math.Sin(theta) * ((P2.X - P1.X) / 2)) + (Math.Cos(theta) * ((P2.Y - P1.Y) / 2)));
 
 			qTop = (((Math.Pow(RX, 2))) * ((Math.Pow(RY, 2)))) - (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) - (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
 
@@ -372,49 +392,49 @@ namespace SVG
 			}
 
 			// Calculate center point
-			centerPoint.X = (float)(((Math.Cos(Theta) * CPrime.X) - (Math.Sin(Theta) * CPrime.Y)) + ((P1.X + P2.X) / 2));
-			centerPoint.Y = (float)(((Math.Sin(Theta) * CPrime.X) + (Math.Cos(Theta) * CPrime.Y)) + ((P1.Y + P2.Y) / 2));
+			centerPoint.X = (float)(((Math.Cos(theta) * CPrime.X) - (Math.Sin(theta) * CPrime.Y)) + ((P1.X + P2.X) / 2));
+			centerPoint.Y = (float)(((Math.Sin(theta) * CPrime.X) + (Math.Cos(theta) * CPrime.Y)) + ((P1.Y + P2.Y) / 2));
 
 			// Calculate Theta1
-			Theta1 = AngleFromPoint(P1Prime, CPrime);
-			ThetaDelta = AngleFromPoint(P2Prime, CPrime);
+			theta1 = AngleFromPoint(P1Prime, CPrime);
+			thetaDelta = AngleFromPoint(P2Prime, CPrime);
 
-			Theta1 = Theta1 - Math.PI;
-			ThetaDelta = ThetaDelta - Math.PI;
+			theta1 = theta1 - Math.PI;
+			thetaDelta = thetaDelta - Math.PI;
 
-			if (sweepFlag) // Sweep is POSITIV
+			if (sweepFlag) // Sweep is POSITIVE
 			{
-				if (ThetaDelta < Theta1)
+				if (thetaDelta < theta1)
 				{
-					ThetaDelta = ThetaDelta + (Math.PI * 2);
+					thetaDelta = thetaDelta + (Math.PI * 2);
 				}
 			}
 			else // Sweep is NEGATIVE
 			{
-				if (ThetaDelta > Theta1)
+				if (thetaDelta > theta1)
 				{
-					ThetaDelta = ThetaDelta - (Math.PI * 2);
+					thetaDelta = thetaDelta - (Math.PI * 2);
 				}
 			}
 
-			startAng = Theta1;
-			endAng = ThetaDelta;
+			startAng = theta1;
+			endAng = thetaDelta;
 
-			AngStep = (Math.PI / 180);
+			angStep = (Math.PI / 180);
 			if (! sweepFlag) // Sweep flag indicates a positive step
 			{
-				AngStep = -AngStep;
+				angStep = -angStep;
 			}
 
-			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Rad2Deg(startAng), Rad2Deg(endAng), Rad2Deg(AngStep));
+			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Rad2Deg(startAng), Rad2Deg(endAng), Rad2Deg(angStep));
 
-			Ang = startAng;
+			ang = startAng;
 			do
 			{
-				tempPoint.X = (float)((RX * Math.Cos(Ang)) + centerPoint.X);
-				tempPoint.Y = (float)((RY * Math.Sin(Ang)) + centerPoint.Y);
+				tempPoint.X = (float)((RX * Math.Cos(ang)) + centerPoint.X);
+				tempPoint.Y = (float)((RY * Math.Sin(ang)) + centerPoint.Y);
 
-				tempAng = AngleFromPoint(centerPoint, tempPoint) + Theta;
+				tempAng = AngleFromPoint(centerPoint, tempPoint) + theta;
 				tempDist = Distance(centerPoint, tempPoint);
 
 				tempPoint.X = (float)((tempDist * Math.Cos(tempAng)) + centerPoint.X);
@@ -422,10 +442,10 @@ namespace SVG
 
 				points.Add(tempPoint);
 
-				Ang = Ang + AngStep;
-			} while ( ! ((Ang >= endAng && AngStep > 0) | (Ang <= endAng && AngStep < 0)));
+				ang = ang + angStep;
+			} while ( ! ((ang >= endAng && angStep > 0) | (ang <= endAng && angStep < 0)));
 
-			// Add the final point
+			// add the final point
 			points.Add(P2);
 
 			return points;
@@ -701,7 +721,7 @@ namespace SVG
 			float rx = SVGUtils.ReadFloat(reader, "rx");
 			float ry = SVGUtils.ReadFloat(reader, "ry");
 			
-			double A = 0;
+			double a = 0;
 			double x = 0;
 			double y = 0;
 			long rr = 0;
@@ -712,10 +732,10 @@ namespace SVG
 				rr = 1;
 			}
 
-			for (A = 0; A <= 360; A += rr)
+			for (a = 0; a <= 360; a += rr)
 			{
-				x = Math.Cos(A * (Math.PI / 180)) * rx + cx;
-				y = Math.Sin(A * (Math.PI / 180)) * ry + cy;
+				x = Math.Cos(a * (Math.PI / 180)) * rx + cx;
+				y = Math.Sin(a * (Math.PI / 180)) * ry + cy;
 
 				points.Add(new PointF((float)x, (float)y));
 			}
@@ -723,7 +743,7 @@ namespace SVG
 			points = Transform(points);
 
 			_path = new GraphicsPath();
-			_path.AddLine(points[0], points[1]);
+			_path.AddPolygon(points.ToArray());
 		}
 
 		public List<List<PointF>> GetContours()
@@ -2328,6 +2348,5 @@ M30 (End)";
 
 			Debug.WriteLine("Thinned contour ({0}/{1}) = {2}%", thin, total, (int)((double)thin / (double)total * 100.0));
 		}
-		
 	}
 }
