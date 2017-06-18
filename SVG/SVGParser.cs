@@ -629,7 +629,6 @@ namespace SVG
 		public SVGShapeBase(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 		{
 			string styleText = reader.GetAttribute("class");
-
 			if (styleText != null)
 			{
 				string[] styleNames = styleText.Split(new [] { ' ', '\t' });
@@ -687,8 +686,8 @@ namespace SVG
 		/// XML style attribute with a name be encountered.</param>
 		public SVGShapeBase(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 		{
+			// check if this element refers to a style class (should exist in the style dictionary)
 			string styleText = SVGUtils.GetAttribute(element, "class");
-
 			if (styleText != null)
 			{
 				string[] styleNames = styleText.Split(new [] { ' ', '\t' });
@@ -712,6 +711,35 @@ namespace SVG
 				}
 			}
 
+			// check if this element has in-element styling
+			string styleData = SVGUtils.GetAttribute(element, "style");
+			if (styleData != null)
+			{
+				// https://stackoverflow.com/questions/21740264/parse-style-attribute-collection-using-linq
+				var styleMap = styleData
+					.Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries)
+					.Select(x => x.Split(new []{':'}, StringSplitOptions.RemoveEmptyEntries));
+				
+				foreach(var styleElem in styleMap) {
+					string styleName = styleElem[0];
+					string styleValue = styleElem[1];
+					var style = new SVGStyle(styleName, styleName+":"+styleValue);
+					if (style.FillColorPresent)
+					{
+						FillColor = style.FillColor;
+					}
+					if (style.OutlineColorPresent)
+					{
+						OutlineColor = style.OutlineColor;
+					}
+					if (style.OutlineWidthPresent)
+					{
+						OutlineWidth = style.OutlineWidth;
+					}
+				}
+			}
+
+			// check if this element includes a transform element
 			string xfs = SVGUtils.GetAttribute(element, "transform");
 			if (xfs != null)
 			{
@@ -764,6 +792,23 @@ namespace SVG
 			_path.AddLine(points[0], points[1]);
 		}
 
+		public SVGLine(XElement element, Dictionary<string, SVGStyle> styleDictionary)
+			: base(element, styleDictionary)
+		{
+			float x1 = SVGUtils.ReadFloat(element, "x1");
+			float y1 = SVGUtils.ReadFloat(element, "y1");
+			float x2 = SVGUtils.ReadFloat(element, "x2");
+			float y2 = SVGUtils.ReadFloat(element, "y2");
+			
+			points.Add(new PointF(x1, y1));
+			points.Add(new PointF(x2, y2));
+
+			points = Transform(points);
+
+			_path = new GraphicsPath();
+			_path.AddLine(points[0], points[1]);
+		}
+
 		public List<List<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
@@ -793,6 +838,45 @@ namespace SVG
 			float cy = SVGUtils.ReadFloat(reader, "cy");
 			float rx = SVGUtils.ReadFloat(reader, "rx");
 			float ry = SVGUtils.ReadFloat(reader, "ry");
+			
+			double a = 0;
+			double x = 0;
+			double y = 0;
+			long rr = 0;
+
+			rr = 2;
+			if (rx > 100 | ry > 100)
+			{
+				rr = 1;
+			}
+
+			for (a = 0; a <= 360; a += rr)
+			{
+				x = Math.Cos(a * (Math.PI / 180)) * rx + cx;
+				y = Math.Sin(a * (Math.PI / 180)) * ry + cy;
+
+				points.Add(new PointF((float)x, (float)y));
+			}
+			
+			points = Transform(points);
+
+			_path = new GraphicsPath();
+			_path.AddPolygon(points.ToArray());
+		}
+
+		public SVGEllipse(XElement element, Dictionary<string, SVGStyle> styleDictionary)
+			: base(element, styleDictionary)
+		{
+
+			//   cx = "245.46707"
+			//   cy = "469.48389"
+			//   rx = "13.131983"
+			//   ry = "14.142136" />
+
+			float cx = SVGUtils.ReadFloat(element, "cx");
+			float cy = SVGUtils.ReadFloat(element, "cy");
+			float rx = SVGUtils.ReadFloat(element, "rx");
+			float ry = SVGUtils.ReadFloat(element, "ry");
 			
 			double a = 0;
 			double x = 0;
@@ -924,6 +1008,30 @@ namespace SVG
 			DestBounds = new RectangleF(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
 		}
 
+		public SVGImage(XElement element, Dictionary<string, SVGStyle> styleDictionary, string baseDocPath)
+			: base(element, styleDictionary)
+		{
+			float x = SVGUtils.ReadFloat(element, "x");
+			float y = SVGUtils.ReadFloat(element, "y");
+			float w = SVGUtils.ReadFloat(element, "width");
+			float h = SVGUtils.ReadFloat(element, "height");
+			
+			string path = SVGUtils.GetAttribute(element, "xlink:href");
+
+			string dir = Path.GetDirectoryName(baseDocPath);
+			string bitspath = Path.Combine(dir, path);
+			bits = Image.FromFile(bitspath);
+
+			var pts = new PointF[2];
+			pts[0].X = x;
+			pts[0].Y = y;
+			pts[1].X = x+w;
+			pts[1].Y = y+h;
+			matrix.TransformPoints(pts);
+
+			DestBounds = new RectangleF(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
+		}
+
 		public List<List<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
@@ -945,6 +1053,26 @@ namespace SVG
 			float cx = SVGUtils.ReadFloat(reader, "cx");
 			float cy = SVGUtils.ReadFloat(reader, "cy");
 			float r = SVGUtils.ReadFloat(reader, "r");
+
+			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
+			{
+				double x = Math.Sin(theta) * r + cx;
+				double y = Math.Cos(theta) * r + cy;
+
+				points.Add(new PointF((float)x, (float)y));
+			}
+			points = Transform(points);
+
+			_path = new GraphicsPath();
+			_path.AddPolygon(points.ToArray());
+		}
+
+		public SVGCircle(XElement element, Dictionary<string, SVGStyle> styleDictionary)
+			: base(element, styleDictionary)
+		{
+			float cx = SVGUtils.ReadFloat(element, "cx");
+			float cy = SVGUtils.ReadFloat(element, "cy");
+			float r = SVGUtils.ReadFloat(element, "r");
 
 			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
 			{
@@ -2345,7 +2473,7 @@ namespace SVG
 			var styleDictionary = new Dictionary<string, SVGStyle>();
 			
 			// Here begins the reading of the SVG file
-			ProcessSVG(XDocument.Load(path).Root, 0, doc, null, new Matrix(), styleDictionary);
+			ProcessSVG(XDocument.Load(path).Root, 0, doc, null, new Matrix(), styleDictionary, path);
 			
 			TimeSpan duration = DateTime.UtcNow - start;
 			Debug.WriteLine("### Load took {0}s", ((double)duration.TotalMilliseconds / 1000.0));
@@ -2361,27 +2489,42 @@ namespace SVG
 		/// <param name="doc">SVGDocument</param>
 		/// <param name="layerName"></param>
 		/// <param name="matrix"></param>
-		static void ProcessSVG(XElement element, int depth, SVGDocument doc, string layerName, Matrix matrix, Dictionary<string, SVGStyle> styleDictionary)
+		static void ProcessSVG(XElement element, int depth, SVGDocument doc, string layerName, Matrix matrix, Dictionary<string, SVGStyle> styleDictionary, string path)
 		{
 			string tagName = element.Name.LocalName;
 
 			string printLayer = "";
 			if (layerName != null) printLayer = " Layer:" + layerName;
 			
-			// does the element has an inline style attribute?
-			string styleData;
-			if ((styleData = SVGUtils.GetAttribute(element, "style")) != null)
-			{
-				// https://stackoverflow.com/questions/21740264/parse-style-attribute-collection-using-linq
-				var styleMap = styleData
-					.Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries)
-					.Select(x => x.Split(new []{':'}, StringSplitOptions.RemoveEmptyEntries));
+			// Styling SVG with CSS can be done a few different ways:
+			// 1. using the style attribute to attach style rules to an individual element,
+			// 2. adding a class attribute and then defining styles in an external or in-page stylesheet, and
+			// 3. using inline stylesheets, which are nested right in the svg element.
+			
+			// Does the document contain in-page styles?
+			if (tagName.Equals("style", StringComparison.InvariantCultureIgnoreCase)) {
 				
-				foreach(var styleElem in styleMap) {
-					string styleName = styleElem[0];
-					string styleValue = styleElem[1];
-					var style = new SVGStyle(styleName, styleName+":"+styleValue);
-					//styleDictionary.Add(styleName, style);
+				var styleData = String.Join("", element.Nodes()).Trim();
+				var styleReader = new StringReader(styleData);
+				string line;
+				while ((line = styleReader.ReadLine()) != null)
+				{
+					string[] splitLine;
+
+					line = line.Trim();
+					if (line == "") continue;
+					
+					splitLine = line.Split(new [] { ' ', '\t', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
+
+					string name = splitLine[0];
+					if (name.StartsWith("."))
+					{
+						name = name.Substring(1);
+					}
+					if (splitLine.Count() == 2)
+					{
+						styleDictionary.Add(name, new SVGStyle(name, splitLine[1]));
+					}
 				}
 			}
 			
@@ -2431,6 +2574,26 @@ namespace SVG
 			// path
 			else if (tagName.Equals("path", StringComparison.InvariantCultureIgnoreCase)) {
 				doc.AddShape(new SVGPath(element, styleDictionary, doc.GLOBAL_DPI));
+			}
+			
+			// line
+			else if (tagName.Equals("line", StringComparison.InvariantCultureIgnoreCase)) {
+				doc.AddShape(new SVGLine(element, styleDictionary));
+			}
+			
+			// circle
+			else if (tagName.Equals("circle", StringComparison.InvariantCultureIgnoreCase)) {
+				doc.AddShape(new SVGCircle(element, styleDictionary));
+			}
+			
+			// ellipse
+			else if (tagName.Equals("ellipse", StringComparison.InvariantCultureIgnoreCase)) {
+				doc.AddShape(new SVGEllipse(element, styleDictionary));
+			}
+			
+			// image
+			else if (tagName.Equals("image", StringComparison.InvariantCultureIgnoreCase)) {
+				doc.AddShape(new SVGImage(element, styleDictionary, path));
 			}
 			
 			// if the element have no children
@@ -2497,7 +2660,7 @@ namespace SVG
 				// for each child, recursively process the child
 				foreach (XElement child in element.Elements())
 				{
-					ProcessSVG(child, depth, doc, layerName, matrix, styleDictionary);
+					ProcessSVG(child, depth, doc, layerName, matrix, styleDictionary, path);
 				}
 				
 				depth--;
