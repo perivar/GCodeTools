@@ -94,6 +94,9 @@ namespace GCodePlotter
 				return;
 			}
 			
+			// calculate optimal multiplier
+			CalculateOptimalZoomMultiplier();
+			
 			RenderBlocks();
 		}
 
@@ -129,14 +132,11 @@ namespace GCodePlotter
 
 				QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
 
-				StreamReader tr = fileInfo.OpenText();
-
 				txtFile.Text = fileInfo.Name;
 				txtFile.Tag = fileInfo.FullName;
 				this.Text = fileInfo.Name;
 
-				string data = tr.ReadToEnd();
-				tr.Close();
+				string data = File.ReadAllText(fileInfo.FullName);
 				
 				// reset multiplier
 				multiplier = DEFAULT_MULTIPLIER;
@@ -153,28 +153,12 @@ namespace GCodePlotter
 			}
 
 			if (txtFile.Tag != null) {
-				var file = new FileInfo(txtFile.Tag.ToString());
-				StreamReader tr = file.OpenText();
-				string data = tr.ReadToEnd();
-				tr.Close();
-				
+				var fileInfo = new FileInfo(txtFile.Tag.ToString());
+				string data = File.ReadAllText(fileInfo.FullName);
 				ParseText(data);
 			}
 		}
 		
-		void btnParseDataClick(object sender, EventArgs e)
-		{
-			
-		}
-
-		void btnRedrawClick(object sender, EventArgs e)
-		{
-			// reset multiplier
-			multiplier = DEFAULT_MULTIPLIER;
-			
-			RenderBlocks();
-		}
-
 		void btnSplitClick(object sender, EventArgs e)
 		{
 			if (radLeft.Checked) {
@@ -276,7 +260,7 @@ namespace GCodePlotter
 			float x = (e.X - LEFT_MARGIN) / scale * 10;
 			float y = (pictureBox1.Height - e.Y - BOTTOM_MARGIN) / scale * 10;
 			
-			txtCoordinates.Text = string.Format("X: {0:0.##}, Y: {1:0.##}", x, y);
+			txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##} {2} {3}", x, y, multiplier, panelViewer.Width);
 		}
 
 		void OnMouseWheel(object sender, MouseEventArgs mea) {
@@ -387,84 +371,6 @@ namespace GCodePlotter
 			panelViewer.AutoScrollPosition = newScrollPosition;
 		}
 		
-		/// <summary>
-		/// Turn the list of instruction into a list of blocks
-		/// where the blocks are separated if "cutting path id" is found
-		/// and when a rapid move up is found
-		/// </summary>
-		/// <param name="instructions">list of gcode instructions</param>
-		/// <returns>list of blocks</returns>
-		static List<Block> GetBlocksOld(List<GCodeInstruction> instructions) {
-			
-			var currentPoint = Point3D.Empty;
-			var blocks = new List<Block>();
-			var currentBlock = new Block();
-			int blockCounter = 1;
-			currentBlock.Name = "Block_" + blockCounter++;
-			
-			foreach (var currentInstruction in instructions)
-			{
-				if (currentInstruction.IsOnlyComment) {
-					
-					if (currentInstruction.Comment.StartsWith("Start cutting path id:")
-					    || currentInstruction.Comment == "Footer") {
-
-						if (currentBlock.PlotPoints.Count > 0) {
-							blocks.Add(currentBlock);
-							
-							// Reset block, meaning add new
-							currentBlock = new Block();
-						}
-						
-						if (currentInstruction.Comment == "Footer") {
-							currentBlock.Name = currentInstruction.Comment;
-						} else {
-							if (currentInstruction.Comment.Length > 23) {
-								currentBlock.Name = currentInstruction.Comment.Substring(23);
-							}
-						}
-					} else if (currentInstruction.Comment.StartsWith("End cutting path id:")) {
-						if (currentBlock.PlotPoints.Count > 0) {
-							blocks.Add(currentBlock);
-							
-							// Reset block, meaning add new
-							currentBlock = new Block();
-						}
-					} else {
-						// ignore all comments up to first "Start Cutting", i.e. header
-					}
-					
-				} else if (currentInstruction.CanRender) {
-					
-					// this is where the block is put together and where the linepoints is added
-					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
-					if (linePointsCollection != null) {
-						currentInstruction.CachedLinePoints = linePointsCollection;
-						currentBlock.PlotPoints.AddRange(linePointsCollection);
-					}
-
-					// make sure to store the actual instruction as well
-					currentBlock.GCodeInstructions.Add(currentInstruction);
-				} else {
-					// ignore everything that isn't a comment and or cannot be rendered
-				}
-			}
-
-			if (currentBlock.PlotPoints.Count > 0) {
-				blocks.Add(currentBlock);
-			}
-
-			// remove footer if it exists
-			if (blocks.Count > 0) {
-				var footer = blocks.Last();
-				if (footer.Name == "Footer") {
-					blocks.Remove(footer);
-				}
-			}
-
-			return blocks;
-		}
-
 		/// <summary>
 		/// Turn the list of instruction into a list of blocks
 		/// where the blocks are separated if "cutting path id" is found
@@ -952,8 +858,18 @@ namespace GCodePlotter
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
 			                                  maxX, minX, maxY, minY, maxZ, minZ);
 			
+			// calculate optimal multiplier
+			CalculateOptimalZoomMultiplier();
+			
 			RenderBlocks();
 			bDataLoaded = true;
+		}
+		
+		void CalculateOptimalZoomMultiplier() {
+			// calculate optimal multiplier
+			if (maxX > 0) {
+				multiplier = (panelViewer.Width-50) / maxX;
+			}
 		}
 	}
 }

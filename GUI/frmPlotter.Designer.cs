@@ -398,13 +398,13 @@ namespace GCodePlotter
 			// 
 			// txtFile
 			// 
-			this.txtFile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+			this.txtFile.Anchor = System.Windows.Forms.AnchorStyles.Left;
 			this.txtFile.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.txtFile.Location = new System.Drawing.Point(24, 17);
 			this.txtFile.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(396, 26);
+			this.txtFile.Size = new System.Drawing.Size(327, 26);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panelZoomFilename
@@ -420,12 +420,13 @@ namespace GCodePlotter
 			// 
 			// txtCoordinates
 			// 
+			this.txtCoordinates.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.txtCoordinates.BackColor = System.Drawing.SystemColors.Control;
 			this.txtCoordinates.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtCoordinates.Location = new System.Drawing.Point(448, 17);
+			this.txtCoordinates.Location = new System.Drawing.Point(359, 17);
 			this.txtCoordinates.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtCoordinates.Name = "txtCoordinates";
-			this.txtCoordinates.Size = new System.Drawing.Size(160, 26);
+			this.txtCoordinates.Size = new System.Drawing.Size(249, 26);
 			this.txtCoordinates.TabIndex = 11;
 			// 
 			// panelViewer
