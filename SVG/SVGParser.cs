@@ -162,22 +162,6 @@ namespace SVG
 		}
 		
 		/// <summary>
-		/// Read a float value from the reader
-		/// </summary>
-		/// <param name="reader">reader</param>
-		/// <param name="attributeName">name of attribute</param>
-		/// <returns>a float value or zero</returns>
-		public static float ReadFloat(XmlTextReader reader, string attributeName) {
-			float value = 0;
-			try
-			{
-				value = float.Parse(reader.GetAttribute(attributeName), CultureInfo.InvariantCulture);
-			}
-			catch (ArgumentNullException) { }
-			return value;
-		}
-		
-		/// <summary>
 		/// Read a float from the XElement
 		/// </summary>
 		/// <param name="element">X Element</param>
@@ -775,23 +759,6 @@ namespace SVG
 	{
 		List<PointF> points = new List<PointF>();
 
-		public SVGLine(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
-			: base(reader, styleDictionary)
-		{
-			float x1 = SVGUtils.ReadFloat(reader, "x1");
-			float y1 = SVGUtils.ReadFloat(reader, "y1");
-			float x2 = SVGUtils.ReadFloat(reader, "x2");
-			float y2 = SVGUtils.ReadFloat(reader, "y2");
-			
-			points.Add(new PointF(x1, y1));
-			points.Add(new PointF(x2, y2));
-
-			points = Transform(points);
-
-			_path = new GraphicsPath();
-			_path.AddLine(points[0], points[1]);
-		}
-
 		public SVGLine(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
 		{
@@ -824,45 +791,6 @@ namespace SVG
 	public class SVGEllipse : SVGShapeBase, ISVGElement
 	{
 		List<PointF> points = new List<PointF>();
-
-		public SVGEllipse(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
-			: base(reader, styleDictionary)
-		{
-
-			//   cx = "245.46707"
-			//   cy = "469.48389"
-			//   rx = "13.131983"
-			//   ry = "14.142136" />
-
-			float cx = SVGUtils.ReadFloat(reader, "cx");
-			float cy = SVGUtils.ReadFloat(reader, "cy");
-			float rx = SVGUtils.ReadFloat(reader, "rx");
-			float ry = SVGUtils.ReadFloat(reader, "ry");
-			
-			double a = 0;
-			double x = 0;
-			double y = 0;
-			long rr = 0;
-
-			rr = 2;
-			if (rx > 100 | ry > 100)
-			{
-				rr = 1;
-			}
-
-			for (a = 0; a <= 360; a += rr)
-			{
-				x = Math.Cos(a * (Math.PI / 180)) * rx + cx;
-				y = Math.Sin(a * (Math.PI / 180)) * ry + cy;
-
-				points.Add(new PointF((float)x, (float)y));
-			}
-			
-			points = Transform(points);
-
-			_path = new GraphicsPath();
-			_path.AddPolygon(points.ToArray());
-		}
 
 		public SVGEllipse(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
@@ -919,26 +847,6 @@ namespace SVG
 	{
 		List<PointF> points = new List<PointF>();
 
-		public SVGRect(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
-			: base(reader, styleDictionary)
-		{
-			float x = SVGUtils.ReadFloat(reader, "x");
-			float y = SVGUtils.ReadFloat(reader, "y");
-			float w = SVGUtils.ReadFloat(reader, "width");
-			float h = SVGUtils.ReadFloat(reader, "height");
-
-			points.Add(new PointF(x, y));
-			points.Add(new PointF(x + w, y));
-			points.Add(new PointF(x + w, y + h));
-			points.Add(new PointF(x, y + h));
-			points.Add(new PointF(x, y));
-
-			points = Transform(points);
-
-			_path = new GraphicsPath();
-			_path.AddPolygon(points.ToArray());
-		}
-
 		public SVGRect(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
 		{
@@ -984,30 +892,6 @@ namespace SVG
 		public Image bits;
 		public RectangleF DestBounds { get; set; }
 
-		public SVGImage(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary, string baseDocPath)
-			: base(reader, styleDictionary)
-		{
-			float x = SVGUtils.ReadFloat(reader, "x");
-			float y = SVGUtils.ReadFloat(reader, "y");
-			float w = SVGUtils.ReadFloat(reader, "width");
-			float h = SVGUtils.ReadFloat(reader, "height");
-			
-			string path = reader.GetAttribute("xlink:href");
-
-			string dir = Path.GetDirectoryName(baseDocPath);
-			string bitspath = Path.Combine(dir, path);
-			bits = Image.FromFile(bitspath);
-
-			var pts = new PointF[2];
-			pts[0].X = x;
-			pts[0].Y = y;
-			pts[1].X = x+w;
-			pts[1].Y = y+h;
-			matrix.TransformPoints(pts);
-
-			DestBounds = new RectangleF(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
-		}
-
 		public SVGImage(XElement element, Dictionary<string, SVGStyle> styleDictionary, string baseDocPath)
 			: base(element, styleDictionary)
 		{
@@ -1047,26 +931,6 @@ namespace SVG
 	{
 		List<PointF> points = new List<PointF>();
 
-		public SVGCircle(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
-			: base(reader, styleDictionary)
-		{
-			float cx = SVGUtils.ReadFloat(reader, "cx");
-			float cy = SVGUtils.ReadFloat(reader, "cy");
-			float r = SVGUtils.ReadFloat(reader, "r");
-
-			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
-			{
-				double x = Math.Sin(theta) * r + cx;
-				double y = Math.Cos(theta) * r + cy;
-
-				points.Add(new PointF((float)x, (float)y));
-			}
-			points = Transform(points);
-
-			_path = new GraphicsPath();
-			_path.AddPolygon(points.ToArray());
-		}
-
 		public SVGCircle(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
 		{
@@ -1104,51 +968,6 @@ namespace SVG
 	{
 		List<List<PointF>> contours = new List<List<PointF>>();
 		List<PointF> currentContour = new List<PointF>();
-
-		public SVGPolygon(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
-			: base(reader, styleDictionary)
-		{
-			// Support
-			// <polygon points="50 160 55 180 70 180 60 190 65 205 50 195 35 205 40 190 30 180 45 180" />
-			// <polyline points="60 110, 65 120, 70 115, 75 130, 80 125, 85 140, 90 135, 95 150, 100 145"/>
-			// <polygon points="850,75  958,137.5 958,262.5 850,325 742,262.6 742,137.5" />
-			
-			string data = reader.GetAttribute("points");
-			
-			// split the data string into elements
-			// and remove empty strings
-			var parts = data.Split(new [] { ' ', '\t', ',' } ).
-				Select(tag => tag.Trim()).
-				Where( tag => !string.IsNullOrEmpty(tag)).ToList();
-			
-			// take two and two elements
-			for(int i = 0; i < parts.Count(); i += 2) {
-				currentContour.Add(
-					new PointF(float.Parse(parts[i], CultureInfo.InvariantCulture),
-					           float.Parse(parts[i+1], CultureInfo.InvariantCulture)));
-			}
-			
-			// Close the shape (We only support closed shapes
-			if (currentContour.Count > 2)
-			{
-				float deltaX = currentContour[0].X - currentContour[currentContour.Count - 1].X;
-				float deltaY = currentContour[0].Y - currentContour[currentContour.Count - 1].Y;
-
-				if (Math.Abs(deltaX) + Math.Abs(deltaY) > 0.001)
-				{
-					currentContour.Add(currentContour[0]);
-				}
-			}
-
-			currentContour = Transform(currentContour);
-			contours.Add(currentContour);
-
-			_path = new GraphicsPath();
-			if (currentContour.Count > 2)
-			{
-				_path.AddPolygon(currentContour.ToArray());
-			}
-		}
 
 		public SVGPolygon(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
@@ -1210,576 +1029,6 @@ namespace SVG
 	{
 		List<List<PointF>> contours = new List<List<PointF>>();
 		List<PointF> currentContour = new List<PointF>();
-		
-		public SVGPath(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary, float globalDPI)
-			: base(reader, styleDictionary)
-		{
-			_path = new GraphicsPath();
-
-			string data = reader.GetAttribute("d");
-			if (data == null)
-			{
-				return;
-			}
-
-			// Parse an SVG path.
-			int index = 0;
-			string character = null;
-			string lastCharacter = null;
-
-			bool isRelative = false;
-			bool gotFirstItem = false;
-
-			float startX = 0;
-			float startY = 0;
-			float curX = 0;
-			float curY = 0;
-
-			PointF pt0 = PointF.Empty;
-			PointF pt1 = PointF.Empty;
-			PointF pt2 = PointF.Empty;
-			PointF pt3 = PointF.Empty;
-			PointF pt4 = PointF.Empty;
-			PointF pt5 = PointF.Empty;
-			
-			string token1 = null;
-			string token2 = null;
-			string token3 = null;
-			string token4 = null;
-			string token5 = null;
-			string token6 = null;
-			string token7 = null;
-
-			PointF prevPoint = PointF.Empty;
-			bool hasPrevPoint = false;
-
-			double pInSegments = 0;
-
-			//M209.1,187.65c-0.3-0.2-0.7-0.4-1-0.4c-0.3,0-0.7,0.2-0.9,0.4c-0.3,0.3-0.4,0.6-0.4,0.9c0,0.4,0.1,0.7,0.4,1
-			//c0.2,0.2,0.6,0.4,0.9,0.4c0.3,0,0.7-0.2,1-0.4c0.2-0.3,0.3-0.6,0.3-1C209.4,188.25,209.3,187.95,209.1,187.65z
-
-			// Get rid of enter presses
-			data = data.Replace("\r", " ");
-			data = data.Replace("\n", " ");
-			data = data.Replace("\t", " ");
-
-			// Start parsing
-			index = 0;
-			while (index < data.Length) {
-				character = "" + data[index];
-				++index;
-				isRelative = false;
-
-				switch (character) {
-					case "M":
-					case "m":
-					case "L":
-					case "l":
-					case "C":
-					case "c":
-					case "V":
-					case "v":
-					case "A":
-					case "a":
-					case "H":
-					case "h":
-					case "S":
-					case "s":
-					case "Z":
-					case "z":
-					case "Q":
-					case "q":
-					case "T":
-					case "t":
-						// Accepted character.
-						lastCharacter = character;
-						break;
-					case " ":
-						// Ignore whitespace
-						break;
-					default:
-						// Not accepted, must be a continuation.
-						if (lastCharacter != null) {
-							character = lastCharacter;
-							if (character == "m") { // Continuous moveto becomes lineto
-								character = "l";
-							}
-							if (character == "M") { // Continuous moveto becomes lineto not relative
-								character = "L";
-							}
-							index = index - 1;
-						}
-						break;
-				}
-
-				switch (character) {
-					case " ": // Skip spaces
-						break;
-					case "M":
-					case "m": // MOVE TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set our "current" coordinates to this
-						if (isRelative) {
-							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
-							curY = curY + float.Parse(token2, CultureInfo.InvariantCulture);
-						} else {
-							curX = float.Parse(token1, CultureInfo.InvariantCulture);
-							curY = float.Parse(token2, CultureInfo.InvariantCulture);
-						}
-
-						// Start a new line, since we moved
-						//newLine currentLayer;
-
-						// Add the start point to this line
-						currentContour.Add(new PointF(curX, curY));
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Move to " + currX + ", " + currY + System.Environment.NewLine;
-
-						startX = curX;
-						startY = curY;
-						gotFirstItem = true;
-						hasPrevPoint = false;
-
-						break;
-					case "L":
-					case "l": // LINE TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set our "current" coordinates to this
-						if (isRelative) {
-							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
-							curY = curY + float.Parse(token2, CultureInfo.InvariantCulture);
-						} else {
-							curX = float.Parse(token1, CultureInfo.InvariantCulture);
-							curY = float.Parse(token2, CultureInfo.InvariantCulture);
-						}
-
-						// Add this point to the line
-						currentContour.Add(new PointF(curX, curY));
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Line to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-						hasPrevPoint = false;
-
-						break;
-					case "V":
-					case "v": // VERTICAL LINE TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						// Extract one co-ordinate
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set our "current" coordinates to this
-						if (isRelative) {
-							curY = curY + float.Parse(token1, CultureInfo.InvariantCulture);
-						} else {
-							curY = float.Parse(token1, CultureInfo.InvariantCulture);
-						}
-
-						// Add this point to the line
-						currentContour.Add(new PointF(curX, curY));
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Vertical to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-						hasPrevPoint = false;
-
-						break;
-					case "H":
-					case "h": // HORIZONTAL LINE TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						// Extract one co-ordinate
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set our "current" coordinates to this
-						if (isRelative) {
-							curX = curX + float.Parse(token1, CultureInfo.InvariantCulture);
-						} else {
-							curX = float.Parse(token1, CultureInfo.InvariantCulture);
-						}
-
-						// Add this point to the line
-						currentContour.Add(new PointF(curX, curY));
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Horiz to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-						hasPrevPoint = false;
-
-						break;
-					case "A":
-					case "a": // PARTIAL ARC TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						// Radii X and Y
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// X axis rotation
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token3 = SVGUtils.ExtractToken(data, ref index);
-
-						// Large arc flag
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token4 = SVGUtils.ExtractToken(data, ref index);
-
-						// Sweep flag
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token5 = SVGUtils.ExtractToken(data, ref index);
-
-						// X and Y
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token6 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token7 = SVGUtils.ExtractToken(data, ref index);
-
-						// Start point
-						pt0.X = curX;
-						pt0.Y = curY;
-
-						// Set our "current" coordinates to this
-						if (isRelative) {
-							curX = curX + float.Parse(token6, CultureInfo.InvariantCulture);
-							curY = curY + float.Parse(token7, CultureInfo.InvariantCulture);
-						} else {
-							curX = float.Parse(token6, CultureInfo.InvariantCulture);
-							curY = float.Parse(token7, CultureInfo.InvariantCulture);
-						}
-
-						pt1.X = curX;
-						pt1.Y = curY;
-
-						var points = SVGUtils.ParseArcSegment(
-							float.Parse(token1, CultureInfo.InvariantCulture),
-							float.Parse(token2, CultureInfo.InvariantCulture),
-							float.Parse(token3, CultureInfo.InvariantCulture),
-							pt0, pt1, (token4 == "1"), (token5 == "1")
-						);
-						currentContour.AddRange(points);
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Partial Arc to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-						hasPrevPoint = false;
-
-						break;
-					case "C":
-					case "c": // CURVE TO
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						pt0.X = curX;
-						pt0.Y = curY;
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 0
-						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-
-						// Extract next two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 1
-						pt2.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						pt2.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-
-						// Extract next two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 2
-						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-						pt3.X = curX;
-						pt3.Y = curY;
-
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt3, globalDPI);
-
-						// Run the bezier code
-						currentContour.AddRange(Bezier.AddBezier((float)pInSegments, pt0, pt1, pt2, pt3));
-						
-						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt2, pt3);
-						hasPrevPoint = true;
-
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Bezier to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-
-						break;
-					case "S":
-					case "s": // CURVE TO with 3 points
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						pt0.X = curX;
-						pt0.Y = curY;
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 0
-						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-
-						// Extract next two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 1
-						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-						pt2.X = curX;
-						pt2.Y = curY;
-
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
-
-						if (!hasPrevPoint) {
-							// Same as pt1
-							prevPoint = pt1;
-						}
-
-						// Run the bezier code
-						currentContour.AddRange(Bezier.AddBezier((float)pInSegments, pt0, prevPoint, pt1, pt2));
-
-						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
-						hasPrevPoint = true;
-
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-
-						break;
-					case "Q":
-					case "q": // Quadratic Bezier TO with 3 points
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						pt0.X = curX;
-						pt0.Y = curY;
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 0
-						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-
-						// Extract next two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 1
-						curX = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						curY = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-						pt2.X = curX;
-						pt2.Y = curY;
-
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
-
-						// Run the bezier code
-						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSegments, pt0, pt1, pt2));
-						
-						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
-
-						hasPrevPoint = true;
-
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-
-						break;
-					case "T":
-					case "t": // Quadratic Bezier TO with 3 points, but use reflection of last
-						if (character.ToLower() == character) { // Lowercase means relative coordinates
-							isRelative = true;
-						}
-						if (!gotFirstItem) { // Relative not valid for first item
-							isRelative = false;
-						}
-
-						pt0.X = curX;
-						pt0.Y = curY;
-
-						// Extract two coordinates
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token1 = SVGUtils.ExtractToken(data, ref index);
-						SVGUtils.SkipWhiteSpace(data, ref index);
-						token2 = SVGUtils.ExtractToken(data, ref index);
-
-						// Set into point 0
-						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
-						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
-
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
-
-						if (!hasPrevPoint) {
-							// Same as pt1
-							prevPoint = pt0; // SHOULD NEVER HAPPEN
-						}
-
-						// Run the bezier code
-						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSegments, pt0, prevPoint, pt1));
-						
-						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(prevPoint, pt1);
-						hasPrevPoint = true;
-
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
-
-						if (!gotFirstItem) {
-							startX = curX;
-							startY = curY;
-						}
-						gotFirstItem = true;
-
-						break;
-					case "Z":
-					case "z":
-						hasPrevPoint = false;
-
-						// z means end the shape
-						// Draw a line back to start of shape
-						//addPoint startX, startY;
-						curX = startX;
-						curY = startY;
-
-						// Since this is a closed path, mark it as fillable.
-						//pData(currentLine).Fillable = true;
-
-						//pData(currentLine).PathCode = pData(currentLine).PathCode + "End Shape" + System.Environment.NewLine;
-
-						// Close current contour and open a new one
-						currentContour.Add(currentContour.First());
-						currentContour = Transform(currentContour);
-						contours.Add(currentContour);
-						_path.AddPolygon(currentContour.ToArray());
-						currentContour = new List<PointF>();
-						
-						break;
-					default:
-						Debug.WriteLine("UNSUPPORTED PATH CODE: {0}", character);
-						break;
-				}
-			}
-			
-			if (currentContour.Count > 0)
-			{
-				if (currentContour.Count <= 2)
-				{
-					// Happens sometimes. This is either a point or
-					// a line. Empty area, so just toss it.
-				}
-				else
-				{
-					currentContour.Add(currentContour.First());
-					currentContour = Transform(currentContour);
-					contours.Add(currentContour);
-					_path.AddPolygon(currentContour.ToArray());
-				}
-			}
-		}
 		
 		public SVGPath(XElement element, Dictionary<string, SVGStyle> styleDictionary, float globalDPI)
 			: base(element, styleDictionary)
@@ -2465,7 +1714,7 @@ namespace SVG
 			}
 		}
 
-		public static SVGDocument LoadFromFile2(string path) {
+		public static SVGDocument LoadFromFile(string path) {
 			
 			DateTime start = DateTime.UtcNow;
 
@@ -2552,8 +1801,12 @@ namespace SVG
 					}
 				}
 
-				string transformValue = SVGUtils.GetAttribute(element, "transform");
-				matrix = SVGUtils.ParseTransformText(transformValue);
+				// check if this element includes a transform element
+				string xfs = SVGUtils.GetAttribute(element, "transform");
+				if (xfs != null)
+				{
+					matrix = SVGUtils.ParseTransformText(xfs);
+				}
 			}
 
 			// rectangle
@@ -2599,6 +1852,7 @@ namespace SVG
 			// if the element have no children
 			if (!element.HasElements)
 			{
+				/*
 				// print attributes
 				if (element.HasAttributes) {
 					
@@ -2626,34 +1880,36 @@ namespace SVG
 						"".PadLeft(depth, '\t'), // {0}
 						element.Name.LocalName  // {1}
 					));
-
-				} else {
-					// print start and end tag
+				
+			} else {
+				// print start and end tag
+				Debug.WriteLine(string.Format(
+					"{0}<{1}{2}>{3}</{1}>",
+					"".PadLeft(depth, '\t'),// {0}
+					element.Name.LocalName,	// {1}
+					printLayer,				// {2}
+					element.Value			// {3}
+				));
+			}
+				 */
+			} else {
+				/*
+			// if element has children
+			Debug.WriteLine("".PadLeft(depth, '\t') + // Indent to show depth
+			                "<" + tagName + printLayer + ">");
+			
+			// print attributes
+			if (element.HasAttributes) {
+				foreach (var attr in element.Attributes()) {
 					Debug.WriteLine(string.Format(
-						"{0}<{1}{2}>{3}</{1}>",
-						"".PadLeft(depth, '\t'),// {0}
-						element.Name.LocalName,	// {1}
-						printLayer,				// {2}
-						element.Value			// {3}
+						"{0}*{1}={2}",
+						"".PadLeft(depth+1, '\t'), // {0}
+						attr.Name.LocalName,  // {1}
+						attr.Value            // {2}
 					));
 				}
-
-			} else {
-				// if element has children
-				Debug.WriteLine("".PadLeft(depth, '\t') + // Indent to show depth
-				                "<" + tagName + printLayer + ">");
-				
-				// print attributes
-				if (element.HasAttributes) {
-					foreach (var attr in element.Attributes()) {
-						Debug.WriteLine(string.Format(
-							"{0}*{1}={2}",
-							"".PadLeft(depth+1, '\t'), // {0}
-							attr.Name.LocalName,  // {1}
-							attr.Value            // {2}
-						));
-					}
-				}
+			}
+				 */
 				
 				depth++;
 				
@@ -2665,124 +1921,16 @@ namespace SVG
 				
 				depth--;
 				
-				Debug.WriteLine
-					(
-						"".PadLeft(depth, '\t') + // Indent to show depth
-						"</" + element.Name.LocalName + ">"
-					);
+				/*
+			Debug.WriteLine
+				(
+					"".PadLeft(depth, '\t') + // Indent to show depth
+					"</" + element.Name.LocalName + ">"
+				);
+				 */
 			}
 		}
 		
-		public static SVGDocument LoadFromFile(string path)
-		{
-			DateTime start = DateTime.UtcNow;
-
-			// Here begins the reading of the SVG file
-			var reader = new XmlTextReader(path);
-			var doc = new SVGDocument();
-			var styleDictionary = new Dictionary<string, SVGStyle>();
-
-			while (reader.Read())
-			{
-				if (reader.NodeType == XmlNodeType.Element)
-				{
-					if (reader.Name == "style")
-					{
-						// Inline style
-						string styleData = reader.ReadElementContentAsString();
-						var styleReader = new StringReader(styleData);
-						string line;
-						
-						while ((line = styleReader.ReadLine()) != null)
-						{
-							string[] splitLine;
-
-							line = line.Trim();
-							if (line == "") continue;
-							
-							splitLine = line.Split(new [] { ' ', '\t', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
-
-							string name = splitLine[0];
-							if (name.StartsWith("."))
-							{
-								name = name.Substring(1);
-							}
-							if (splitLine.Count() == 2)
-							{
-								styleDictionary.Add(name, new SVGStyle(name, splitLine[1]));
-							}
-
-						};
-					}
-					else if (reader.Name == "svg")
-					{
-						string widthValue = reader.GetAttribute("width");
-						string heightValue = reader.GetAttribute("height");
-						string viewBoxValue = reader.GetAttribute("viewBox");
-						doc.SetDPIAndSVGSizeParameters(widthValue, heightValue, viewBoxValue);
-					}
-					else if (reader.Name == "g") {
-						// <g id="g3023" transform="translate(269.81467,-650.62904)">
-						// <g id="Layer_x0020_1">
-						string layerName = "";
-						
-						string inkscapeLabel = reader.GetAttribute("inkscape:label");
-						if (inkscapeLabel != null) {
-							layerName = inkscapeLabel;
-						} else {
-							string idValue = reader.GetAttribute("id");
-							if (idValue != null) {
-								if (idValue.ToLower().StartsWith("layer")) {
-									layerName = idValue;
-								}
-							}
-						}
-
-						string transformValue = reader.GetAttribute("transform");
-						var matrix = SVGUtils.ParseTransformText(transformValue);
-						// TODO: use the transform matrix for something!
-					}
-					else if (reader.Name == "rect")
-					{
-						doc.AddShape(new SVGRect(reader, styleDictionary));
-					}
-					else if (reader.Name == "path")
-					{
-						doc.AddShape(new SVGPath(reader, styleDictionary, doc.GLOBAL_DPI));
-					}
-					else if (reader.Name == "line")
-					{
-						doc.AddShape(new SVGLine(reader, styleDictionary));
-					}
-					else if (reader.Name == "polyline")
-					{
-						doc.AddShape(new SVGPolygon(reader, styleDictionary));
-					}
-					else if (reader.Name == "polygon")
-					{
-						doc.AddShape(new SVGPolygon(reader, styleDictionary));
-					}
-					else if (reader.Name == "circle")
-					{
-						doc.AddShape(new SVGCircle(reader, styleDictionary));
-					}
-					else if (reader.Name == "ellipse")
-					{
-						doc.AddShape(new SVGEllipse(reader, styleDictionary));
-					}
-					else if (reader.Name == "image")
-					{
-						doc.AddShape(new SVGImage(reader, styleDictionary, path));
-					}
-				}
-			}
-
-			TimeSpan duration = DateTime.UtcNow - start;
-			Debug.WriteLine("### Load took {0}s", ((double)duration.TotalMilliseconds / 1000.0));
-
-			return doc;
-		}
-
 		public void AddShape(ISVGElement shape)
 		{
 			shapes.Add(shape);

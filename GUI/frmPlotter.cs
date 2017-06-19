@@ -893,8 +893,7 @@ namespace GCodePlotter
 					//QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
 				}
 				
-				//var svg = SVGDocument.LoadFromFile(svgFilePath);
-				var svg = SVGDocument.LoadFromFile2(svgFilePath);
+				var svg = SVGDocument.LoadFromFile(svgFilePath);
 				var contours = svg.GetScaledContours();
 				//var contours = svg.GetContours();
 				float zSafeHeight = GetZSafeHeight();
