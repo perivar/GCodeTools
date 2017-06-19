@@ -80,8 +80,7 @@ namespace GCodePlotter
 					this.Text = fileInfo.Name;
 					
 					Application.DoEvents();
-					btnParseData.Enabled = true;
-					btnParseData.PerformClick();
+					ParseData();
 				}
 			}
 			
@@ -146,8 +145,7 @@ namespace GCodePlotter
 			}
 		}
 
-		void btnParseDataClick(object sender, EventArgs e)
-		{
+		void ParseData() {
 			if (bDataLoaded) {
 				if (AskToLoadData() == DialogResult.No) {
 					return;
@@ -162,6 +160,11 @@ namespace GCodePlotter
 				
 				ParseText(data);
 			}
+		}
+		
+		void btnParseDataClick(object sender, EventArgs e)
+		{
+			
 		}
 
 		void btnRedrawClick(object sender, EventArgs e)
@@ -206,8 +209,7 @@ namespace GCodePlotter
 			float xSplit = 0.0f;
 			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
 				
-				btnParseData.Enabled = true;
-				btnParseData.PerformClick();
+				ParseData();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				
@@ -561,8 +563,7 @@ namespace GCodePlotter
 			float xSplit = 0.0f;
 			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
 				
-				btnParseData.Enabled = true;
-				btnParseData.PerformClick();
+				ParseData();
 				
 				var splitPoint = new Point3D(xSplit, 0, 0);
 				
@@ -863,9 +864,8 @@ namespace GCodePlotter
 			float deltaX = GetShiftX();
 			float deltaY = GetShiftY();
 			float deltaZ = GetShiftZ();
-			var gcodeInstructions = GCodeUtils.ShiftGCode(parsedInstructions, deltaX, deltaY, deltaZ);
+			var gcodeInstructions = GCodeUtils.GetShiftedGCode(parsedInstructions, deltaX, deltaY, deltaZ);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
-			//GCodeUtils.DumpGCode(gcodeShiftObject, "shifted.gcode");
 			ParseText(gCode);
 		}
 		
@@ -899,11 +899,10 @@ namespace GCodePlotter
 				float zSafeHeight = GetZSafeHeight();
 				string gCode = "";
 				if (radSVGCenter.Checked) {
-					gCode = GCodeUtils.GenerateGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
 				} else {
-					gCode = GCodeUtils.GenerateGCode(contours, -2.0f, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCode(contours, -2.0f, 800.0f, zSafeHeight);
 				}
-				//string gCode = svg.EmitGCode(true, 90, 800, true, 90, 800, false, null);
 				ParseText(gCode);
 			}
 		}

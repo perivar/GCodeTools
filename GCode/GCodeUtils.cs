@@ -10,7 +10,7 @@ using SVG;
 namespace GCode
 {
 	/// <summary>
-	/// Description of GCodeUtils.
+	/// A set of gcode util methods
 	/// </summary>
 	public static class GCodeUtils
 	{
@@ -254,7 +254,7 @@ namespace GCode
 		/// <param name="bestPath">best sequence of the point3d elements</param>
 		/// <param name="points">Point elements</param>
 		/// <param name="filePath">filepath to save</param>
-		/// <returns>succesful or </returns>
+		/// <returns>succesful or not</returns>
 		public static bool SaveGCode(List<int> bestPath, List<IPoint> points, string filePath) {
 			
 			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
@@ -296,6 +296,12 @@ namespace GCode
 			}
 		}
 		
+		/// <summary>
+		/// Get the gcode instructions assuming the points are Point3DBlock elements
+		/// </summary>
+		/// <param name="bestPath">best sequence of the point3d elements</param>
+		/// <param name="points">Point elements</param>
+		/// <returns>the gcode or null</returns>
 		public static String GetGCode(List<int> bestPath, List<IPoint> points) {
 			
 			if (points != null && points.Count > 0 && points[0] is Point3DBlock) {
@@ -326,6 +332,11 @@ namespace GCode
 			return null;
 		}
 		
+		/// <summary>
+		/// Get the gcode instructions using a list of GCodeInstruction elements
+		/// </summary>
+		/// <param name="instructions">list of instruction elements</param>
+		/// <returns>the gcode or null</returns>
 		public static String GetGCode(List<GCodeInstruction> instructions) {
 			
 			using (var tw = new StringWriter()) {
@@ -336,35 +347,15 @@ namespace GCode
 			}
 		}
 		
-		public static void DumpGCode(List<GCodeInstruction> instructions, string filePath) {
-			
-			// create or overwrite a file
-			using (FileStream f = File.Create(filePath)) {
-				using (var s = new StreamWriter(f)) {
-					foreach (var gCodeLine in instructions) {
-						s.WriteLine(gCodeLine);
-					}
-				}
-			}
-		}
-		
 		/// <summary>
-		/// Get the points for all contours in all shapes.
+		/// Get the gcode instructions using a list of contour elements
 		/// </summary>
-		/// <returns></returns>
-		public static IEnumerable<PointF> GetPoints(IEnumerable<IEnumerable<PointF>>contours)
-		{
-			// Enumerate each shape in the document
-			foreach (var contour in contours)
-			{
-				foreach (PointF point in contour)
-				{
-					yield return point;
-				}
-			}
-		}
-		
-		public static string GenerateGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+		/// <param name="contours">list of contour elements</param>
+		/// <param name="z">z height lower / raise</param>
+		/// <param name="feed">feedrate to use</param>
+		/// <param name="safeHeight">z height to raise after each contour action</param>
+		/// <returns>the gcode instructions using a list of contour elements</returns>
+		public static string GetGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
 			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
@@ -405,7 +396,15 @@ namespace GCode
 			return sb.ToString();
 		}
 
-		public static string GenerateGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+		/// <summary>
+		/// Get the gcode instructions for center drilling using a list of contour elements
+		/// </summary>
+		/// <param name="contours">list of contour elements</param>
+		/// <param name="z">z height lower / raise</param>
+		/// <param name="feed">feedrate to use</param>
+		/// <param name="safeHeight">z height to raise after each contour action</param>
+		/// <returns>the gcode instructions for center drilling using a list of contour elements</returns>
+		public static string GetGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
 			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
@@ -439,8 +438,49 @@ namespace GCode
 			}
 			return sb.ToString();
 		}
+
+		/// <summary>
+		/// Dump the raw gcode to file
+		/// </summary>
+		/// <param name="instructions">list of instruction elements</param>
+		/// <param name="filePath">file path</param>
+		public static void DumpGCode(List<GCodeInstruction> instructions, string filePath) {
+			
+			// create or overwrite a file
+			using (FileStream f = File.Create(filePath)) {
+				using (var s = new StreamWriter(f)) {
+					foreach (var gCodeLine in instructions) {
+						s.WriteLine(gCodeLine);
+					}
+				}
+			}
+		}
 		
-		public static List<GCodeInstruction> ShiftGCode(List<GCodeInstruction> instructions, float deltaX, float deltaY, float deltaZ) {
+		/// <summary>
+		/// Get the points for all contours in all shapes.
+		/// </summary>
+		/// <returns>a list of the points</returns>
+		public static IEnumerable<PointF> GetPoints(IEnumerable<IEnumerable<PointF>>contours)
+		{
+			// Enumerate each shape in the document
+			foreach (var contour in contours)
+			{
+				foreach (PointF point in contour)
+				{
+					yield return point;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Shift the gcode instructions in x, y or z direction
+		/// </summary>
+		/// <param name="instructions">list of instruction elements</param>
+		/// <param name="deltaX">delta x</param>
+		/// <param name="deltaY">delta y</param>
+		/// <param name="deltaZ">delta z</param>
+		/// <returns>list of shifted gcode</returns>
+		public static List<GCodeInstruction> GetShiftedGCode(List<GCodeInstruction> instructions, float deltaX, float deltaY, float deltaZ) {
 			
 			var shifted = new List<GCodeInstruction>();
 
@@ -463,6 +503,9 @@ namespace GCode
 		}
 	}
 	
+	/// <summary>
+	/// A class used to organise a gcode file into sections
+	/// </summary>
 	public class GCodeSplitObject {
 		
 		public List<Point3DBlock> AllG0Sections { get; set; }
