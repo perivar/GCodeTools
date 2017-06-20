@@ -37,7 +37,7 @@ namespace GCode
 			Pen = pen;
 		}
 
-		public void DrawSegment(Graphics g, int height, bool highlight = false, float Multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
+		public void DrawSegment(Graphics g, int height, bool highlight = false, float multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
 		{
 			if (Pen == PenColorList.RapidMove && !renderG0) {
 				return;
@@ -47,20 +47,20 @@ namespace GCode
 				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHilight);
 				float[] dashValues = { 5, 2 };
 				rapidPen.DashPattern = dashValues;
-				g.DrawLine(rapidPen, X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				return;
 			}
 
 			if (highlight) {
-				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 			} else {
 				if (Pen == PenColorList.RapidMove) {
 					var rapidPen = ColorHelper.GetPen(Pen);
 					float[] dashValues = { 5, 2 };
 					rapidPen.DashPattern = dashValues;
-					g.DrawLine(rapidPen, X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+					g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				} else {
-					g.DrawLine(ColorHelper.GetPen(Pen), X1 * Multiplier + left, height - (Y1 * Multiplier) - bottom, X2 * Multiplier + left, height - (Y2 * Multiplier) - bottom);
+					g.DrawLine(ColorHelper.GetPen(Pen), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				}
 			}
 		}
@@ -98,6 +98,8 @@ namespace GCode
 		/// </summary>
 		public void CalculateMinAndMax()
 		{
+			// why was this needed in the first place?
+			/*
 			var first = gcodeInstructions.First();
 			if (first != null)
 			{
@@ -109,6 +111,7 @@ namespace GCode
 				minY = first.StartPoint.Y;
 				minZ = first.StartPoint.Z;
 			}
+			 */
 
 			foreach (var currentInstruction in gcodeInstructions)
 			{
@@ -125,8 +128,7 @@ namespace GCode
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
-			//sb.AppendFormat("{0}  --  {1} lines -- {2:0.####} , {3:0.####}", Name, PlotPoints != null ? PlotPoints.Count : 0, maxX, maxY);
-			sb.AppendFormat("{0}  --  {1} commands -- {2:0.####} , {3:0.####}", Name, GCodeInstructions.Count, maxX, maxY);
+			sb.AppendFormat("{0}  --  {1} cmds -- Max X : {2:0.####}, Max Y : {3:0.####} ({4})", Name, GCodeInstructions.Count, maxX, maxY, PlotPoints != null ? PlotPoints.Count : 0);
 
 			return sb.ToString();
 		}

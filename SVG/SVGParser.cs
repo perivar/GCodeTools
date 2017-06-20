@@ -885,10 +885,6 @@ namespace SVG
 	/// </summary>
 	public class SVGImage : SVGShapeBase, ISVGElement
 	{
-		float x = 0;
-		float y = 0;
-		float width, height;
-		
 		public Image image;
 		public RectangleF DestBounds { get; set; }
 

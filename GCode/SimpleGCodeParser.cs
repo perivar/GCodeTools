@@ -52,9 +52,12 @@ namespace GCode
 
 	public class GCodeInstruction
 	{
-		// https://stackoverflow.com/questions/41074050/regex-for-movement-g-code-python
-		// (?i)^[gG0-3]{1,3}(?:\s+x-?(?P<x>[0-9.]{1,15})|\s+y-?(?P<y>[0-9.]{1,15})|\s+z-?(?P<z>[0-9.]{1,15}))*$
-		// [ngxyzf][+-]?[0-9]*\\.?[0-9]*
+		// split line into groups.
+		// Supports one letter, optional space, optional minus, at least one number, optional fraction and optional more digits
+		// E.g.
+		// G2 X 30.0000 Y 30.0000 I 20.0000 J 40.0000
+		// or
+		// G02 X71.871087 Y23.266043 Z-0.050000 I2198.689889 J-561.348455
 		private static Regex GCodeSplitter = new Regex(@"([A-Z])\s*(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		// pattern matchers.
@@ -268,12 +271,6 @@ namespace GCode
 		
 		public GCodeInstruction(string line)
 		{
-			// A good parser can be found in bCNC, file CNC.py
-			// def load(self, filename=None) - Load a file into editor
-			// def _addLine(self, line) - add new line to list create block if necessary
-			// def parseLine(line) - return line in broken a list of commands, None if empty or comment
-			// def motionStart(self, cmds):
-			
 			// parse comments and return the remaining command if any
 			string command = ParseComments(line).Trim();
 			

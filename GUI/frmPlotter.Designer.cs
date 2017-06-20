@@ -94,7 +94,7 @@ namespace GCodePlotter
 			this.cbRenderG0.Location = new System.Drawing.Point(10, 12);
 			this.cbRenderG0.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbRenderG0.Name = "cbRenderG0";
-			this.cbRenderG0.Size = new System.Drawing.Size(122, 24);
+			this.cbRenderG0.Size = new System.Drawing.Size(128, 27);
 			this.cbRenderG0.TabIndex = 5;
 			this.cbRenderG0.Text = "Render G0s";
 			this.cbRenderG0.UseVisualStyleBackColor = true;
@@ -172,7 +172,7 @@ namespace GCodePlotter
 			this.cbSoloSelect.Location = new System.Drawing.Point(308, 12);
 			this.cbSoloSelect.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbSoloSelect.Name = "cbSoloSelect";
-			this.cbSoloSelect.Size = new System.Drawing.Size(116, 24);
+			this.cbSoloSelect.Size = new System.Drawing.Size(122, 27);
 			this.cbSoloSelect.TabIndex = 6;
 			this.cbSoloSelect.Text = "Solo Select";
 			this.cbSoloSelect.UseVisualStyleBackColor = true;
@@ -404,7 +404,7 @@ namespace GCodePlotter
 			this.txtFile.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
-			this.txtFile.Size = new System.Drawing.Size(327, 26);
+			this.txtFile.Size = new System.Drawing.Size(395, 26);
 			this.txtFile.TabIndex = 10;
 			// 
 			// panelZoomFilename
@@ -423,10 +423,10 @@ namespace GCodePlotter
 			this.txtCoordinates.Anchor = System.Windows.Forms.AnchorStyles.Right;
 			this.txtCoordinates.BackColor = System.Drawing.SystemColors.Control;
 			this.txtCoordinates.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtCoordinates.Location = new System.Drawing.Point(359, 17);
+			this.txtCoordinates.Location = new System.Drawing.Point(427, 17);
 			this.txtCoordinates.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtCoordinates.Name = "txtCoordinates";
-			this.txtCoordinates.Size = new System.Drawing.Size(249, 26);
+			this.txtCoordinates.Size = new System.Drawing.Size(181, 26);
 			this.txtCoordinates.TabIndex = 11;
 			// 
 			// panelViewer

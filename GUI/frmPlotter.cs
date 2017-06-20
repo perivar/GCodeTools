@@ -265,7 +265,7 @@ namespace GCodePlotter
 			float x = (e.X - LEFT_MARGIN) / scale * 10;
 			float y = (pictureBox1.Height - e.Y - BOTTOM_MARGIN) / scale * 10;
 			
-			txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##} {2} {3}", x, y, multiplier, panelViewer.Width);
+			txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##}", x, y);
 		}
 
 		void OnMouseWheel(object sender, MouseEventArgs mea) {
