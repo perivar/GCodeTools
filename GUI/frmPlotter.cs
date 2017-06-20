@@ -175,7 +175,12 @@ namespace GCodePlotter
 
 		void btnSaveLayersClick(object sender, EventArgs e)
 		{
-			SaveGCodes(true);
+			using (var options = new frmOptions()) {
+				var result = options.ShowDialog();
+				if (result == DialogResult.OK) {
+					SaveGCodes(true);
+				}
+			}
 		}
 		
 		void btnSaveSplitClick(object sender, EventArgs e)

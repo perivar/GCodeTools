@@ -52,7 +52,10 @@ namespace GCode
 
 	public class GCodeInstruction
 	{
-		private static Regex GCodeSplitter = new Regex(@"([A-Z])(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		// https://stackoverflow.com/questions/41074050/regex-for-movement-g-code-python
+		// (?i)^[gG0-3]{1,3}(?:\s+x-?(?P<x>[0-9.]{1,15})|\s+y-?(?P<y>[0-9.]{1,15})|\s+z-?(?P<z>[0-9.]{1,15}))*$
+		// [ngxyzf][+-]?[0-9]*\\.?[0-9]*
+		private static Regex GCodeSplitter = new Regex(@"([A-Z])\s*(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		// pattern matchers.
 		private static Regex parenPattern  = new Regex(@"\((.*)\)", RegexOptions.Compiled);
