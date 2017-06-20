@@ -352,10 +352,11 @@ namespace GCode
 		/// </summary>
 		/// <param name="contours">list of contour elements</param>
 		/// <param name="z">z height lower / raise</param>
-		/// <param name="feed">feedrate to use</param>
+		/// <param name="rapidFeed">feedrate to use for rapid moves</param>
+		/// <param name="plungeFeed">feedrate to use for plunge moves (Z)</param>
 		/// <param name="safeHeight">z height to raise after each contour action</param>
 		/// <returns>the gcode instructions using a list of contour elements</returns>
-		public static string GetGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+		public static string GetGCode(IEnumerable<IEnumerable<PointF>>contours, float z, float rapidFeed, float plungeFeed, float safeHeight) {
 			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
@@ -385,9 +386,9 @@ namespace GCode
 				foreach (var point in contour) {
 					if (first) {
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X - minX, maxY - point.Y);
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, plungeFeed);
 					} else {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", point.X - minX, maxY - point.Y, feed);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", point.X - minX, maxY - point.Y, rapidFeed);
 					}
 					first = false;
 				}
@@ -401,10 +402,11 @@ namespace GCode
 		/// </summary>
 		/// <param name="contours">list of contour elements</param>
 		/// <param name="z">z height lower / raise</param>
-		/// <param name="feed">feedrate to use</param>
+		/// <param name="rapidFeed">feedrate to use for rapid moves</param>
+		/// <param name="plungeFeed">feedrate to use for plunge moves (Z)</param>
 		/// <param name="safeHeight">z height to raise after each contour action</param>
 		/// <returns>the gcode instructions for center drilling using a list of contour elements</returns>
-		public static string GetGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float feed, float safeHeight) {
+		public static string GetGCodeCenter(IEnumerable<IEnumerable<PointF>>contours, float z, float rapidFeed, float plungeFeed, float safeHeight) {
 			
 			var sb = new StringBuilder();
 			int contourCounter = 0;
@@ -433,7 +435,7 @@ namespace GCode
 				var center = SVGUtils.Center(contour);
 
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X - minX, maxY - center.Y);
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, feed);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, plungeFeed);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
 			}
 			return sb.ToString();

@@ -154,8 +154,25 @@ namespace GCodePlotter
 
 			if (txtFile.Tag != null) {
 				var fileInfo = new FileInfo(txtFile.Tag.ToString());
-				string data = File.ReadAllText(fileInfo.FullName);
-				ParseText(data);
+				if (fileInfo.Extension.ToLower().Equals(".svg")) {
+					var svg = SVGDocument.LoadFromFile(fileInfo.FullName);
+					var contours = svg.GetScaledContours();
+					//var contours = svg.GetContours();
+					float zSafeHeight = GetZSafeHeight();
+					float zDepth = GetZDepth();
+					float feedRateRapid = GetFeedRateRapidMoves();
+					float feedRatePlunge = GetFeedRatePlungeMoves();
+					string data = "";
+					if (radSVGCenter.Checked) {
+						data = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+					} else {
+						data = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+					}
+					ParseText(data);
+				} else {
+					string data = File.ReadAllText(fileInfo.FullName);
+					ParseText(data);
+				}
 			}
 		}
 		
@@ -470,8 +487,8 @@ namespace GCodePlotter
 				return;
 			}
 			
-			if ("".Equals(txtSplit.Text)) {
-				MessageBox.Show("No split value entered!");
+			if ("".Equals(txtSplit.Text) || "0.0".Equals(txtSplit.Text)) {
+				MessageBox.Show("Please enter a positive split value!");
 				return;
 			}
 
@@ -625,6 +642,34 @@ namespace GCodePlotter
 
 			pictureBox1.Refresh();
 		}
+
+		float GetFeedRateRapidMoves() {
+			var data = QuickSettings.Get["FeedRateRapidMoves"];
+			if (string.IsNullOrEmpty(data))
+			{
+				data = "1016";
+				QuickSettings.Get["FeedRateRapidMoves"] = data;
+			}
+			float f = 0.0f;
+			if (float.TryParse(data, style, culture, out f)) {
+				// succesfull
+			}
+			return f;
+		}
+		
+		float GetFeedRatePlungeMoves() {
+			var data = QuickSettings.Get["FeedRatePlungeMoves"];
+			if (string.IsNullOrEmpty(data))
+			{
+				data = "228.6";
+				QuickSettings.Get["FeedRatePlungeMoves"] = data;
+			}
+			float f = 0.0f;
+			if (float.TryParse(data, style, culture, out f)) {
+				// succesfull
+			}
+			return f;
+		}
 		
 		float GetZSafeHeight() {
 			style = NumberStyles.AllowDecimalPoint;
@@ -669,13 +714,13 @@ namespace GCodePlotter
 			return GetShiftValue(txtShiftZ);
 		}
 		
-		void SaveGCodes(bool doMultiLayer)
+		void SaveGCodes(bool doPeckDrilling)
 		{
 			var result = sfdSaveDialog.ShowDialog();
 			if (result == DialogResult.OK)
 			{
 				var file = new FileInfo(sfdSaveDialog.FileName);
-				if (!doMultiLayer)
+				if (!doPeckDrilling)
 				{
 					QuickSettings.Get["LastOpenedFile"] = file.FullName;
 				}
@@ -691,7 +736,7 @@ namespace GCodePlotter
 					myBlocks.ForEach(x =>
 					                 {
 					                 	tw.WriteLine();
-					                 	tw.Write(x.BuildGCodeOutput(doMultiLayer));
+					                 	tw.Write(x.BuildGCodeOutput(doPeckDrilling));
 					                 });
 					tw.Flush();
 					WriteGCodeFooter(tw, zSafeHeight);
@@ -829,11 +874,13 @@ namespace GCodePlotter
 				//var contours = svg.GetContours();
 				float zSafeHeight = GetZSafeHeight();
 				float zDepth = GetZDepth();
+				float feedRateRapid = GetFeedRateRapidMoves();
+				float feedRatePlunge = GetFeedRatePlungeMoves();
 				string gCode = "";
 				if (radSVGCenter.Checked) {
-					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
 				} else {
-					gCode = GCodeUtils.GetGCode(contours, zDepth, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
 				}
 				ParseText(gCode);
 			}

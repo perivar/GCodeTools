@@ -133,8 +133,8 @@ namespace GCode
 			return sb.ToString();
 		}
 
-		public string BuildGCodeOutput(bool doMultiLayers) {
-			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doMultiLayers);
+		public string BuildGCodeOutput(bool doPeckDrilling) {
+			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doPeckDrilling);
 		}
 		
 		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doPeckDrilling)
