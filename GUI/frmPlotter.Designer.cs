@@ -41,6 +41,15 @@ namespace GCodePlotter
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.panelSplitCmds = new System.Windows.Forms.Panel();
+			this.btnSplit = new System.Windows.Forms.Button();
+			this.radLeft = new System.Windows.Forms.RadioButton();
+			this.radRight = new System.Windows.Forms.RadioButton();
+			this.lblSplit = new System.Windows.Forms.Label();
+			this.txtSplit = new System.Windows.Forms.TextBox();
+			this.btnSaveSplit = new System.Windows.Forms.Button();
+			this.label1 = new System.Windows.Forms.Label();
+			this.txtZDepth = new System.Windows.Forms.TextBox();
 			this.radSVGCenter = new System.Windows.Forms.RadioButton();
 			this.radSVGAll = new System.Windows.Forms.RadioButton();
 			this.txtShiftZ = new System.Windows.Forms.TextBox();
@@ -49,14 +58,8 @@ namespace GCodePlotter
 			this.btnLoadSVG = new System.Windows.Forms.Button();
 			this.btnShift = new System.Windows.Forms.Button();
 			this.btnOptimize = new System.Windows.Forms.Button();
-			this.btnSaveSplit = new System.Windows.Forms.Button();
 			this.lblZClearance = new System.Windows.Forms.Label();
 			this.txtZClearance = new System.Windows.Forms.TextBox();
-			this.radRight = new System.Windows.Forms.RadioButton();
-			this.radLeft = new System.Windows.Forms.RadioButton();
-			this.txtSplit = new System.Windows.Forms.TextBox();
-			this.lblSplit = new System.Windows.Forms.Label();
-			this.btnSplit = new System.Windows.Forms.Button();
 			this.txtDimension = new System.Windows.Forms.TextBox();
 			this.cmdSaveLayers = new System.Windows.Forms.Button();
 			this.btnSave = new System.Windows.Forms.Button();
@@ -77,6 +80,7 @@ namespace GCodePlotter
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.panelZoomFilename.SuspendLayout();
 			this.panelCommands.SuspendLayout();
+			this.panelSplitCmds.SuspendLayout();
 			this.panelCode.SuspendLayout();
 			this.panelCheckboxes.SuspendLayout();
 			this.SuspendLayout();
@@ -168,6 +172,9 @@ namespace GCodePlotter
 			// 
 			// panelCommands
 			// 
+			this.panelCommands.Controls.Add(this.panelSplitCmds);
+			this.panelCommands.Controls.Add(this.label1);
+			this.panelCommands.Controls.Add(this.txtZDepth);
 			this.panelCommands.Controls.Add(this.radSVGCenter);
 			this.panelCommands.Controls.Add(this.radSVGAll);
 			this.panelCommands.Controls.Add(this.txtShiftZ);
@@ -176,14 +183,8 @@ namespace GCodePlotter
 			this.panelCommands.Controls.Add(this.btnLoadSVG);
 			this.panelCommands.Controls.Add(this.btnShift);
 			this.panelCommands.Controls.Add(this.btnOptimize);
-			this.panelCommands.Controls.Add(this.btnSaveSplit);
 			this.panelCommands.Controls.Add(this.lblZClearance);
 			this.panelCommands.Controls.Add(this.txtZClearance);
-			this.panelCommands.Controls.Add(this.radRight);
-			this.panelCommands.Controls.Add(this.radLeft);
-			this.panelCommands.Controls.Add(this.txtSplit);
-			this.panelCommands.Controls.Add(this.lblSplit);
-			this.panelCommands.Controls.Add(this.btnSplit);
 			this.panelCommands.Controls.Add(this.txtDimension);
 			this.panelCommands.Controls.Add(this.cmdSaveLayers);
 			this.panelCommands.Controls.Add(this.btnSave);
@@ -195,12 +196,106 @@ namespace GCodePlotter
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
 			// 
+			// panelSplitCmds
+			// 
+			this.panelSplitCmds.Controls.Add(this.btnSplit);
+			this.panelSplitCmds.Controls.Add(this.radLeft);
+			this.panelSplitCmds.Controls.Add(this.radRight);
+			this.panelSplitCmds.Controls.Add(this.lblSplit);
+			this.panelSplitCmds.Controls.Add(this.txtSplit);
+			this.panelSplitCmds.Controls.Add(this.btnSaveSplit);
+			this.panelSplitCmds.Location = new System.Drawing.Point(7, 325);
+			this.panelSplitCmds.Name = "panelSplitCmds";
+			this.panelSplitCmds.Size = new System.Drawing.Size(178, 154);
+			this.panelSplitCmds.TabIndex = 30;
+			// 
+			// btnSplit
+			// 
+			this.btnSplit.Location = new System.Drawing.Point(9, 9);
+			this.btnSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.btnSplit.Name = "btnSplit";
+			this.btnSplit.Size = new System.Drawing.Size(160, 34);
+			this.btnSplit.TabIndex = 12;
+			this.btnSplit.Text = "Split";
+			this.btnSplit.UseVisualStyleBackColor = true;
+			this.btnSplit.Click += new System.EventHandler(this.btnSplitClick);
+			// 
+			// radLeft
+			// 
+			this.radLeft.Checked = true;
+			this.radLeft.Location = new System.Drawing.Point(12, 45);
+			this.radLeft.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.radLeft.Name = "radLeft";
+			this.radLeft.Size = new System.Drawing.Size(68, 37);
+			this.radLeft.TabIndex = 15;
+			this.radLeft.TabStop = true;
+			this.radLeft.Text = "Left";
+			this.radLeft.UseVisualStyleBackColor = true;
+			// 
+			// radRight
+			// 
+			this.radRight.Location = new System.Drawing.Point(82, 45);
+			this.radRight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.radRight.Name = "radRight";
+			this.radRight.Size = new System.Drawing.Size(87, 37);
+			this.radRight.TabIndex = 16;
+			this.radRight.TabStop = true;
+			this.radRight.Text = "Right";
+			this.radRight.UseVisualStyleBackColor = true;
+			// 
+			// lblSplit
+			// 
+			this.lblSplit.Location = new System.Drawing.Point(11, 85);
+			this.lblSplit.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+			this.lblSplit.Name = "lblSplit";
+			this.lblSplit.Size = new System.Drawing.Size(52, 26);
+			this.lblSplit.TabIndex = 13;
+			this.lblSplit.Text = "Split:";
+			// 
+			// txtSplit
+			// 
+			this.txtSplit.Location = new System.Drawing.Point(80, 82);
+			this.txtSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.txtSplit.Name = "txtSplit";
+			this.txtSplit.Size = new System.Drawing.Size(87, 26);
+			this.txtSplit.TabIndex = 14;
+			this.txtSplit.Text = "0.0";
+			// 
+			// btnSaveSplit
+			// 
+			this.btnSaveSplit.Location = new System.Drawing.Point(9, 116);
+			this.btnSaveSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.btnSaveSplit.Name = "btnSaveSplit";
+			this.btnSaveSplit.Size = new System.Drawing.Size(160, 34);
+			this.btnSaveSplit.TabIndex = 19;
+			this.btnSaveSplit.Text = "Save Both";
+			this.btnSaveSplit.UseVisualStyleBackColor = true;
+			this.btnSaveSplit.Click += new System.EventHandler(this.btnSaveSplitClick);
+			// 
+			// label1
+			// 
+			this.label1.Location = new System.Drawing.Point(11, 514);
+			this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(81, 29);
+			this.label1.TabIndex = 29;
+			this.label1.Text = "Z-Depth:";
+			// 
+			// txtZDepth
+			// 
+			this.txtZDepth.Location = new System.Drawing.Point(130, 511);
+			this.txtZDepth.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.txtZDepth.Name = "txtZDepth";
+			this.txtZDepth.Size = new System.Drawing.Size(45, 26);
+			this.txtZDepth.TabIndex = 28;
+			this.txtZDepth.Text = "-0.1";
+			// 
 			// radSVGCenter
 			// 
-			this.radSVGCenter.Location = new System.Drawing.Point(82, 302);
+			this.radSVGCenter.Location = new System.Drawing.Point(81, 295);
 			this.radSVGCenter.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radSVGCenter.Name = "radSVGCenter";
-			this.radSVGCenter.Size = new System.Drawing.Size(100, 37);
+			this.radSVGCenter.Size = new System.Drawing.Size(93, 37);
 			this.radSVGCenter.TabIndex = 27;
 			this.radSVGCenter.TabStop = true;
 			this.radSVGCenter.Text = "Center";
@@ -209,7 +304,7 @@ namespace GCodePlotter
 			// radSVGAll
 			// 
 			this.radSVGAll.Checked = true;
-			this.radSVGAll.Location = new System.Drawing.Point(16, 302);
+			this.radSVGAll.Location = new System.Drawing.Point(16, 295);
 			this.radSVGAll.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radSVGAll.Name = "radSVGAll";
 			this.radSVGAll.Size = new System.Drawing.Size(68, 37);
@@ -220,7 +315,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftZ
 			// 
-			this.txtShiftZ.Location = new System.Drawing.Point(125, 234);
+			this.txtShiftZ.Location = new System.Drawing.Point(130, 222);
 			this.txtShiftZ.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftZ.Name = "txtShiftZ";
 			this.txtShiftZ.Size = new System.Drawing.Size(44, 26);
@@ -229,7 +324,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftY
 			// 
-			this.txtShiftY.Location = new System.Drawing.Point(72, 234);
+			this.txtShiftY.Location = new System.Drawing.Point(72, 222);
 			this.txtShiftY.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftY.Name = "txtShiftY";
 			this.txtShiftY.Size = new System.Drawing.Size(44, 26);
@@ -238,7 +333,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftX
 			// 
-			this.txtShiftX.Location = new System.Drawing.Point(16, 234);
+			this.txtShiftX.Location = new System.Drawing.Point(16, 222);
 			this.txtShiftX.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftX.Name = "txtShiftX";
 			this.txtShiftX.Size = new System.Drawing.Size(44, 26);
@@ -247,10 +342,10 @@ namespace GCodePlotter
 			// 
 			// btnLoadSVG
 			// 
-			this.btnLoadSVG.Location = new System.Drawing.Point(15, 270);
+			this.btnLoadSVG.Location = new System.Drawing.Point(16, 257);
 			this.btnLoadSVG.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnLoadSVG.Name = "btnLoadSVG";
-			this.btnLoadSVG.Size = new System.Drawing.Size(153, 34);
+			this.btnLoadSVG.Size = new System.Drawing.Size(158, 34);
 			this.btnLoadSVG.TabIndex = 22;
 			this.btnLoadSVG.Text = "SVG Load";
 			this.btnLoadSVG.UseVisualStyleBackColor = true;
@@ -258,10 +353,10 @@ namespace GCodePlotter
 			// 
 			// btnShift
 			// 
-			this.btnShift.Location = new System.Drawing.Point(16, 190);
+			this.btnShift.Location = new System.Drawing.Point(15, 178);
 			this.btnShift.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnShift.Name = "btnShift";
-			this.btnShift.Size = new System.Drawing.Size(153, 34);
+			this.btnShift.Size = new System.Drawing.Size(159, 34);
 			this.btnShift.TabIndex = 21;
 			this.btnShift.Text = "Move";
 			this.btnShift.UseVisualStyleBackColor = true;
@@ -269,95 +364,32 @@ namespace GCodePlotter
 			// 
 			// btnOptimize
 			// 
-			this.btnOptimize.Location = new System.Drawing.Point(15, 146);
+			this.btnOptimize.Location = new System.Drawing.Point(15, 136);
 			this.btnOptimize.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnOptimize.Name = "btnOptimize";
-			this.btnOptimize.Size = new System.Drawing.Size(153, 34);
+			this.btnOptimize.Size = new System.Drawing.Size(159, 34);
 			this.btnOptimize.TabIndex = 20;
 			this.btnOptimize.Text = "Optimize";
 			this.btnOptimize.UseVisualStyleBackColor = true;
 			this.btnOptimize.Click += new System.EventHandler(this.BtnOptimizeClick);
 			// 
-			// btnSaveSplit
-			// 
-			this.btnSaveSplit.Location = new System.Drawing.Point(16, 451);
-			this.btnSaveSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.btnSaveSplit.Name = "btnSaveSplit";
-			this.btnSaveSplit.Size = new System.Drawing.Size(153, 34);
-			this.btnSaveSplit.TabIndex = 19;
-			this.btnSaveSplit.Text = "Save Both";
-			this.btnSaveSplit.UseVisualStyleBackColor = true;
-			this.btnSaveSplit.Click += new System.EventHandler(this.btnSaveSplitClick);
-			// 
 			// lblZClearance
 			// 
-			this.lblZClearance.Location = new System.Drawing.Point(15, 496);
+			this.lblZClearance.Location = new System.Drawing.Point(12, 486);
 			this.lblZClearance.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
 			this.lblZClearance.Name = "lblZClearance";
-			this.lblZClearance.Size = new System.Drawing.Size(120, 29);
+			this.lblZClearance.Size = new System.Drawing.Size(114, 29);
 			this.lblZClearance.TabIndex = 18;
 			this.lblZClearance.Text = "Z-Safe Height:";
 			// 
 			// txtZClearance
 			// 
-			this.txtZClearance.Location = new System.Drawing.Point(137, 493);
+			this.txtZClearance.Location = new System.Drawing.Point(130, 482);
 			this.txtZClearance.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtZClearance.Name = "txtZClearance";
-			this.txtZClearance.Size = new System.Drawing.Size(31, 26);
+			this.txtZClearance.Size = new System.Drawing.Size(45, 26);
 			this.txtZClearance.TabIndex = 17;
 			this.txtZClearance.Text = "2.0";
-			// 
-			// radRight
-			// 
-			this.radRight.Location = new System.Drawing.Point(82, 381);
-			this.radRight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.radRight.Name = "radRight";
-			this.radRight.Size = new System.Drawing.Size(87, 37);
-			this.radRight.TabIndex = 16;
-			this.radRight.TabStop = true;
-			this.radRight.Text = "Right";
-			this.radRight.UseVisualStyleBackColor = true;
-			// 
-			// radLeft
-			// 
-			this.radLeft.Checked = true;
-			this.radLeft.Location = new System.Drawing.Point(15, 381);
-			this.radLeft.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.radLeft.Name = "radLeft";
-			this.radLeft.Size = new System.Drawing.Size(68, 37);
-			this.radLeft.TabIndex = 15;
-			this.radLeft.TabStop = true;
-			this.radLeft.Text = "Left";
-			this.radLeft.UseVisualStyleBackColor = true;
-			// 
-			// txtSplit
-			// 
-			this.txtSplit.Location = new System.Drawing.Point(74, 418);
-			this.txtSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.txtSplit.Name = "txtSplit";
-			this.txtSplit.Size = new System.Drawing.Size(94, 26);
-			this.txtSplit.TabIndex = 14;
-			this.txtSplit.Text = "0.0";
-			// 
-			// lblSplit
-			// 
-			this.lblSplit.Location = new System.Drawing.Point(14, 421);
-			this.lblSplit.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			this.lblSplit.Name = "lblSplit";
-			this.lblSplit.Size = new System.Drawing.Size(52, 26);
-			this.lblSplit.TabIndex = 13;
-			this.lblSplit.Text = "Split:";
-			// 
-			// btnSplit
-			// 
-			this.btnSplit.Location = new System.Drawing.Point(15, 343);
-			this.btnSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.btnSplit.Name = "btnSplit";
-			this.btnSplit.Size = new System.Drawing.Size(153, 34);
-			this.btnSplit.TabIndex = 12;
-			this.btnSplit.Text = "Split";
-			this.btnSplit.UseVisualStyleBackColor = true;
-			this.btnSplit.Click += new System.EventHandler(this.btnSplitClick);
 			// 
 			// txtDimension
 			// 
@@ -365,7 +397,7 @@ namespace GCodePlotter
 			| System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtDimension.Location = new System.Drawing.Point(4, 648);
+			this.txtDimension.Location = new System.Drawing.Point(4, 651);
 			this.txtDimension.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtDimension.Multiline = true;
 			this.txtDimension.Name = "txtDimension";
@@ -375,21 +407,21 @@ namespace GCodePlotter
 			// 
 			// cmdSaveLayers
 			// 
-			this.cmdSaveLayers.Location = new System.Drawing.Point(15, 102);
+			this.cmdSaveLayers.Location = new System.Drawing.Point(15, 92);
 			this.cmdSaveLayers.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cmdSaveLayers.Name = "cmdSaveLayers";
-			this.cmdSaveLayers.Size = new System.Drawing.Size(153, 34);
+			this.cmdSaveLayers.Size = new System.Drawing.Size(159, 34);
 			this.cmdSaveLayers.TabIndex = 9;
-			this.cmdSaveLayers.Text = "Save (Peck)";
+			this.cmdSaveLayers.Text = "Save (Peck Drill)";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
 			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSaveLayersClick);
 			// 
 			// btnSave
 			// 
-			this.btnSave.Location = new System.Drawing.Point(15, 58);
+			this.btnSave.Location = new System.Drawing.Point(15, 49);
 			this.btnSave.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSave.Name = "btnSave";
-			this.btnSave.Size = new System.Drawing.Size(153, 34);
+			this.btnSave.Size = new System.Drawing.Size(159, 34);
 			this.btnSave.TabIndex = 9;
 			this.btnSave.Text = "Save";
 			this.btnSave.UseVisualStyleBackColor = true;
@@ -397,10 +429,10 @@ namespace GCodePlotter
 			// 
 			// btnLoad
 			// 
-			this.btnLoad.Location = new System.Drawing.Point(15, 14);
+			this.btnLoad.Location = new System.Drawing.Point(15, 5);
 			this.btnLoad.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnLoad.Name = "btnLoad";
-			this.btnLoad.Size = new System.Drawing.Size(153, 34);
+			this.btnLoad.Size = new System.Drawing.Size(159, 34);
 			this.btnLoad.TabIndex = 9;
 			this.btnLoad.Text = "Load";
 			this.btnLoad.UseVisualStyleBackColor = true;
@@ -446,7 +478,7 @@ namespace GCodePlotter
 			this.cbSoloSelect.Location = new System.Drawing.Point(203, 12);
 			this.cbSoloSelect.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbSoloSelect.Name = "cbSoloSelect";
-			this.cbSoloSelect.Size = new System.Drawing.Size(122, 27);
+			this.cbSoloSelect.Size = new System.Drawing.Size(116, 24);
 			this.cbSoloSelect.TabIndex = 6;
 			this.cbSoloSelect.Text = "Solo Select";
 			this.cbSoloSelect.UseVisualStyleBackColor = true;
@@ -460,7 +492,7 @@ namespace GCodePlotter
 			this.cbRenderG0.Location = new System.Drawing.Point(10, 12);
 			this.cbRenderG0.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbRenderG0.Name = "cbRenderG0";
-			this.cbRenderG0.Size = new System.Drawing.Size(128, 27);
+			this.cbRenderG0.Size = new System.Drawing.Size(122, 24);
 			this.cbRenderG0.TabIndex = 5;
 			this.cbRenderG0.Text = "Render G0s";
 			this.cbRenderG0.UseVisualStyleBackColor = true;
@@ -500,6 +532,8 @@ namespace GCodePlotter
 			this.panelZoomFilename.PerformLayout();
 			this.panelCommands.ResumeLayout(false);
 			this.panelCommands.PerformLayout();
+			this.panelSplitCmds.ResumeLayout(false);
+			this.panelSplitCmds.PerformLayout();
 			this.panelCode.ResumeLayout(false);
 			this.panelCheckboxes.ResumeLayout(false);
 			this.panelCheckboxes.PerformLayout();
@@ -543,6 +577,9 @@ namespace GCodePlotter
 		private System.Windows.Forms.TextBox txtShiftX;
 		private System.Windows.Forms.RadioButton radSVGCenter;
 		private System.Windows.Forms.RadioButton radSVGAll;
+		private System.Windows.Forms.Label label1;
+		private System.Windows.Forms.TextBox txtZDepth;
+		private System.Windows.Forms.Panel panelSplitCmds;
 	}
 }
 

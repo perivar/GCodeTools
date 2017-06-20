@@ -394,13 +394,13 @@ namespace GCodePlotter
 			if (gcodeSplitObject == null) return blocks;
 			
 			// first add header
-			//blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
 
 			// add main blocks
 			blocks.AddRange(GetBlockElements(gcodeSplitObject.AllG0Sections, ref currentPoint));
 			
 			// last add footer
-			//blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
 			
 			return blocks;
 		}
@@ -424,7 +424,9 @@ namespace GCodePlotter
 					}
 
 					// make sure to store the actual instruction as well
-					if (currentInstruction.CanRender) {
+					//if (currentInstruction.CanRender) {
+					// TODO: should we add all commands?
+					if (!currentInstruction.IsEmptyLine) {
 						currentBlock.GCodeInstructions.Add(currentInstruction);
 					}
 				}
@@ -450,7 +452,9 @@ namespace GCodePlotter
 				}
 
 				// make sure to store the actual instruction as well
-				if (currentInstruction.CanRender) {
+				//if (currentInstruction.CanRender) {
+				// TODO: should we add all commands?
+				if (!currentInstruction.IsEmptyLine) {
 					currentBlock.GCodeInstructions.Add(currentInstruction);
 				}
 			}
@@ -580,32 +584,38 @@ namespace GCodePlotter
 					foreach (var instruction in parentBlock.GCodeInstructions) {
 						
 						if (instruction == selectedInstruction) {
-							foreach (var subLinePlots in instruction.CachedLinePoints) {
-								// draw correct instruction as selected
-								subLinePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+							if (instruction.CachedLinePoints != null) {
+								foreach (var subLinePlots in instruction.CachedLinePoints) {
+									// draw correct instruction as selected
+									subLinePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+								}
 							}
 						} else {
-							foreach (var subLinePlots in instruction.CachedLinePoints) {
-								subLinePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+							if (instruction.CachedLinePoints != null) {
+								foreach (var subLinePlots in instruction.CachedLinePoints) {
+									subLinePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+								}
 							}
 						}
 					}
 				} else {
 					// top level, i.e. the block level or if nothing is selected
 					foreach (Block blockItem in myBlocks) {
-						foreach (var linePlots in blockItem.PlotPoints) {
-							
-							// check level first
-							if (treeView.SelectedNode != null
-							    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
-
-								// draw correct segment as selected
-								linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+						if (blockItem.PlotPoints != null) {
+							foreach (var linePlots in blockItem.PlotPoints) {
 								
-							} else {
-								// nothing is selected, draw segment as normal
-								if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
-									linePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+								// check level first
+								if (treeView.SelectedNode != null
+								    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
+
+									// draw correct segment as selected
+									linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									
+								} else {
+									// nothing is selected, draw segment as normal
+									if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
+										linePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									}
 								}
 							}
 						}
@@ -626,6 +636,16 @@ namespace GCodePlotter
 			return zSafeHeight;
 		}
 
+		float GetZDepth() {
+			style = NumberStyles.AllowDecimalPoint;
+			float zDepth = 2.0f;
+			if (!float.TryParse(txtZDepth.Text, style, culture, out zDepth)) {
+				txtZDepth.Text = "-0.1";
+				zDepth = -0.1f;
+			}
+			return zDepth;
+		}
+		
 		float GetShiftValue(TextBox txtBox) {
 			float shiftValue = 0.0f;
 			if (!float.TryParse(txtBox.Text, style, culture, out shiftValue)) {
@@ -808,11 +828,12 @@ namespace GCodePlotter
 				var contours = svg.GetScaledContours();
 				//var contours = svg.GetContours();
 				float zSafeHeight = GetZSafeHeight();
+				float zDepth = GetZDepth();
 				string gCode = "";
 				if (radSVGCenter.Checked) {
-					gCode = GCodeUtils.GetGCodeCenter(contours, -2.0f, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, 800.0f, zSafeHeight);
 				} else {
-					gCode = GCodeUtils.GetGCode(contours, -2.0f, 800.0f, zSafeHeight);
+					gCode = GCodeUtils.GetGCode(contours, zDepth, 800.0f, zSafeHeight);
 				}
 				ParseText(gCode);
 			}

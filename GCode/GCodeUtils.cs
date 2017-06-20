@@ -379,7 +379,7 @@ namespace GCode
 			{
 				contourCounter++;
 				
-				sb.AppendFormat("Contour {0}\n", contourCounter);
+				sb.AppendFormat("(Contour {0})\n", contourCounter);
 
 				bool first = true;
 				foreach (var point in contour) {
@@ -428,7 +428,7 @@ namespace GCode
 			{
 				contourCounter++;
 				
-				sb.AppendFormat("Drill Contour Center {0}\n", contourCounter);
+				sb.AppendFormat("(Drill Contour Center {0})\n", contourCounter);
 				
 				var center = SVGUtils.Center(contour);
 

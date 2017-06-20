@@ -137,13 +137,13 @@ namespace GCode
 			return BuildGCodeOutput(this.Name, this.GCodeInstructions, doMultiLayers);
 		}
 		
-		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doMultiLayers)
+		public static string BuildGCodeOutput(string name, List<GCodeInstruction> gCodeInstructions, bool doPeckDrilling)
 		{
 			var sb = new StringBuilder();
 
 			sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
 
-			if (doMultiLayers) {
+			if (doPeckDrilling) {
 				var data = QuickSettings.Get["ZDepths"];
 				if (string.IsNullOrEmpty(data))
 				{
