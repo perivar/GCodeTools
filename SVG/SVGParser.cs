@@ -43,8 +43,20 @@ namespace SVG
 	/// </summary>
 	public static class SVGUtils {
 
+		/// <summary>
+		/// Return the euclidean distance between two points
+		/// </summary>
+		/// <param name="a">first point</param>
+		/// <param name="b">second point</param>
+		/// <returns>the euclidean distance between two points</returns>
 		public static double Distance(PointF a, PointF b)
 		{
+			// From a Math point of view, the distance between two points in the same plane
+			// is the square root of the sum from the power of two from each side in a triangle
+			// distance = Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+			// Or alternatively:
+			// distance = Math.sqrt(Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2));
+
 			double xd = Math.Abs(a.X - b.X);
 			double yd = Math.Abs(a.Y - b.Y);
 
@@ -54,6 +66,11 @@ namespace SVG
 			return Math.Sqrt(xd + yd);
 		}
 
+		/// <summary>
+		/// Return the bounding rectangle around a list of points
+		/// </summary>
+		/// <param name="points">points</param>
+		/// <returns>the bounding rectangle</returns>
 		public static RectangleF BoundingRect(IEnumerable<PointF> points)
 		{
 			var x_query = from PointF p in points select p.X;
@@ -67,6 +84,12 @@ namespace SVG
 			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
 		}
 		
+		/// <summary>
+		/// Return the center point of the bounding rectangle for a list of points
+		/// Note that this is not necceserily correct for skewed polygons
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <returns>the centerpoint of the bounding rectangle</returns>
 		public static PointF Center(IEnumerable<PointF> points)
 		{
 			var rect = BoundingRect(points);
@@ -75,9 +98,14 @@ namespace SVG
 			                  rect.Top + rect.Height / 2);
 		}
 		
+		/// <summary>
+		/// Test if the passed list of points is a circle
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <returns>true if circle has been detected</returns>
 		public static bool IsPolygonCircle(IEnumerable<PointF> points) {
 			
-			// A circle
+			// A circle:
 			// 1. Has more than 6 vertices.
 			// 2. Has diameter of the same size in each direction.
 			// 3. The area of the contour is ~πr2
@@ -95,6 +123,29 @@ namespace SVG
 				return true;
 			}
 			return false;
+		}
+		
+		/// <summary>
+		/// If the polygon is a circle, this method can be used to
+		/// return the center point and radiu
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <param name="center">out center point</param>
+		/// <param name="radius">out radius</param>
+		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius) {
+
+			center = new PointF
+			{
+				X = (float)(points.Average(p => p.X)),
+				Y = (float)(points.Average(p => p.Y))
+			};
+			
+			var radiuses = new List<double>();
+			foreach (var point in points) {
+				double rad = Distance(center, point);
+				radiuses.Add(rad);
+			}
+			radius = (float)radiuses.Average();
 		}
 		
 		/// <summary>
@@ -1635,10 +1686,17 @@ namespace SVG
 				}
 			}
 			
+			/*
 			// check for circles
 			foreach (var contour in contours) {
-				SVGUtils.IsPolygonCircle(contour);
+				if (SVGUtils.IsPolygonCircle(contour)) {
+					// get center point and radius
+					PointF center = PointF.Empty;
+					float radius = 0.0f;
+					SVGUtils.GetCenterAndRadiusForPolygonCircle(contour, ref center, out radius);
+				}
 			}
+			 */
 		}
 
 		public List<List<PointF>> GetContours()
