@@ -54,7 +54,7 @@ namespace SVG
 			return Math.Sqrt(xd + yd);
 		}
 
-		public static RectangleF BoundingBox(IEnumerable<PointF> points)
+		public static RectangleF BoundingRect(IEnumerable<PointF> points)
 		{
 			var x_query = from PointF p in points select p.X;
 			float xmin = x_query.Min();
@@ -69,10 +69,50 @@ namespace SVG
 		
 		public static PointF Center(IEnumerable<PointF> points)
 		{
-			var rect = BoundingBox(points);
+			var rect = BoundingRect(points);
 			
 			return new PointF(rect.Left + rect.Width/2,
 			                  rect.Top + rect.Height / 2);
+		}
+		
+		public static bool IsPolygonCircle(IEnumerable<PointF> points) {
+			
+			// A circle
+			// 1. Has more than 6 vertices.
+			// 2. Has diameter of the same size in each direction.
+			// 3. The area of the contour is ~πr2
+			
+			if (points.Count() < 6) return false;
+			
+			double area = PolygonArea(points);
+			var r = BoundingRect(points);
+			float radius = r.Width / 2;
+			
+			if (Math.Abs( 1 - ((double)r.Width / r.Height)) <= 0.2 &&
+			    Math.Abs(1 - (area / (Math.PI * Math.Pow(radius, 2)))) <= 0.2)
+			{
+				// found circle
+				return true;
+			}
+			return false;
+		}
+		
+		/// <summary>
+		/// Determine the area of the passed polygon
+		/// </summary>
+		/// <param name="points">contour</param>
+		/// <returns>area</returns>
+		public static double PolygonArea(IEnumerable<PointF> points) {
+			
+			int i,j;
+			double area = 0;
+			for (i=0; i < points.Count(); i++) {
+				j = (i + 1) % points.Count();
+				area += points.ElementAt(i).X * points.ElementAt(j).Y;
+				area -= points.ElementAt(i).Y * points.ElementAt(j).X;
+			}
+			area /= 2;
+			return (area < 0 ? -area : area);
 		}
 
 		/// <summary>
@@ -563,7 +603,7 @@ namespace SVG
 			// Y1 = BX + DY + F
 		}
 	}
-	
+
 	/// <summary>
 	/// Interface for a drawable object found in an SVG file. This
 	/// is not a general-purpose SVG library -- it only does the
@@ -784,7 +824,7 @@ namespace SVG
 			return result;
 		}
 	}
-	
+
 	/// <summary>
 	/// SVG Ellipse
 	/// </summary>
@@ -1594,6 +1634,11 @@ namespace SVG
 					_path.AddPolygon(currentContour.ToArray());
 				}
 			}
+			
+			// check for circles
+			foreach (var contour in contours) {
+				SVGUtils.IsPolygonCircle(contour);
+			}
 		}
 
 		public List<List<PointF>> GetContours()
@@ -2127,18 +2172,19 @@ namespace SVG
 		/// <summary>
 		/// Render the SVG onto the graphic panel
 		/// </summary>
-		/// <param name="g"></param>
-		/// <param name="rasterOnly"></param>
+		/// <param name="g">Graphics drawing surface</param>
+		/// <param name="rasterOnly">Only draw raster </param>
 		public void Render(Graphics g, bool rasterOnly)
 		{
 			foreach (ISVGElement shape in shapes)
 			{
-				if (shape is SVGImage)
+				var sVGImage = shape as SVGImage;
+				if (sVGImage != null)
 				{
-					var img = shape as SVGImage;
-					g.DrawImage(img.image, img.DestBounds);
+					g.DrawImage(sVGImage.image, sVGImage.DestBounds);
 				}
 
+				// don't draw if the ouline width is too small, alpha is 0 and raster only is set
 				if (shape.OutlineWidth < .01 && shape.FillColor.A == 0 && rasterOnly)
 				{
 					continue;
