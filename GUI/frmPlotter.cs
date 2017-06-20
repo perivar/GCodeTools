@@ -557,12 +557,12 @@ namespace GCodePlotter
 			using (var penX = new Pen(Color.Red, 3)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 10 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penY = new Pen(Color.Green, 3)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (10 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 
 			// draw gcode

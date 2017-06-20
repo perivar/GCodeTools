@@ -128,7 +128,7 @@ namespace GCode
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
-			sb.AppendFormat("{0}  --  {1} cmds -- Max X : {2:0.####}, Max Y : {3:0.####} ({4})", Name, GCodeInstructions.Count, maxX, maxY, PlotPoints != null ? PlotPoints.Count : 0);
+			sb.AppendFormat("{0}  --  {1} cmds -- Max X/Y : {2:0.####}, {3:0.####} -- ({4})", Name, GCodeInstructions.Count, maxX, maxY, PlotPoints != null ? PlotPoints.Count : 0);
 
 			return sb.ToString();
 		}
