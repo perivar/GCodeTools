@@ -19,6 +19,10 @@ namespace GCodePlotter
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.TextBox txtLayers;
 		private System.Windows.Forms.Button btnCancel;
+		private System.Windows.Forms.TextBox txtThickness;
+		private System.Windows.Forms.Label label3;
+		private System.Windows.Forms.Label label2;
+		private System.Windows.Forms.Button btnGeneratePeck;
 		
 		/// <summary>
 		/// Disposes resources used by the form.
@@ -46,6 +50,10 @@ namespace GCodePlotter
 			this.label1 = new System.Windows.Forms.Label();
 			this.txtLayers = new System.Windows.Forms.TextBox();
 			this.btnCancel = new System.Windows.Forms.Button();
+			this.btnGeneratePeck = new System.Windows.Forms.Button();
+			this.label2 = new System.Windows.Forms.Label();
+			this.label3 = new System.Windows.Forms.Label();
+			this.txtThickness = new System.Windows.Forms.TextBox();
 			this.groupBox1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -61,11 +69,15 @@ namespace GCodePlotter
 			// 
 			// groupBox1
 			// 
+			this.groupBox1.Controls.Add(this.txtThickness);
+			this.groupBox1.Controls.Add(this.label3);
+			this.groupBox1.Controls.Add(this.label2);
+			this.groupBox1.Controls.Add(this.btnGeneratePeck);
 			this.groupBox1.Controls.Add(this.label1);
 			this.groupBox1.Controls.Add(this.txtLayers);
 			this.groupBox1.Location = new System.Drawing.Point(12, 12);
 			this.groupBox1.Name = "groupBox1";
-			this.groupBox1.Size = new System.Drawing.Size(520, 100);
+			this.groupBox1.Size = new System.Drawing.Size(520, 159);
 			this.groupBox1.TabIndex = 4;
 			this.groupBox1.TabStop = false;
 			this.groupBox1.Text = "Drill Peck Values";
@@ -80,9 +92,9 @@ namespace GCodePlotter
 			// 
 			// txtLayers
 			// 
-			this.txtLayers.Location = new System.Drawing.Point(225, 35);
+			this.txtLayers.Location = new System.Drawing.Point(206, 35);
 			this.txtLayers.Name = "txtLayers";
-			this.txtLayers.Size = new System.Drawing.Size(263, 26);
+			this.txtLayers.Size = new System.Drawing.Size(285, 26);
 			this.txtLayers.TabIndex = 0;
 			// 
 			// btnCancel
@@ -95,6 +107,40 @@ namespace GCodePlotter
 			this.btnCancel.Text = "Cancel";
 			this.btnCancel.UseVisualStyleBackColor = true;
 			this.btnCancel.Click += new System.EventHandler(this.BtnCancelClick);
+			// 
+			// btnGeneratePeck
+			// 
+			this.btnGeneratePeck.Location = new System.Drawing.Point(310, 106);
+			this.btnGeneratePeck.Name = "btnGeneratePeck";
+			this.btnGeneratePeck.Size = new System.Drawing.Size(101, 36);
+			this.btnGeneratePeck.TabIndex = 2;
+			this.btnGeneratePeck.Text = "Generate";
+			this.btnGeneratePeck.UseVisualStyleBackColor = true;
+			this.btnGeneratePeck.Click += new System.EventHandler(this.BtnGeneratePeckClick);
+			// 
+			// label2
+			// 
+			this.label2.Location = new System.Drawing.Point(6, 84);
+			this.label2.Name = "label2";
+			this.label2.Size = new System.Drawing.Size(193, 25);
+			this.label2.TabIndex = 3;
+			this.label2.Text = "Or generate peck values:";
+			// 
+			// label3
+			// 
+			this.label3.Location = new System.Drawing.Point(7, 109);
+			this.label3.Name = "label3";
+			this.label3.Size = new System.Drawing.Size(193, 50);
+			this.label3.TabIndex = 4;
+			this.label3.Text = "Material Thickness \r\n(e.g. MDF 12.7mm)";
+			// 
+			// txtThickness
+			// 
+			this.txtThickness.Location = new System.Drawing.Point(206, 111);
+			this.txtThickness.Name = "txtThickness";
+			this.txtThickness.Size = new System.Drawing.Size(64, 26);
+			this.txtThickness.TabIndex = 5;
+			this.txtThickness.Text = "12.7";
 			// 
 			// frmOptions
 			// 

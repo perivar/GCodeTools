@@ -308,20 +308,22 @@ namespace GCode
 				
 				using (var tw = new StringWriter()) {
 					
+					/*
 					tw.WriteLine("(File built with GCodeTools)");
 					tw.WriteLine("(Generated on " + DateTime.Now + ")");
 					tw.WriteLine();
+					 */
 
 					for (int i = 0; i < bestPath.Count; i++) {
 						
 						var block = points[bestPath[i]] as Point3DBlock;
 						var instructions = block.GCodeInstructions;
 
-						tw.WriteLine(string.Format("(Start Block_{0})", i));
+						//tw.WriteLine(string.Format("(Start Block_{0})", i));
 						foreach (var instruction in instructions) {
 							tw.WriteLine(instruction);
 						}
-						tw.WriteLine(string.Format("(End Block_{0})", i));
+						//tw.WriteLine(string.Format("(End Block_{0})", i));
 						tw.WriteLine();
 					}
 					
@@ -379,18 +381,15 @@ namespace GCode
 			foreach (var contour in contours)
 			{
 				contourCounter++;
-				
-				sb.AppendFormat("(Contour {0})\n", contourCounter);
-
 				bool first = true;
 				foreach (var point in contour) {
 					if (first) {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", point.X - minX, maxY - point.Y);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", (point.X - minX), (maxY - point.Y));
 						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, plungeFeed);
+						first = false;
 					} else {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", point.X - minX, maxY - point.Y, rapidFeed);
+						sb.AppendFormat(CultureInfo.InvariantCulture, "G1 X{0:0.##} Y{1:0.##} F{2:0.##}\n", (point.X - minX), (maxY - point.Y), rapidFeed);
 					}
-					first = false;
 				}
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
 			}
@@ -429,12 +428,8 @@ namespace GCode
 			foreach (var contour in contours)
 			{
 				contourCounter++;
-				
-				sb.AppendFormat("(Drill Contour Center {0})\n", contourCounter);
-				
 				var center = SVGUtils.Center(contour);
-
-				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", center.X - minX, maxY - center.Y);
+				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", (center.X - minX), (maxY - center.Y));
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, plungeFeed);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
 			}

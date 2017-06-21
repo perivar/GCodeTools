@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
+using System.Collections.Generic;
 using System.Windows.Forms;
+using System.Globalization;
 using GCode;
 
 namespace GCodePlotter
@@ -37,6 +40,35 @@ namespace GCodePlotter
 		void BtnCancelClick(object sender, EventArgs e)
 		{
 			this.Dispose();
+		}
+		
+		void BtnGeneratePeckClick(object sender, EventArgs e)
+		{
+			float f = 1.6f; // use as ceiling
+			
+			// only allow decimal and not minus
+			NumberStyles style = NumberStyles.AllowDecimalPoint;
+			float thickness = 0.0f;
+			if (!float.TryParse(txtThickness.Text, style, CultureInfo.InvariantCulture, out thickness)) {
+				txtThickness.Text = "0.0";
+				thickness = 2.0f;
+			} else {
+				var layers = new List<float>();
+				float fSum = 0.0f;
+				int count = (int) Math.Ceiling(thickness/f);
+				for (int i = 0; i < count; i++) {
+					fSum += f;
+					if (fSum > thickness) {
+						layers.Add(-thickness);
+						break;
+					} else {
+						layers.Add(-fSum);
+					}
+				}
+				string result = String.Join(",", layers.Select(val => val.ToString(CultureInfo.InvariantCulture)));
+				txtLayers.Text = result;
+			}
+			
 		}
 	}
 }

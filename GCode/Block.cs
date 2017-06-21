@@ -141,7 +141,7 @@ namespace GCode
 		{
 			var sb = new StringBuilder();
 
-			sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
+			//sb.AppendFormat("(Start cutting path id: {0})", name).AppendLine();
 
 			if (doPeckDrilling) {
 				var data = QuickSettings.Get["ZDepths"];
@@ -161,7 +161,7 @@ namespace GCode
 				foreach(var line in bits) {
 					float f;
 					if (float.TryParse(line, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) {
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(Start peck drilling: {0:0.####})", f).AppendLine();
+						//sb.AppendFormat(CultureInfo.InvariantCulture, "(Start peck drilling: {0:0.####})", f).AppendLine();
 						foreach (var gCodeLine in gCodeInstructions) {
 							string newLine = gCodeLine.ToString(true, zOverride: f);
 							
@@ -171,7 +171,7 @@ namespace GCode
 								lastLine = newLine;
 							}
 						}
-						sb.AppendFormat(CultureInfo.InvariantCulture, "(End peck drilling: {0:0.####})", f).AppendLine();
+						//sb.AppendFormat(CultureInfo.InvariantCulture, "(End peck drilling: {0:0.####})", f).AppendLine();
 					}
 				}
 			} else {
@@ -180,7 +180,7 @@ namespace GCode
 				}
 			}
 
-			sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", name).AppendLine();
+			//sb.AppendFormat(CultureInfo.InvariantCulture, "(End cutting path id: {0})", name).AppendLine();
 
 			return sb.ToString();
 		}

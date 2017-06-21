@@ -19,9 +19,6 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
-		CultureInfo culture = CultureInfo.InvariantCulture;
-		
 		const float DEFAULT_MULTIPLIER = 4.0f;
 
 		float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
@@ -212,8 +209,8 @@ namespace GCodePlotter
 				return;
 			}
 
-			float xSplit = 0.0f;
-			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
+			float xSplit = GetSplitValue();
+			if (xSplit != 0) {
 				
 				ParseData();
 				
@@ -411,13 +408,13 @@ namespace GCodePlotter
 			if (gcodeSplitObject == null) return blocks;
 			
 			// first add header
-			blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
 
 			// add main blocks
 			blocks.AddRange(GetBlockElements(gcodeSplitObject.AllG0Sections, ref currentPoint));
 			
 			// last add footer
-			blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
 			
 			return blocks;
 		}
@@ -492,8 +489,8 @@ namespace GCodePlotter
 				return;
 			}
 
-			float xSplit = 0.0f;
-			if (float.TryParse(txtSplit.Text, style, culture, out xSplit)) {
+			float xSplit = GetSplitValue();
+			if (xSplit != 0) {
 				
 				ParseData();
 				
@@ -643,7 +640,21 @@ namespace GCodePlotter
 			pictureBox1.Refresh();
 		}
 
+		float GetSplitValue() {
+			// only allow decimal and not minus
+			NumberStyles style = NumberStyles.AllowDecimalPoint;
+			float splitValue = 0.0f;
+			if (!float.TryParse(txtSplit.Text, style, CultureInfo.InvariantCulture, out splitValue)) {
+				txtSplit.Text = "0.0";
+				splitValue = 0.0f;
+			}
+			return splitValue;
+		}
+		
 		float GetFeedRateRapidMoves() {
+			// allow leading sign (minus) and decimal fractions
+			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+			
 			var data = QuickSettings.Get["FeedRateRapidMoves"];
 			if (string.IsNullOrEmpty(data))
 			{
@@ -651,13 +662,16 @@ namespace GCodePlotter
 				QuickSettings.Get["FeedRateRapidMoves"] = data;
 			}
 			float f = 0.0f;
-			if (float.TryParse(data, style, culture, out f)) {
+			if (float.TryParse(data, style, CultureInfo.InvariantCulture, out f)) {
 				// succesfull
 			}
 			return f;
 		}
 		
 		float GetFeedRatePlungeMoves() {
+			// allow leading sign (minus) and decimal fractions
+			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+			
 			var data = QuickSettings.Get["FeedRatePlungeMoves"];
 			if (string.IsNullOrEmpty(data))
 			{
@@ -665,16 +679,17 @@ namespace GCodePlotter
 				QuickSettings.Get["FeedRatePlungeMoves"] = data;
 			}
 			float f = 0.0f;
-			if (float.TryParse(data, style, culture, out f)) {
+			if (float.TryParse(data, style, CultureInfo.InvariantCulture, out f)) {
 				// succesfull
 			}
 			return f;
 		}
 		
 		float GetZSafeHeight() {
-			style = NumberStyles.AllowDecimalPoint;
+			// only allow decimal and not minus
+			NumberStyles style = NumberStyles.AllowDecimalPoint;
 			float zSafeHeight = 2.0f;
-			if (!float.TryParse(txtZClearance.Text, style, culture, out zSafeHeight)) {
+			if (!float.TryParse(txtZClearance.Text, style, CultureInfo.InvariantCulture, out zSafeHeight)) {
 				txtZClearance.Text = "2.0";
 				zSafeHeight = 2.0f;
 			}
@@ -682,18 +697,20 @@ namespace GCodePlotter
 		}
 
 		float GetZDepth() {
-			style = NumberStyles.AllowDecimalPoint;
-			float zDepth = 2.0f;
-			if (!float.TryParse(txtZDepth.Text, style, culture, out zDepth)) {
+			// allow leading sign (minus) and decimal fractions
+			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+			float zDepth = -0.1f;
+			if (!float.TryParse(txtZDepth.Text, style, CultureInfo.InvariantCulture, out zDepth)) {
 				txtZDepth.Text = "-0.1";
 				zDepth = -0.1f;
 			}
 			return zDepth;
 		}
 		
-		float GetShiftValue(TextBox txtBox) {
+		float GetMoveValue(TextBox txtBox) {
+			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 			float shiftValue = 0.0f;
-			if (!float.TryParse(txtBox.Text, style, culture, out shiftValue)) {
+			if (!float.TryParse(txtBox.Text, style, CultureInfo.InvariantCulture, out shiftValue)) {
 				txtBox.Text = "0.0";
 				shiftValue = 0.0f;
 			} else {
@@ -702,16 +719,16 @@ namespace GCodePlotter
 			return shiftValue;
 		}
 		
-		float GetShiftX() {
-			return GetShiftValue(txtShiftX);
+		float GetMoveX() {
+			return GetMoveValue(txtShiftX);
 		}
 
-		float GetShiftY() {
-			return GetShiftValue(txtShiftY);
+		float GetMoveY() {
+			return GetMoveValue(txtShiftY);
 		}
 
-		float GetShiftZ() {
-			return GetShiftValue(txtShiftZ);
+		float GetMoveZ() {
+			return GetMoveValue(txtShiftZ);
 		}
 		
 		void SaveGCodes(bool doPeckDrilling)
@@ -815,12 +832,12 @@ namespace GCodePlotter
 			tw.WriteLine();
 			tw.WriteLine("(Header)");
 			tw.WriteLine("G90 (set absolute distance mode)");
-			//tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
+			tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
 			tw.WriteLine("G17 (set active plane to XY)");
 			tw.WriteLine("G40 (turn cutter compensation off)");
 			tw.WriteLine("G21 (set units to mm)");
 			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
-			//tw.WriteLine("M3 (start the spindle clockwise at the S speed)");
+			tw.WriteLine("M3 S4000 (start the spindle clockwise at the S speed)");
 			tw.WriteLine("(Header end.)");
 		}
 
@@ -828,18 +845,18 @@ namespace GCodePlotter
 			tw.WriteLine();
 			tw.WriteLine("(Footer)");
 			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
-			//tw.WriteLine("M5 (stop the spindle)");
-			//tw.WriteLine("M30 (program end)");
+			tw.WriteLine("M5 (stop the spindle)");
 			tw.WriteLine("G0 X0 Y0");
+			tw.WriteLine("G4 P1.0 (Dwell)");
 			tw.WriteLine("(Footer end.)");
 			tw.WriteLine();
 		}
 		
 		void BtnShiftClick(object sender, EventArgs e)
 		{
-			float deltaX = GetShiftX();
-			float deltaY = GetShiftY();
-			float deltaZ = GetShiftZ();
+			float deltaX = GetMoveX();
+			float deltaY = GetMoveY();
+			float deltaZ = GetMoveZ();
 			var gcodeInstructions = GCodeUtils.GetShiftedGCode(parsedInstructions, deltaX, deltaY, deltaZ);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
 			ParseText(gCode);
