@@ -44,7 +44,7 @@ namespace GCode
 			}
 			
 			if (Pen == PenColorList.RapidMove && highlight) {
-				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHilight);
+				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHighlight);
 				float[] dashValues = { 5, 2 };
 				rapidPen.DashPattern = dashValues;
 				g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);

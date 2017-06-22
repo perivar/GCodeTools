@@ -413,8 +413,8 @@ namespace GCodePlotter
 			// 
 			// txtDimension
 			// 
-			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+			                                                                 | System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.txtDimension.Location = new System.Drawing.Point(4, 651);
@@ -479,7 +479,8 @@ namespace GCodePlotter
 			this.treeView.Size = new System.Drawing.Size(329, 733);
 			this.treeView.TabIndex = 10;
 			this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewAfterSelect);
-			this.treeView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TreeViewMouseDown);
+			this.treeView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.TreeViewKeyDown);
+			this.treeView.MouseUp += new System.Windows.Forms.MouseEventHandler(this.TreeViewMouseUp);
 			// 
 			// panelCheckboxes
 			// 

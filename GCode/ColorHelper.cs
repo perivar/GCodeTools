@@ -19,7 +19,7 @@ namespace GCode
 		NormalMove,
 		CWArc,
 		CCWArc,
-		RapidMoveHilight,
+		RapidMoveHighlight,
 		LineHighlight,
 		Background,
 		GridLines
@@ -36,7 +36,7 @@ namespace GCode
 			if (list == PenColorList.NormalMove) return Color.DodgerBlue;
 			if (list == PenColorList.CWArc) return Color.Lime;
 			if (list == PenColorList.CCWArc) return Color.Yellow;
-			if (list == PenColorList.RapidMoveHilight) return Color.Pink;
+			if (list == PenColorList.RapidMoveHighlight) return Color.Pink;
 			if (list == PenColorList.LineHighlight) return Color.White;
 			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
 			if (list == PenColorList.GridLines) return Color.DimGray;
@@ -109,8 +109,8 @@ namespace GCode
 					_penList[type] = new Pen(GetColor(type), 1f);
 				}
 
-				//_penList[type].StartCap = LineCap.Flat;
-				//_penList[type].EndCap = LineCap.ArrowAnchor;
+				_penList[type].StartCap = LineCap.Flat;
+				_penList[type].EndCap = LineCap.ArrowAnchor;
 			}
 
 			return _penList[type];

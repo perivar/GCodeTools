@@ -93,7 +93,7 @@ namespace GCodeOptimizer
 			// first sort by z-order
 			var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
 			string gCode = GCodeUtils.GetGCode(sortedBestPath, _points);
-			_plotter.ParseText(gCode);
+			_plotter.ParseGCodeString(gCode);
 			this.Close();
 		}
 		

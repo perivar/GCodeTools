@@ -12,6 +12,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Globalization;
+using System.Diagnostics;
 using GCode;
 using SVG;
 
@@ -102,16 +103,26 @@ namespace GCodePlotter
 			RenderBlocks();
 			pictureBox1.Refresh();
 		}
-
-		void TreeViewMouseDown(object sender, MouseEventArgs e)
+		
+		void TreeViewMouseUp(object sender, MouseEventArgs e)
 		{
-			var me = (MouseEventArgs) e;
-			if (me.Button == MouseButtons.Right) {
+			if (e.Button == MouseButtons.Right) {
 				treeView.SelectedNode = null;
 				RenderBlocks();
 			}
 		}
 
+		void TreeViewKeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Delete) {
+				var selectedNode = treeView.SelectedNode;
+				if (selectedNode != null && selectedNode.Level == 0)
+				{
+					DeleteTreeNode(selectedNode);
+				}
+			}
+		}
+		
 		void btnLoadClick(object sender, EventArgs e)
 		{
 			if (AskToLoadData() == DialogResult.No) {
@@ -138,41 +149,10 @@ namespace GCodePlotter
 				// reset multiplier
 				multiplier = DEFAULT_MULTIPLIER;
 
-				ParseText(data);
+				ParseGCodeString(data);
 			}
 		}
 
-		void ParseData() {
-			if (bDataLoaded) {
-				if (AskToLoadData() == DialogResult.No) {
-					return;
-				}
-			}
-
-			if (txtFile.Tag != null) {
-				var fileInfo = new FileInfo(txtFile.Tag.ToString());
-				if (fileInfo.Extension.ToLower().Equals(".svg")) {
-					var svg = SVGDocument.LoadFromFile(fileInfo.FullName);
-					var contours = svg.GetScaledContours();
-					//var contours = svg.GetContours();
-					float zSafeHeight = GetZSafeHeight();
-					float zDepth = GetZDepth();
-					float feedRateRapid = GetFeedRateRapidMoves();
-					float feedRatePlunge = GetFeedRatePlungeMoves();
-					string data = "";
-					if (radSVGCenter.Checked) {
-						data = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-					} else {
-						data = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-					}
-					ParseText(data);
-				} else {
-					string data = File.ReadAllText(fileInfo.FullName);
-					ParseText(data);
-				}
-			}
-		}
-		
 		void btnSplitClick(object sender, EventArgs e)
 		{
 			if (radLeft.Checked) {
@@ -314,21 +294,60 @@ namespace GCodePlotter
 			// we have to ensure we update the drawing when we scroll
 			RenderBlocks();
 		}
-		#endregion
-		
-		#region Methods
-		Rectangle GetVisibleRectangle(Control c)
+
+		void BtnShiftClick(object sender, EventArgs e)
 		{
-			Rectangle rect = c.RectangleToScreen(c.ClientRectangle);
-			while (c != null)
-			{
-				rect = Rectangle.Intersect(rect, c.RectangleToScreen(c.ClientRectangle));
-				c = c.Parent;
-			}
-			rect = pictureBox1.RectangleToClient(rect);
-			return rect;
+			float deltaX = GetMoveX();
+			float deltaY = GetMoveY();
+			float deltaZ = GetMoveZ();
+			var gcodeInstructions = GCodeUtils.GetShiftedGCode(parsedInstructions, deltaX, deltaY, deltaZ);
+			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
+			ParseGCodeString(gCode);
 		}
 		
+		void BtnSVGLoadClick(object sender, EventArgs e)
+		{
+			
+			var dialog = new OpenFileDialog();
+			string svgFilePath = "";
+			
+			dialog.Filter = "SVG Drawing|*.svg";
+			if (dialog.ShowDialog() == DialogResult.OK)
+			{
+				svgFilePath = dialog.FileName;
+				
+				// store data
+				var fileInfo = new FileInfo(svgFilePath);
+				if (fileInfo.Exists)
+				{
+					txtFile.Text = fileInfo.Name;
+					txtFile.Tag = fileInfo.FullName;
+					this.Text = fileInfo.Name;
+					
+					// Cannot store with QuickSettings since the last opened file is
+					// opened with another load method than SVGs
+					//QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
+				}
+				
+				var svg = SVGDocument.LoadFromFile(svgFilePath);
+				var contours = svg.GetScaledContours();
+				//var contours = svg.GetContours();
+				float zSafeHeight = GetZSafeHeight();
+				float zDepth = GetZDepth();
+				float feedRateRapid = GetFeedRateRapidMoves();
+				float feedRatePlunge = GetFeedRatePlungeMoves();
+				string gCode = "";
+				if (radSVGCenter.Checked) {
+					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+				} else {
+					gCode = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+				}
+				ParseGCodeString(gCode);
+			}
+		}
+		#endregion
+		
+		#region Zoom Methods
 		void ZoomIn(Point clickPoint) {
 
 			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
@@ -390,6 +409,27 @@ namespace GCodePlotter
 			panelViewer.AutoScrollPosition = newScrollPosition;
 		}
 		
+		Size GetDimensionsFromZoom() {
+
+			// set scale variable
+			scale = (10 * multiplier);
+
+			// 10 mm per grid
+			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
+			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
+			
+			return new Size(width, height);
+		}
+
+		void CalculateOptimalZoomMultiplier() {
+			// calculate optimal multiplier
+			if (maxX > 0) {
+				multiplier = (panelViewer.Width-50) / maxX;
+			}
+		}
+		#endregion
+		
+		#region Get Block Methods
 		/// <summary>
 		/// Turn the list of instruction into a list of blocks
 		/// where the blocks are separated if "cutting path id" is found
@@ -476,50 +516,21 @@ namespace GCodePlotter
 			
 			return blocks;
 		}
+		#endregion
 		
-		void ResetSplit(int index) {
-			
-			if (parsedInstructions == null) {
-				MessageBox.Show("No file loaded!");
-				return;
+		#region Render Methods
+		Rectangle GetVisibleRectangle(Control c)
+		{
+			Rectangle rect = c.RectangleToScreen(c.ClientRectangle);
+			while (c != null)
+			{
+				rect = Rectangle.Intersect(rect, c.RectangleToScreen(c.ClientRectangle));
+				c = c.Parent;
 			}
-			
-			if ("".Equals(txtSplit.Text) || "0.0".Equals(txtSplit.Text)) {
-				MessageBox.Show("Please enter a positive split value!");
-				return;
-			}
-
-			float xSplit = GetSplitValue();
-			if (xSplit != 0) {
-				
-				ParseData();
-				
-				var splitPoint = new Point3D(xSplit, 0, 0);
-				
-				float zClearance = GetZSafeHeight();
-				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
-				
-				// clean up the mess with too many G0 commands
-				var cleaned = GCodeSplitter.CleanGCode(split[index]);
-				
-				var gcodeSplitted = Block.BuildGCodeOutput("Block_1", cleaned, false);
-				ParseText(gcodeSplitted);
-			}
+			rect = pictureBox1.RectangleToClient(rect);
+			return rect;
 		}
-		
-		Size GetDimensionsFromZoom() {
 
-			// set scale variable
-			scale = (10 * multiplier);
-
-			// 10 mm per grid
-			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
-			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
-			
-			return new Size(width, height);
-		}
-		
 		void GetEmptyImage() {
 			
 			var imageDimension = GetDimensionsFromZoom();
@@ -639,7 +650,9 @@ namespace GCodePlotter
 
 			pictureBox1.Refresh();
 		}
-
+		#endregion
+		
+		#region Getters for input text field values
 		float GetSplitValue() {
 			// only allow decimal and not minus
 			NumberStyles style = NumberStyles.AllowDecimalPoint;
@@ -730,7 +743,9 @@ namespace GCodePlotter
 		float GetMoveZ() {
 			return GetMoveValue(txtShiftZ);
 		}
+		#endregion
 		
+		#region Save Methods
 		void SaveGCodes(bool doPeckDrilling)
 		{
 			var result = sfdSaveDialog.ShowDialog();
@@ -851,60 +866,41 @@ namespace GCodePlotter
 			tw.WriteLine("(Footer end.)");
 			tw.WriteLine();
 		}
-		
-		void BtnShiftClick(object sender, EventArgs e)
-		{
-			float deltaX = GetMoveX();
-			float deltaY = GetMoveY();
-			float deltaZ = GetMoveZ();
-			var gcodeInstructions = GCodeUtils.GetShiftedGCode(parsedInstructions, deltaX, deltaY, deltaZ);
-			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
-			ParseText(gCode);
-		}
-		
-		void BtnSVGLoadClick(object sender, EventArgs e)
-		{
-			
-			var dialog = new OpenFileDialog();
-			string svgFilePath = "";
-			
-			dialog.Filter = "SVG Drawing|*.svg";
-			if (dialog.ShowDialog() == DialogResult.OK)
-			{
-				svgFilePath = dialog.FileName;
-				
-				// store data
-				var fileInfo = new FileInfo(svgFilePath);
-				if (fileInfo.Exists)
-				{
-					txtFile.Text = fileInfo.Name;
-					txtFile.Tag = fileInfo.FullName;
-					this.Text = fileInfo.Name;
-					
-					// Cannot store with QuickSettings since the last opened file is
-					// opened with another load method than SVGs
-					//QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
-				}
-				
-				var svg = SVGDocument.LoadFromFile(svgFilePath);
-				var contours = svg.GetScaledContours();
-				//var contours = svg.GetContours();
-				float zSafeHeight = GetZSafeHeight();
-				float zDepth = GetZDepth();
-				float feedRateRapid = GetFeedRateRapidMoves();
-				float feedRatePlunge = GetFeedRatePlungeMoves();
-				string gCode = "";
-				if (radSVGCenter.Checked) {
-					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-				} else {
-					gCode = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-				}
-				ParseText(gCode);
-			}
-		}
 		#endregion
 		
-		public void ParseText(string text)
+		#region Parse Methods
+		void ParseData() {
+			if (bDataLoaded) {
+				if (AskToLoadData() == DialogResult.No) {
+					return;
+				}
+			}
+
+			if (txtFile.Tag != null) {
+				var fileInfo = new FileInfo(txtFile.Tag.ToString());
+				if (fileInfo.Extension.ToLower().Equals(".svg")) {
+					var svg = SVGDocument.LoadFromFile(fileInfo.FullName);
+					var contours = svg.GetScaledContours();
+					//var contours = svg.GetContours();
+					float zSafeHeight = GetZSafeHeight();
+					float zDepth = GetZDepth();
+					float feedRateRapid = GetFeedRateRapidMoves();
+					float feedRatePlunge = GetFeedRatePlungeMoves();
+					string data = "";
+					if (radSVGCenter.Checked) {
+						data = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+					} else {
+						data = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+					}
+					ParseGCodeString(data);
+				} else {
+					string data = File.ReadAllText(fileInfo.FullName);
+					ParseGCodeString(data);
+				}
+			}
+		}
+		
+		public void ParseGCodeString(string text)
 		{
 			parsedInstructions = SimpleGCodeParser.ParseText(text);
 
@@ -954,11 +950,71 @@ namespace GCodePlotter
 			RenderBlocks();
 			bDataLoaded = true;
 		}
+		#endregion
+
+		void DeleteTreeNode(TreeNode selectedNode) {
+			
+			DialogResult dialogResult = MessageBox.Show("Are you sure you want to delete this node?",
+			                                            "Delete Node?",
+			                                            MessageBoxButtons.YesNo,
+			                                            MessageBoxIcon.Question);
+			if(dialogResult == DialogResult.Yes)
+			{
+				// get block
+				var selectedBlock = selectedNode.Tag as Block;
+				
+				// get node position
+				int selectedNodePos = treeView.Nodes.IndexOf(selectedNode);
+				
+				// try to get next node
+				TreeNode nextTreeNode = null;
+				if (selectedNodePos + 1 < treeView.Nodes.Count) {
+					nextTreeNode = treeView.Nodes[selectedNodePos+1];
+				} else {
+					// get last node
+					nextTreeNode = treeView.Nodes[treeView.Nodes.Count-1];
+				}
+				
+				// remove from tree
+				treeView.Nodes.Remove(selectedNode);
+				
+				// remove from block list
+				myBlocks.Remove(selectedBlock);
+				
+				// and update
+				treeView.SelectedNode = nextTreeNode;
+				RenderBlocks();
+			}
+		}
 		
-		void CalculateOptimalZoomMultiplier() {
-			// calculate optimal multiplier
-			if (maxX > 0) {
-				multiplier = (panelViewer.Width-50) / maxX;
+		void ResetSplit(int index) {
+			
+			if (parsedInstructions == null) {
+				MessageBox.Show("No file loaded!");
+				return;
+			}
+			
+			if ("".Equals(txtSplit.Text) || "0.0".Equals(txtSplit.Text)) {
+				MessageBox.Show("Please enter a positive split value!");
+				return;
+			}
+
+			float xSplit = GetSplitValue();
+			if (xSplit != 0) {
+				
+				ParseData();
+				
+				var splitPoint = new Point3D(xSplit, 0, 0);
+				
+				float zClearance = GetZSafeHeight();
+				
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
+				
+				// clean up the mess with too many G0 commands
+				var cleaned = GCodeSplitter.CleanGCode(split[index]);
+				
+				var gcodeSplitted = Block.BuildGCodeOutput("Block_1", cleaned, false);
+				ParseGCodeString(gcodeSplitted);
 			}
 		}
 	}
