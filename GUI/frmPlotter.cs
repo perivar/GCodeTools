@@ -10,6 +10,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Diagnostics;
@@ -20,13 +21,16 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		const float DEFAULT_MULTIPLIER = 4.0f;
+		// this tracks the transformation applied to the PictureBox's Graphics
+		Matrix transform = new Matrix();
+		const float mouseScrollValue = 0.5f;
+		float zoomScale = 1.0f;
 
-		float ZOOMFACTOR = 1.25f;   // = 25% smaller or larger
-		int MINMAX = 8;             // Times bigger or smaller than the ctrl
-		
-		float scale = 1.0f;
+		const float DEFAULT_MULTIPLIER = 1.0f;
+		//const float ZOOMFACTOR = 1.25f;  	// = 25% smaller or larger
+		//const int MINMAX = 40;          	// Times bigger or smaller than the ctrl
 		float multiplier = DEFAULT_MULTIPLIER;
+		float scale = 10.0f;				// draw scale, typically 10 times the multiplier
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -46,13 +50,18 @@ namespace GCodePlotter
 		
 		List<Block> myBlocks;
 
-		Image renderImage = null;
+		Image offlineImage = null;
 		
 		Point MouseDownLocation;
+		
+		// if app is called using a filepath (from "Open With") store this
+		string filePathArgument = string.Empty;
 
-		public frmPlotter()
+		public frmPlotter(string filePath)
 		{
 			InitializeComponent();
+			
+			filePathArgument = filePath;
 		}
 		
 		DialogResult AskToLoadData()
@@ -66,11 +75,17 @@ namespace GCodePlotter
 		{
 			bDataLoaded = false;
 
-			var lastFile = QuickSettings.Get["LastOpenedFile"];
-			if (!string.IsNullOrWhiteSpace(lastFile))
+			string filePathToUse = string.Empty;
+			if (filePathArgument != string.Empty) {
+				filePathToUse = filePathArgument;
+			} else {
+				filePathToUse = QuickSettings.Get["LastOpenedFile"];
+			}
+			
+			if (!string.IsNullOrWhiteSpace(filePathToUse))
 			{
 				// Load data here!
-				var fileInfo = new FileInfo(lastFile);
+				var fileInfo = new FileInfo(filePathToUse);
 				if (fileInfo.Exists)
 				{
 					txtFile.Text = fileInfo.Name;
@@ -101,7 +116,6 @@ namespace GCodePlotter
 		void TreeViewAfterSelect(object sender, TreeViewEventArgs e)
 		{
 			RenderBlocks();
-			pictureBox1.Refresh();
 		}
 		
 		void TreeViewMouseUp(object sender, MouseEventArgs e)
@@ -213,7 +227,7 @@ namespace GCodePlotter
 
 		void cbRenderG0CheckedChanged(object sender, EventArgs e)
 		{
-			if (renderImage == null) {
+			if (offlineImage == null) {
 				return;
 			}
 
@@ -222,7 +236,7 @@ namespace GCodePlotter
 		
 		void cbSoloSelectCheckedChanged(object sender, EventArgs e)
 		{
-			if (renderImage == null) {
+			if (offlineImage == null) {
 				return;
 			}
 
@@ -241,14 +255,22 @@ namespace GCodePlotter
 		
 		void PictureBox1MouseMove(object sender, MouseEventArgs e)
 		{
+			//Point changePoint = Point.Empty;
+			// change scroll bar position based when dragging
+			var changePoint = new Point(e.Location.X - MouseDownLocation.X,
+			                            e.Location.Y - MouseDownLocation.Y);
+			
+			// reduce with 5 to make the move slower
+			float deltaX = changePoint.X / zoomScale / 5;
+			float deltaY = changePoint.Y / zoomScale / 5;
+			
 			if (e.Button == System.Windows.Forms.MouseButtons.Right)
 			{
-				// change scroll bar position based when dragging
-				var changePoint = new Point(e.Location.X - MouseDownLocation.X,
-				                            e.Location.Y - MouseDownLocation.Y);
 				
-				panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
-				                                           -panelViewer.AutoScrollPosition.Y - changePoint.Y);
+				//panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
+				//                                          -panelViewer.AutoScrollPosition.Y - changePoint.Y);
+				
+				transform.Translate(deltaX, deltaY, MatrixOrder.Prepend);
 				
 				// Since we are only drawing the visable rectange of the picturebox
 				// we have to ensure we update the drawing when we scroll
@@ -259,17 +281,21 @@ namespace GCodePlotter
 			float x = (e.X - LEFT_MARGIN) / scale * 10;
 			float y = (pictureBox1.Height - e.Y - BOTTOM_MARGIN) / scale * 10;
 			
-			txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##}", x, y);
+			//txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##}", x, y);
+			txtCoordinates.Text = string.Format("{0}:{1}, d:{2:0.##}:{3:0.##}", changePoint.X, changePoint.Y, deltaX, deltaY);
+			
+			string transformString = string.Concat(transform.Elements.Select(i => string.Format("{0:0.##},", i)));
+			txtFile.Text = string.Format(CultureInfo.InvariantCulture, "{0}", transformString);
 		}
 
 		void OnMouseWheel(object sender, MouseEventArgs mea) {
 			
-			// http://stackoverflow.com/questions/10694397/how-to-zoom-in-using-mouse-position-on-that-image
-			
-			if (mea.Delta < 0) {
-				ZoomIn(mea.Location);
-			} else {
-				ZoomOut(mea.Location);
+			pictureBox1.Focus();
+			if (pictureBox1.Focused && mea.Delta != 0)
+			{
+				// Map the Form-centric mouse location to the PictureBox client coordinate system
+				Point pictureBoxPoint = pictureBox1.PointToClient(this.PointToScreen(mea.Location));
+				ZoomInOut(pictureBoxPoint, mea.Delta > 0);
 			}
 			
 			// set handled to true to disable scrolling the scrollbars using the mousewheel
@@ -288,13 +314,6 @@ namespace GCodePlotter
 			new GCodeOptimizer.MainForm(this, points, maxX, maxY).Show();
 		}
 		
-		void PanelViewerScroll(object sender, ScrollEventArgs e)
-		{
-			// Since we are only drawing the visable rectange of the picturebox
-			// we have to ensure we update the drawing when we scroll
-			RenderBlocks();
-		}
-
 		void BtnShiftClick(object sender, EventArgs e)
 		{
 			float deltaX = GetMoveX();
@@ -348,35 +367,76 @@ namespace GCodePlotter
 		#endregion
 		
 		#region Zoom Methods
-		void ZoomIn(Point clickPoint) {
+		void PanelViewerScroll(object sender, ScrollEventArgs e)
+		{
+			return;
+			
+			// Since we are only drawing the visable rectange of the picturebox
+			// we have to ensure we update the drawing when we scroll
+			//RenderBlocks();
+			
+			// Fix scrollbar position
+			float zoom = transform.Elements[0];
+			transform = new Matrix(zoom, 0, 0,
+			                       zoom, 0, 0);
+			transform.Translate(panelViewer.AutoScrollPosition.X / zoom,
+			                    panelViewer.AutoScrollPosition.Y / zoom,
+			                    MatrixOrder.Append);
 
-			if ((pictureBox1.Width < (MINMAX * panelViewer.Width)) &&
-			    (pictureBox1.Height < (MINMAX * panelViewer.Height)))
+			string transformString = string.Concat(transform.Elements.Select(i => string.Format("{0:0.##},", i)));
+			txtDimension.Text = string.Format(CultureInfo.InvariantCulture, "{0}", transformString);
+
+			RenderBlocks();
+
+			//pictureBox1.Invalidate();
+			//pictureBox1.Refresh();
+		}
+
+		void ZoomInOut(Point clickPoint, bool zoomIn) {
+
+			// https://stackoverflow.com/questions/44566229/how-to-zoom-at-a-point-in-picturebox-in-c
+			
+			// Figure out what the new scale will be.
+			// Ensure the scale factor remains at a sensible level
+			float newZoomScale = Math.Min(Math.Max(zoomScale + (zoomIn ? mouseScrollValue : -mouseScrollValue), 0.5f), 20f);
+
+			if (newZoomScale != zoomScale)
 			{
-				// store the multiplier to be used for scrollbar setting later
-				float oldMultiplier = multiplier;
+				float adjust = newZoomScale / zoomScale;
+				float oldZoomScale = zoomScale;
+				zoomScale = newZoomScale;
 				
-				// zoom the multiplier
-				multiplier *= ZOOMFACTOR;
+				// Translate mouse point to origin
+				transform.Translate(-clickPoint.X, -clickPoint.Y, MatrixOrder.Append);
+
+				// Scale view
+				transform.Scale(adjust, adjust, MatrixOrder.Append);
+
+				// Translate origin back to original mouse point.
+				transform.Translate(clickPoint.X, clickPoint.Y, MatrixOrder.Append);
 				
-				UpdateScrollbar(clickPoint, oldMultiplier);
+				// Update scrollbar length and position
+				//UpdateScroll(clickPoint);
+				
+				// Render the GCode Blocks
 				RenderBlocks();
 			}
 		}
-
-		void ZoomOut(Point clickPoint) {
-
-			if ((pictureBox1.Width > (panelViewer.Width / MINMAX)) &&
-			    (pictureBox1.Height > (panelViewer.Height / MINMAX )))
-			{
-				// store the multiplier to be used for scrollbar setting later
-				float oldMultiplier = multiplier;
+		
+		void UpdateScroll(Point origin) {
+			if (offlineImage != null) {
+				var scrollSize = new Size(
+					(int)Math.Round(offlineImage.Width * transform.Elements[0]),
+					(int)Math.Round(offlineImage.Height * transform.Elements[3]));
 				
-				// zoom the multiplier
-				multiplier /= ZOOMFACTOR;
-
-				UpdateScrollbar(clickPoint, oldMultiplier);
-				RenderBlocks();
+				var position = new Point((int)(-panelViewer.AutoScrollPosition.X - transform.Elements[4]),
+				                         (int)(-panelViewer.AutoScrollPosition.Y - transform.Elements[5]));
+				
+				panelViewer.AutoScrollMinSize = scrollSize;
+				//panelViewer.AutoScrollPosition = position;
+			}
+			else {
+				panelViewer.AutoScrollMargin = Size.Empty;
 			}
 		}
 		
@@ -386,6 +446,16 @@ namespace GCodePlotter
 		/// <param name="clickPoint">position under the cursor which is to be retained</param>
 		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
 		void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
+			UpdateScrollbar(clickPoint, multiplier, oldMultiplier);
+		}
+
+		/// <summary>
+		/// Update the Scrollbar
+		/// </summary>
+		/// <param name="clickPoint">position under the cursor which is to be retained</param>
+		/// <param name="newMultiplier">zoom factor between 0.1 and 8.0 after it was updated</param>
+		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
+		void UpdateScrollbar(Point clickPoint, float newMultiplier, float oldMultiplier) {
 			// http://vilipetek.com/2013/09/07/105/
 			
 			var scrollPosition = panelViewer.AutoScrollPosition;
@@ -401,9 +471,9 @@ namespace GCodePlotter
 			
 			// Calculate the new scroll position
 			var newScrollPosition = new Point(
-				(int)Math.Round(multiplier * clickPoint.X / oldMultiplier) -
+				(int)Math.Round(newMultiplier * clickPoint.X / oldMultiplier) -
 				(int)cursorOffset.X,
-				(int)Math.Round(multiplier * clickPoint.Y / oldMultiplier) -
+				(int)Math.Round(newMultiplier * clickPoint.Y / oldMultiplier) -
 				(int)cursorOffset.Y );
 			
 			panelViewer.AutoScrollPosition = newScrollPosition;
@@ -531,41 +601,69 @@ namespace GCodePlotter
 			return rect;
 		}
 
-		void GetEmptyImage() {
+		void CreateOfflineImage() {
 			
+			// create offline image
 			var imageDimension = GetDimensionsFromZoom();
 			int width = imageDimension.Width;
 			int height = imageDimension.Height;
 			
 			// if anything has changed, reset image
-			if (renderImage == null || width != renderImage.Width || height != renderImage.Height)
+			if (offlineImage == null || width != offlineImage.Width || height != offlineImage.Height)
 			{
-				if (renderImage != null) {
-					renderImage.Dispose();
+				if (offlineImage != null) {
+					offlineImage.Dispose();
 				}
 
-				renderImage = new Bitmap(width, height);
-				pictureBox1.Width = width;
-				pictureBox1.Height = height;
+				offlineImage = new Bitmap(width, height);
+				//pictureBox1.ClientSize = imageDimension; // cannot set this if autosize=true
 				
 				try {
-					pictureBox1.Image = renderImage;
+					pictureBox1.Image = offlineImage;
 				} catch (OutOfMemoryException) {
 					// could draw a red cross like here:
 					// http://stackoverflow.com/questions/22163846/zooming-of-an-image-using-mousewheel
 				}
 			}
 		}
-
+		
 		void RenderBlocks()
 		{
-			GetEmptyImage();
+			CreateOfflineImage();
+
+			using (var offlineGraphics = Graphics.FromImage(offlineImage)) {
+				
+				// set background color
+				offlineGraphics.Clear(ColorHelper.GetColor(PenColorList.Background));
+
+				// draw smoothly.
+				offlineGraphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+				// set the transformation (zoom, scale etc)
+				offlineGraphics.Transform = transform;
+				//offlineGraphics.ScaleTransform(transform.Elements[0], transform.Elements[3], MatrixOrder.Append);
+				//offlineGraphics.TranslateTransform(transform.Elements[4], transform.Elements[5], MatrixOrder.Append);
+				
+				// The interpolation mode used to smooth the drawing
+				offlineGraphics.InterpolationMode = InterpolationMode.High;
+				
+				// paint the code
+				PaintGCode(offlineGraphics);
+			}
+
+			// when done with all drawing you can enforce the display update by calling
+			// Invalidate or Refresh
+			//pictureBox1.Image = renderImage;
+			//pictureBox1.Invalidate();
+			//pictureBox1.Refresh();
+			//pictureBox1.Image = offlineImage;
+			pictureBox1.Refresh();
 			
-			var graphics = Graphics.FromImage(renderImage);
-			graphics.Clear(ColorHelper.GetColor(PenColorList.Background));
-			
-			// limit the drawing area
-			graphics.Clip = new Region(GetVisibleRectangle(this.pictureBox1));
+			//Draw at 0,0, use the last TranslateTransform to position the image, otherwise the location of the image will depend on the ScaleTransform
+			//pictureBox1.CreateGraphics().DrawImage(offlineImage, 0, 0);
+		}
+		
+		void PaintGCode(Graphics g) {
 			
 			// draw grid
 			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines);
@@ -573,25 +671,25 @@ namespace GCodePlotter
 			{
 				for (var y = 0; y < pictureBox1.Height / scale; y++)
 				{
-					graphics.DrawLine(gridPen, x * scale + LEFT_MARGIN, 0, x * scale + LEFT_MARGIN, pictureBox1.Height);
-					graphics.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN);
+					g.DrawLine(gridPen, x * scale + LEFT_MARGIN, 0, x * scale + LEFT_MARGIN, pictureBox1.Height);
+					g.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN);
 				}
 			}
 
 			// draw arrow grid
 			using (var penZero = new Pen(Color.WhiteSmoke, 1)) {
-				graphics.DrawLine(penZero, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height-BOTTOM_MARGIN);
-				graphics.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penZero, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penX = new Pen(Color.Red, 3)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				graphics.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penY = new Pen(Color.Green, 3)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				graphics.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 
 			// draw gcode
@@ -612,13 +710,13 @@ namespace GCodePlotter
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
 									// draw correct instruction as selected
-									subLinePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									subLinePlots.DrawSegment(g, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								}
 							}
 						} else {
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
-									subLinePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									subLinePlots.DrawSegment(g, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 								}
 							}
 						}
@@ -634,12 +732,12 @@ namespace GCodePlotter
 								    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
 
 									// draw correct segment as selected
-									linePlots.DrawSegment(graphics, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									linePlots.DrawSegment(g, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 									
 								} else {
 									// nothing is selected, draw segment as normal
 									if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
-										linePlots.DrawSegment(graphics, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+										linePlots.DrawSegment(g, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
 									}
 								}
 							}
@@ -647,8 +745,6 @@ namespace GCodePlotter
 					}
 				}
 			}
-
-			pictureBox1.Refresh();
 		}
 		#endregion
 		

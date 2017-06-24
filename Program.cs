@@ -17,7 +17,7 @@ namespace GCodeOptimizer
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new frmPlotter());
+			Application.Run(args.Length == 0 ? new frmPlotter(string.Empty) : new frmPlotter(args[0]));
 		}
 	}
 }

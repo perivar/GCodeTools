@@ -24,9 +24,7 @@ namespace GCodePlotter
 			}
 			base.Dispose(disposing);
 		}
-
-		#region Windows Form Designer generated code
-
+		
 		/// <summary>
 		/// Required method for Designer support - do not modify
 		/// the contents of this method with the code editor.
@@ -119,7 +117,6 @@ namespace GCodePlotter
 			// 
 			// panelViewer
 			// 
-			this.panelViewer.AutoScroll = true;
 			this.panelViewer.Controls.Add(this.pictureBox1);
 			this.panelViewer.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panelViewer.Location = new System.Drawing.Point(0, 0);
@@ -135,7 +132,8 @@ namespace GCodePlotter
 			this.pictureBox1.Location = new System.Drawing.Point(0, 0);
 			this.pictureBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.pictureBox1.Name = "pictureBox1";
-			this.pictureBox1.Size = new System.Drawing.Size(544, 714);
+			this.pictureBox1.Size = new System.Drawing.Size(600, 600);
+			this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
 			this.pictureBox1.TabIndex = 0;
 			this.pictureBox1.TabStop = false;
 			this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PictureBox1MouseDown);
@@ -413,8 +411,8 @@ namespace GCodePlotter
 			// 
 			// txtDimension
 			// 
-			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-			                                                                 | System.Windows.Forms.AnchorStyles.Right)));
+			this.txtDimension.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.txtDimension.Location = new System.Drawing.Point(4, 651);
@@ -548,6 +546,7 @@ namespace GCodePlotter
 			this.splitContainer1.ResumeLayout(false);
 			this.panelViewerAndCommands.ResumeLayout(false);
 			this.panelViewer.ResumeLayout(false);
+			this.panelViewer.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.panelZoomFilename.ResumeLayout(false);
 			this.panelZoomFilename.PerformLayout();
@@ -565,8 +564,6 @@ namespace GCodePlotter
 			this.ResumeLayout(false);
 
 		}
-		#endregion
-
 		private System.Windows.Forms.SplitContainer splitContainer1;
 		private System.Windows.Forms.Panel panelViewerAndCommands;
 		private System.Windows.Forms.Panel panelViewer;
@@ -609,4 +606,3 @@ namespace GCodePlotter
 		private System.Windows.Forms.Panel panelSVG;
 	}
 }
-

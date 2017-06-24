@@ -109,8 +109,15 @@ namespace GCode
 					_penList[type] = new Pen(GetColor(type), 1f);
 				}
 
-				_penList[type].StartCap = LineCap.Flat;
-				_penList[type].EndCap = LineCap.ArrowAnchor;
+				var lineDrawing = QuickSettings.Get["LineDrawing"];
+				if (!string.IsNullOrWhiteSpace(lineDrawing)
+				    && lineDrawing.Equals("Arrow", StringComparison.InvariantCultureIgnoreCase))
+				{
+					_penList[type].StartCap = LineCap.Flat;
+					_penList[type].EndCap = LineCap.ArrowAnchor;
+				} else {
+					QuickSettings.Get["LineDrawing"] = "Normal";
+				}
 			}
 
 			return _penList[type];
