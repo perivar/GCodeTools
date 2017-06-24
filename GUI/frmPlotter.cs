@@ -1,8 +1,8 @@
 ﻿/**
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
+ * Heaviliy Modified by perivar@nerseth.com
  *
  * See LICENCE in the project directory for licence information
- * Heaviliy Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
@@ -27,10 +27,8 @@ namespace GCodePlotter
 		float zoomScale = 1.0f;
 
 		const float DEFAULT_MULTIPLIER = 1.0f;
-		//const float ZOOMFACTOR = 1.25f;  	// = 25% smaller or larger
-		//const int MINMAX = 40;          	// Times bigger or smaller than the ctrl
 		float multiplier = DEFAULT_MULTIPLIER;
-		float scale = 10.0f;				// draw scale, typically 10 times the multiplier
+		float scale = 10.0f;		// draw scale, typically 10 times the multiplier
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -52,7 +50,7 @@ namespace GCodePlotter
 
 		Image offlineImage = null;
 		
-		Point MouseDownLocation;
+		Point MouseDownLocation = Point.Empty;
 		
 		// if app is called using a filepath (from "Open With") store this
 		string filePathArgument = string.Empty;
@@ -249,28 +247,44 @@ namespace GCodePlotter
 			{
 				// store mouse down for mouse drag support
 				// i.e. change scroll bar position based when dragging
-				MouseDownLocation = e.Location;
+				MouseDownLocation = GetRealCoordinate(e.Location);
 			}
+		}
+		
+		/// <summary>
+		/// Back Track the Mouse to return accurate coordinates regardless of
+		/// zoom or pan effects.
+		/// <seealso cref="http://www.bobpowell.net/backtrack.htm"/>
+		/// </summary>
+		/// <param name="p">Point to backtrack</param>
+		/// <returns>Backtracked point</returns>
+		public Point GetRealCoordinate(Point p) {
+
+			// Get the inverse of the view matrix so that we can transform the mouse point into the view
+			Matrix inverseTransform = transform.Clone();
+			inverseTransform.Invert();
+
+			// Translate the point
+			var pts = new [] { p };
+			inverseTransform.TransformPoints(pts);
+			return pts[0];
 		}
 		
 		void PictureBox1MouseMove(object sender, MouseEventArgs e)
 		{
-			//Point changePoint = Point.Empty;
-			// change scroll bar position based when dragging
-			var changePoint = new Point(e.Location.X - MouseDownLocation.X,
-			                            e.Location.Y - MouseDownLocation.Y);
-			
-			// reduce with 5 to make the move slower
-			float deltaX = changePoint.X / zoomScale / 5;
-			float deltaY = changePoint.Y / zoomScale / 5;
+			// Translate the mouse point
+			Point mouseNowLocation = GetRealCoordinate(e.Location);
 			
 			if (e.Button == System.Windows.Forms.MouseButtons.Right)
 			{
-				
-				//panelViewer.AutoScrollPosition = new Point(-panelViewer.AutoScrollPosition.X - changePoint.X,
-				//                                          -panelViewer.AutoScrollPosition.Y - changePoint.Y);
-				
-				transform.Translate(deltaX, deltaY, MatrixOrder.Prepend);
+				// the distance the mouse has travelled since the mouse was pressed
+				int deltaX = mouseNowLocation.X - MouseDownLocation.X;
+				int deltaY = mouseNowLocation.Y - MouseDownLocation.Y;
+
+				// move (translat) the offline image the same distance
+				transform.Translate(deltaX, deltaY);
+
+				//UpdateAutoScrollMinSize();
 				
 				// Since we are only drawing the visable rectange of the picturebox
 				// we have to ensure we update the drawing when we scroll
@@ -278,14 +292,14 @@ namespace GCodePlotter
 			}
 			
 			// output scaled coordinates
-			float x = (e.X - LEFT_MARGIN) / scale * 10;
-			float y = (pictureBox1.Height - e.Y - BOTTOM_MARGIN) / scale * 10;
+			float x = (mouseNowLocation.X - LEFT_MARGIN) / scale * 10;
+			float y = (pictureBox1.Height - mouseNowLocation.Y - BOTTOM_MARGIN) / scale * 10;
 			
-			//txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##}", x, y);
-			txtCoordinates.Text = string.Format("{0}:{1}, d:{2:0.##}:{3:0.##}", changePoint.X, changePoint.Y, deltaX, deltaY);
+			// round
+			x = (float) Math.Round(x, 1, MidpointRounding.AwayFromZero);
+			y = (float) Math.Round(y, 1, MidpointRounding.AwayFromZero);
 			
-			string transformString = string.Concat(transform.Elements.Select(i => string.Format("{0:0.##},", i)));
-			txtFile.Text = string.Format(CultureInfo.InvariantCulture, "{0}", transformString);
+			txtCoordinates.Text = string.Format(CultureInfo.InvariantCulture, "X: {0:0.##}, Y: {1:0.##}", x, y);
 		}
 
 		void OnMouseWheel(object sender, MouseEventArgs mea) {
@@ -293,9 +307,7 @@ namespace GCodePlotter
 			pictureBox1.Focus();
 			if (pictureBox1.Focused && mea.Delta != 0)
 			{
-				// Map the Form-centric mouse location to the PictureBox client coordinate system
-				Point pictureBoxPoint = pictureBox1.PointToClient(this.PointToScreen(mea.Location));
-				ZoomInOut(pictureBoxPoint, mea.Delta > 0);
+				ZoomInOut(mea.Location, mea.Delta > 0);
 			}
 			
 			// set handled to true to disable scrolling the scrollbars using the mousewheel
@@ -308,7 +320,7 @@ namespace GCodePlotter
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
 			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
 			
-			// TODO: add an origin at 0,0
+			// TODO: add the origin at 0,0
 			//points.Add(new Point3D(0, 0, 0));
 			
 			new GCodeOptimizer.MainForm(this, points, maxX, maxY).Show();
@@ -393,36 +405,64 @@ namespace GCodePlotter
 		}
 
 		void ZoomInOut(Point clickPoint, bool zoomIn) {
-
+			
+			// The best explanation of how zooming around a origin works is here:
+			// https://stackoverflow.com/questions/27871711/zoom-in-on-a-fixed-point-using-matrices
+			// I.e.
+			// 1. Translate mouse point to origin (0,0) => ( -xpos, -ypos )
+			// 2. Scale (e.g. 1.5 )
+			// 3. Translate back to the pivot ( +xpos, +ypos )
+			
+			// A more comprehensive example can be found here:
 			// https://stackoverflow.com/questions/44566229/how-to-zoom-at-a-point-in-picturebox-in-c
 			
-			// Figure out what the new scale will be.
-			// Ensure the scale factor remains at a sensible level
-			float newZoomScale = Math.Min(Math.Max(zoomScale + (zoomIn ? mouseScrollValue : -mouseScrollValue), 0.5f), 20f);
+			// Figure out what the new scale will be and
+			// ensure the scale factor remains at a sensible level
+			float newZoomScale = Math.Min(Math.Max(zoomScale + (zoomIn ? mouseScrollValue : -mouseScrollValue), 0.25f), 20f);
 
 			if (newZoomScale != zoomScale)
 			{
-				float adjust = newZoomScale / zoomScale;
-				float oldZoomScale = zoomScale;
+				float zoomValue = newZoomScale / zoomScale;
 				zoomScale = newZoomScale;
 				
 				// Translate mouse point to origin
 				transform.Translate(-clickPoint.X, -clickPoint.Y, MatrixOrder.Append);
 
-				// Scale view
-				transform.Scale(adjust, adjust, MatrixOrder.Append);
+				// Scale the view
+				transform.Scale(zoomValue, zoomValue, MatrixOrder.Append);
 
 				// Translate origin back to original mouse point.
 				transform.Translate(clickPoint.X, clickPoint.Y, MatrixOrder.Append);
 				
-				// Update scrollbar length and position
-				//UpdateScroll(clickPoint);
+				// Calculates the effective size of the image after zooming and updates the AutoScrollSize accordingly
+				UpdateAutoScrollMinSize();
+				
+				// Update scrollbar position
+				// UpdateScroll(clickPoint);
+				//UpdateAutoScrollPosition(clickPoint, );
 				
 				// Render the GCode Blocks
 				RenderBlocks();
 			}
 		}
 		
+		/// <summary>
+		/// Calculates the effective size of the image
+		/// after zooming and updates the AutoScrollSize accordingly
+		/// </summary>
+		void UpdateAutoScrollMinSize()
+		{
+			if(offlineImage == null) {
+				panelViewer.AutoScrollMinSize = panelViewer.Size;
+			} else {
+				panelViewer.AutoScrollMinSize = new Size(
+					(int)(offlineImage.Width * zoomScale + 0.5f),
+					(int)(offlineImage.Height * zoomScale + 0.5f)
+				);
+			}
+		}
+		
+		// TODO: DELETE?
 		void UpdateScroll(Point origin) {
 			if (offlineImage != null) {
 				var scrollSize = new Size(
@@ -436,26 +476,18 @@ namespace GCodePlotter
 				//panelViewer.AutoScrollPosition = position;
 			}
 			else {
-				panelViewer.AutoScrollMargin = Size.Empty;
+				//panelViewer.AutoScrollMargin = Size.Empty;
+				panelViewer.AutoScrollMinSize = panelViewer.Size;
 			}
 		}
 		
 		/// <summary>
-		/// Update the Scrollbar
-		/// </summary>
-		/// <param name="clickPoint">position under the cursor which is to be retained</param>
-		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
-		void UpdateScrollbar(Point clickPoint, float oldMultiplier) {
-			UpdateScrollbar(clickPoint, multiplier, oldMultiplier);
-		}
-
-		/// <summary>
-		/// Update the Scrollbar
+		/// Update the Scrollbar position
 		/// </summary>
 		/// <param name="clickPoint">position under the cursor which is to be retained</param>
 		/// <param name="newMultiplier">zoom factor between 0.1 and 8.0 after it was updated</param>
 		/// <param name="oldMultiplier">zoom factor between 0.1 and 8.0 before it was updated</param>
-		void UpdateScrollbar(Point clickPoint, float newMultiplier, float oldMultiplier) {
+		void UpdateAutoScrollPosition(Point clickPoint, float newMultiplier, float oldMultiplier) {
 			// http://vilipetek.com/2013/09/07/105/
 			
 			var scrollPosition = panelViewer.AutoScrollPosition;
@@ -641,8 +673,6 @@ namespace GCodePlotter
 
 				// set the transformation (zoom, scale etc)
 				offlineGraphics.Transform = transform;
-				//offlineGraphics.ScaleTransform(transform.Elements[0], transform.Elements[3], MatrixOrder.Append);
-				//offlineGraphics.TranslateTransform(transform.Elements[4], transform.Elements[5], MatrixOrder.Append);
 				
 				// The interpolation mode used to smooth the drawing
 				offlineGraphics.InterpolationMode = InterpolationMode.High;
@@ -653,14 +683,10 @@ namespace GCodePlotter
 
 			// when done with all drawing you can enforce the display update by calling
 			// Invalidate or Refresh
-			//pictureBox1.Image = renderImage;
 			//pictureBox1.Invalidate();
 			//pictureBox1.Refresh();
 			//pictureBox1.Image = offlineImage;
 			pictureBox1.Refresh();
-			
-			//Draw at 0,0, use the last TranslateTransform to position the image, otherwise the location of the image will depend on the ScaleTransform
-			//pictureBox1.CreateGraphics().DrawImage(offlineImage, 0, 0);
 		}
 		
 		void PaintGCode(Graphics g) {

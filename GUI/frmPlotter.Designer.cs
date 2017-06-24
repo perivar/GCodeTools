@@ -117,6 +117,7 @@ namespace GCodePlotter
 			// 
 			// panelViewer
 			// 
+			this.panelViewer.AutoScroll = true;
 			this.panelViewer.Controls.Add(this.pictureBox1);
 			this.panelViewer.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panelViewer.Location = new System.Drawing.Point(0, 0);
