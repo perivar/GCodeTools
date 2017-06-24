@@ -21,14 +21,14 @@ namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
 	{
-		// this tracks the transformation applied to the PictureBox's Graphics
+		// zoom transform properties
 		Matrix transform = new Matrix();
 		const float mouseScrollValue = 0.5f;
-		float zoomScale = 1.0f;
+		const float DEFAULT_ZOOM_SCALE = 1.0f;
+		float zoomScale = DEFAULT_ZOOM_SCALE;
 
-		const float DEFAULT_MULTIPLIER = 1.0f;
-		float multiplier = DEFAULT_MULTIPLIER;
-		float scale = 10.0f;		// draw scale, typically 10 times the multiplier
+		float multiplier = 1.0f;	// draw multiplier, originall used for zooming, not anylonger
+		float paintScale = 10.0f;	// draw scale, typically 10 times the multiplier
 
 		// calculated total min and max sizes
 		float maxX = 0.0f;
@@ -158,8 +158,8 @@ namespace GCodePlotter
 
 				string data = File.ReadAllText(fileInfo.FullName);
 				
-				// reset multiplier
-				multiplier = DEFAULT_MULTIPLIER;
+				// reset zoom scale
+				zoomScale = DEFAULT_ZOOM_SCALE;
 
 				ParseGCodeString(data);
 			}
@@ -270,6 +270,23 @@ namespace GCodePlotter
 			return pts[0];
 		}
 		
+		/// <summary>
+		/// Convert point to transformed coordinates
+		/// <seealso cref="https://stackoverflow.com/questions/28427412/c-sharp-cursor-position-on-matrix-transformed-image"/>
+		/// </summary>
+		/// <param name="p">Point to convert</param>
+		/// <returns>Converted point</returns>
+		public Point GetUnrealCoordinate(Point p) {
+
+			// Get the inverse of the view matrix so that we can transform the mouse point into the view
+			Matrix realTransform = transform.Clone();
+
+			// Translate the point
+			var pts = new [] { p };
+			realTransform.TransformPoints(pts);
+			return pts[0];
+		}
+		
 		void PictureBox1MouseMove(object sender, MouseEventArgs e)
 		{
 			// Translate the mouse point
@@ -281,10 +298,11 @@ namespace GCodePlotter
 				int deltaX = mouseNowLocation.X - MouseDownLocation.X;
 				int deltaY = mouseNowLocation.Y - MouseDownLocation.Y;
 
-				// move (translat) the offline image the same distance
+				// move (translate) the offline image the same distance
 				transform.Translate(deltaX, deltaY);
 
-				//UpdateAutoScrollMinSize();
+				// update the scrollbar position
+				UpdateAutoScrollPosition(deltaX, deltaY);
 				
 				// Since we are only drawing the visable rectange of the picturebox
 				// we have to ensure we update the drawing when we scroll
@@ -292,8 +310,8 @@ namespace GCodePlotter
 			}
 			
 			// output scaled coordinates
-			float x = (mouseNowLocation.X - LEFT_MARGIN) / scale * 10;
-			float y = (pictureBox1.Height - mouseNowLocation.Y - BOTTOM_MARGIN) / scale * 10;
+			float x = (mouseNowLocation.X - LEFT_MARGIN) / paintScale * 10;
+			float y = (pictureBox1.Height - mouseNowLocation.Y - BOTTOM_MARGIN) / paintScale * 10;
 			
 			// round
 			x = (float) Math.Round(x, 1, MidpointRounding.AwayFromZero);
@@ -320,8 +338,10 @@ namespace GCodePlotter
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
 			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
 			
-			// TODO: add the origin at 0,0
-			//points.Add(new Point3D(0, 0, 0));
+			// Add the origin as well
+			var origin = new Point3DBlock(0,0);
+			origin.GCodeInstructions.Add(new GCodeInstruction("(origin)"));
+			points.Add(origin);
 			
 			new GCodeOptimizer.MainForm(this, points, maxX, maxY).Show();
 		}
@@ -338,7 +358,6 @@ namespace GCodePlotter
 		
 		void BtnSVGLoadClick(object sender, EventArgs e)
 		{
-			
 			var dialog = new OpenFileDialog();
 			string svgFilePath = "";
 			
@@ -360,27 +379,33 @@ namespace GCodePlotter
 					//QuickSettings.Get["LastOpenedFile"] = fileInfo.FullName;
 				}
 				
-				var svg = SVGDocument.LoadFromFile(svgFilePath);
-				var contours = svg.GetScaledContours();
-				//var contours = svg.GetContours();
-				float zSafeHeight = GetZSafeHeight();
-				float zDepth = GetZDepth();
-				float feedRateRapid = GetFeedRateRapidMoves();
-				float feedRatePlunge = GetFeedRatePlungeMoves();
-				string gCode = "";
-				if (radSVGCenter.Checked) {
-					gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-				} else {
-					gCode = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-				}
-				ParseGCodeString(gCode);
+				// load svg
+				LoadSVG(svgFilePath);
 			}
+		}
+		
+		void LoadSVG(string svgFilePath) {
+			var svg = SVGDocument.LoadFromFile(svgFilePath);
+			var contours = svg.GetScaledContours();
+			//var contours = svg.GetContours();
+			float zSafeHeight = GetZSafeHeight();
+			float zDepth = GetZDepth();
+			float feedRateRapid = GetFeedRateRapidMoves();
+			float feedRatePlunge = GetFeedRatePlungeMoves();
+			string gCode = "";
+			if (radSVGCenter.Checked) {
+				gCode = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+			} else {
+				gCode = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
+			}
+			ParseGCodeString(gCode);
 		}
 		#endregion
 		
 		#region Zoom Methods
 		void PanelViewerScroll(object sender, ScrollEventArgs e)
 		{
+			// TODO FIX THIS
 			return;
 			
 			// Since we are only drawing the visable rectange of the picturebox
@@ -399,9 +424,6 @@ namespace GCodePlotter
 			txtDimension.Text = string.Format(CultureInfo.InvariantCulture, "{0}", transformString);
 
 			RenderBlocks();
-
-			//pictureBox1.Invalidate();
-			//pictureBox1.Refresh();
 		}
 
 		void ZoomInOut(Point clickPoint, bool zoomIn) {
@@ -437,9 +459,8 @@ namespace GCodePlotter
 				// Calculates the effective size of the image after zooming and updates the AutoScrollSize accordingly
 				UpdateAutoScrollMinSize();
 				
-				// Update scrollbar position
-				// UpdateScroll(clickPoint);
-				//UpdateAutoScrollPosition(clickPoint, );
+				// Update the scrollbar position
+				UpdateAutoScrollPosition(clickPoint.X, clickPoint.Y);
 				
 				// Render the GCode Blocks
 				RenderBlocks();
@@ -452,6 +473,10 @@ namespace GCodePlotter
 		/// </summary>
 		void UpdateAutoScrollMinSize()
 		{
+			// TODO FIX THIS
+			panelViewer.AutoScrollMinSize = Size.Empty;
+			return;
+			
 			if(offlineImage == null) {
 				panelViewer.AutoScrollMinSize = panelViewer.Size;
 			} else {
@@ -459,25 +484,6 @@ namespace GCodePlotter
 					(int)(offlineImage.Width * zoomScale + 0.5f),
 					(int)(offlineImage.Height * zoomScale + 0.5f)
 				);
-			}
-		}
-		
-		// TODO: DELETE?
-		void UpdateScroll(Point origin) {
-			if (offlineImage != null) {
-				var scrollSize = new Size(
-					(int)Math.Round(offlineImage.Width * transform.Elements[0]),
-					(int)Math.Round(offlineImage.Height * transform.Elements[3]));
-				
-				var position = new Point((int)(-panelViewer.AutoScrollPosition.X - transform.Elements[4]),
-				                         (int)(-panelViewer.AutoScrollPosition.Y - transform.Elements[5]));
-				
-				panelViewer.AutoScrollMinSize = scrollSize;
-				//panelViewer.AutoScrollPosition = position;
-			}
-			else {
-				//panelViewer.AutoScrollMargin = Size.Empty;
-				panelViewer.AutoScrollMinSize = panelViewer.Size;
 			}
 		}
 		
@@ -510,15 +516,34 @@ namespace GCodePlotter
 			
 			panelViewer.AutoScrollPosition = newScrollPosition;
 		}
+
+		void UpdateAutoScrollPosition(float deltaX, float deltaY) {
+			return; // TODO FIX THIS
+			
+			var scrollPosition = GetRealCoordinate(panelViewer.AutoScrollPosition);
+			var cursorOffset = new Point((int)(deltaX + scrollPosition.X),
+			                             (int)(deltaY + scrollPosition.Y));
+
+			var newScrollPosition = GetRealCoordinate(cursorOffset);
+
+			// AutoScrollPosition is quite cumbersome.
+			// usually you get negative values when doing this:
+			// Point p = this.AutoScrollPosition;
+			// but when setting the scroll position you have to use positive values
+			// ... so to restore the exact same scroll position you have to invert the negative numbers:
+			// this.AutoScrollPosition = new Point(-p.X, -p.Y)
+			
+			//panelViewer.AutoScrollPosition = new Point(-newScrollPosition.X, -newScrollPosition.Y);
+		}
 		
-		Size GetDimensionsFromZoom() {
+		Size GetOfflineImageDimensionsFromZoom() {
 
 			// set scale variable
-			scale = (10 * multiplier);
+			paintScale = (10 * multiplier);
 
 			// 10 mm per grid
-			var width = (int)(maxX * scale + 1) / 10 + 2 * LEFT_MARGIN;
-			var height = (int)(maxY * scale + 1) / 10 + 2 * BOTTOM_MARGIN;
+			var width = (int)(maxX * paintScale + 1) / 10 + 2 * LEFT_MARGIN;
+			var height = (int)(maxY * paintScale + 1) / 10 + 2 * BOTTOM_MARGIN;
 			
 			return new Size(width, height);
 		}
@@ -636,7 +661,7 @@ namespace GCodePlotter
 		void CreateOfflineImage() {
 			
 			// create offline image
-			var imageDimension = GetDimensionsFromZoom();
+			var imageDimension = GetOfflineImageDimensionsFromZoom();
 			int width = imageDimension.Width;
 			int height = imageDimension.Height;
 			
@@ -693,12 +718,12 @@ namespace GCodePlotter
 			
 			// draw grid
 			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines);
-			for (var x = 0; x < pictureBox1.Width / scale; x++)
+			for (var x = 0; x < pictureBox1.Width / paintScale; x++)
 			{
-				for (var y = 0; y < pictureBox1.Height / scale; y++)
+				for (var y = 0; y < pictureBox1.Height / paintScale; y++)
 				{
-					g.DrawLine(gridPen, x * scale + LEFT_MARGIN, 0, x * scale + LEFT_MARGIN, pictureBox1.Height);
-					g.DrawLine(gridPen, 0, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * scale) - BOTTOM_MARGIN);
+					g.DrawLine(gridPen, x * paintScale + LEFT_MARGIN, 0, x * paintScale + LEFT_MARGIN, pictureBox1.Height);
+					g.DrawLine(gridPen, 0, pictureBox1.Height - (y * paintScale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * paintScale) - BOTTOM_MARGIN);
 				}
 			}
 
@@ -710,12 +735,12 @@ namespace GCodePlotter
 			using (var penX = new Pen(Color.Red, 3)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				g.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * scale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * paintScale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 			using (var penY = new Pen(Color.Green, 3)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				g.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * scale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * paintScale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
 
 			// draw gcode
@@ -897,10 +922,10 @@ namespace GCodePlotter
 					                 	
 					                 	foreach (var line in lines) {
 					                 		// check that we are not adding identical lines
-					                 		if (!multiLine.Equals(prevLine)) {
-					                 			tw.Write(multiLine);
+					                 		if (!string.Equals(line, prevLine, StringComparison.OrdinalIgnoreCase)) {
+					                 			tw.WriteLine(line);
 					                 		}
-					                 		prevLine = multiLine;
+					                 		prevLine = line;
 					                 	}
 					                 });
 					tw.Flush();
@@ -1011,20 +1036,7 @@ namespace GCodePlotter
 			if (txtFile.Tag != null) {
 				var fileInfo = new FileInfo(txtFile.Tag.ToString());
 				if (fileInfo.Extension.ToLower().Equals(".svg")) {
-					var svg = SVGDocument.LoadFromFile(fileInfo.FullName);
-					var contours = svg.GetScaledContours();
-					//var contours = svg.GetContours();
-					float zSafeHeight = GetZSafeHeight();
-					float zDepth = GetZDepth();
-					float feedRateRapid = GetFeedRateRapidMoves();
-					float feedRatePlunge = GetFeedRatePlungeMoves();
-					string data = "";
-					if (radSVGCenter.Checked) {
-						data = GCodeUtils.GetGCodeCenter(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-					} else {
-						data = GCodeUtils.GetGCode(contours, zDepth, feedRateRapid, feedRatePlunge, zSafeHeight);
-					}
-					ParseGCodeString(data);
+					LoadSVG(fileInfo.FullName);
 				} else {
 					string data = File.ReadAllText(fileInfo.FullName);
 					ParseGCodeString(data);

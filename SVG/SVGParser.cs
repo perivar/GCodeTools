@@ -291,7 +291,7 @@ namespace SVG
 			// subdivide the Bezier into 250 line segments
 			double segments = 0;
 			//segments = 250 * distance;
-			segments = 1 * distance;
+			segments = distance / 4;
 			
 			return Math.Max(0.01, 1.0 / segments);
 		}

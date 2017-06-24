@@ -167,7 +167,16 @@ namespace GCode
 							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						} else {
 							// Lines doesn't intersect
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							
+							// check if this point is the same as centerpoint
+							// if so add it to both sides
+							// TODO: check if this works in all cases?
+							if (currentPos.X == shift.X) {
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
+							} else {
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							}
 						}
 					}
 					
