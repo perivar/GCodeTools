@@ -887,10 +887,21 @@ namespace GCodePlotter
 
 				using (var tw = new StreamWriter(file.OpenWrite())) {
 					WriteGCodeHeader(tw, zSafeHeight);
+					string prevLine = string.Empty;
 					myBlocks.ForEach(x =>
 					                 {
 					                 	tw.WriteLine();
-					                 	tw.Write(x.BuildGCodeOutput(doPeckDrilling));
+					                 	
+					                 	string multiLine = x.BuildGCodeOutput(doPeckDrilling);
+					                 	string[] lines = multiLine.Split(new [] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+					                 	
+					                 	foreach (var line in lines) {
+					                 		// check that we are not adding identical lines
+					                 		if (!multiLine.Equals(prevLine)) {
+					                 			tw.Write(multiLine);
+					                 		}
+					                 		prevLine = multiLine;
+					                 	}
 					                 });
 					tw.Flush();
 					WriteGCodeFooter(tw, zSafeHeight);
@@ -969,7 +980,6 @@ namespace GCodePlotter
 			tw.WriteLine();
 			tw.WriteLine("(Header)");
 			tw.WriteLine("G90 (set absolute distance mode)");
-			tw.WriteLine("G90.1 (set absolute distance mode for arc centers)");
 			tw.WriteLine("G17 (set active plane to XY)");
 			tw.WriteLine("G40 (turn cutter compensation off)");
 			tw.WriteLine("G21 (set units to mm)");
@@ -983,8 +993,8 @@ namespace GCodePlotter
 			tw.WriteLine("(Footer)");
 			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
 			tw.WriteLine("M5 (stop the spindle)");
-			tw.WriteLine("G0 X0 Y0");
-			tw.WriteLine("G4 P1.0 (Dwell)");
+			//tw.WriteLine("G0 X0 Y0");
+			//tw.WriteLine("G4 P1.0 (Dwell)");
 			tw.WriteLine("(Footer end.)");
 			tw.WriteLine();
 		}
