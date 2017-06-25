@@ -22,7 +22,8 @@ namespace GCode
 		RapidMoveHighlight,
 		LineHighlight,
 		Background,
-		GridLines
+		GridLines,
+		GridLinesHighlight
 	}
 
 	public static class ColorHelper
@@ -40,6 +41,7 @@ namespace GCode
 			if (list == PenColorList.LineHighlight) return Color.White;
 			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
 			if (list == PenColorList.GridLines) return Color.DimGray;
+			if (list == PenColorList.GridLinesHighlight) return Color.LightGray;
 			return Color.White;
 		}
 
@@ -103,7 +105,7 @@ namespace GCode
 			if (!_penList.ContainsKey(type))
 			{
 				if (type == PenColorList.LineHighlight) {
-					_penList[type] = new Pen(GetColor(type), 2f);
+					_penList[type] = new Pen(GetColor(type), 1.5f);
 
 				} else {
 					_penList[type] = new Pen(GetColor(type), 1f);
