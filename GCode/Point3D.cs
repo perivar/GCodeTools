@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -14,6 +15,12 @@ namespace GCode
 		private float z;
 		
 		public static readonly Point3D Empty;
+
+		public PointF PointF {
+			get {
+				return new PointF(this.X, this.Y);
+			}
+		}
 		
 		public bool IsEmpty {
 			get {
@@ -106,6 +113,12 @@ namespace GCode
 		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
 		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
 
+		public PointF PointF {
+			get {
+				return new PointF(point.X, point.Y);
+			}
+		}
+		
 		#region IPoint implementation
 		public float X {
 			get {

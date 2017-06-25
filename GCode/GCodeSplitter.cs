@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 
 namespace GCode
 {
@@ -193,13 +192,13 @@ namespace GCode
 							B = UnsetOffsetAndRotation(cross[0], shift, angle);
 							
 							// Check length of arc before writing
-							if (Distance(B, A) > SELF_ACCURACY) {
+							if (Transformation.Distance(B, A) > SELF_ACCURACY) {
 								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
-								if (Distance(C, B) > SELF_ACCURACY) {
+								if (Transformation.Distance(C, B) > SELF_ACCURACY) {
 									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 							}
@@ -208,12 +207,12 @@ namespace GCode
 								E = UnsetOffsetAndRotation(cross[1], shift, angle);
 								
 								// Check length of arc before writing
-								if (Distance(E, B) > SELF_ACCURACY) {
+								if (Transformation.Distance(E, B) > SELF_ACCURACY) {
 									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 								
 								// Check length of arc before writing
-								if (Distance(C, E) > SELF_ACCURACY) {
+								if (Transformation.Distance(C, E) > SELF_ACCURACY) {
 									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 								}
 							}
@@ -419,7 +418,7 @@ namespace GCode
 			var ps2 = new PointF(p1.X, p1.Y);
 			var pe2 = new PointF(p2.X, p2.Y);
 			
-			var intersection = FindLineIntersectionPoint(ps1, pe1, ps2, pe2);
+			var intersection = Transformation.FindLineIntersectionPoint(ps1, pe1, ps2, pe2);
 			
 			if (!intersection.IsEmpty) {
 				output.Add(new Point3D(intersection.X, intersection.Y));
@@ -443,8 +442,8 @@ namespace GCode
 			double gamma2 = 0.0f;
 			
 			// find radius of circle
-			double R = Distance(p1, cent);
-			double Rt = Distance(p2, cent);
+			double R = Transformation.Distance(p1, cent);
+			double Rt = Transformation.Distance(p2, cent);
 			
 			if (Math.Abs(R-Rt) > SELF_ACCURACY) {
 				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
@@ -462,7 +461,7 @@ namespace GCode
 
 			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // Note! no code
 
-			var betaTuple = Transform(p2.X-cent.X,p2.Y-cent.Y,DegreeToRadian(-theta));
+			var betaTuple = Transform(p2.X-cent.X,p2.Y-cent.Y,Transformation.DegreeToRadian(-theta));
 			double xbeta = betaTuple.Item1;
 			double ybeta = betaTuple.Item2;
 			double beta = GetAngle(xbeta, ybeta, code);
@@ -471,12 +470,12 @@ namespace GCode
 				beta = 360.0;
 			}
 
-			var xyTransTuple = Transform(-cent.X,ycross1-cent.Y,DegreeToRadian(-theta));
+			var xyTransTuple = Transform(-cent.X,ycross1-cent.Y,Transformation.DegreeToRadian(-theta));
 			double xt = xyTransTuple.Item1;
 			double yt = xyTransTuple.Item2;
 			double gt1 = GetAngle(xt,yt,code);
 			
-			var xyTransTuple2 = Transform(-cent.X,ycross2-cent.Y,DegreeToRadian(-theta));
+			var xyTransTuple2 = Transform(-cent.X,ycross2-cent.Y,Transformation.DegreeToRadian(-theta));
 			double xt2 = xyTransTuple2.Item1;
 			double yt2 = xyTransTuple2.Item2;
 			double gt2 = GetAngle(xt2,yt2,code);
@@ -521,38 +520,6 @@ namespace GCode
 			return output;
 		}
 
-		public static List<Point3D> GetArcIntersects2(Point3D p1, Point3D p2, Point3D cent, CommandList code) {
-
-			var output = new List<Point3D>();
-
-			// find radius of circle
-			double R = Distance(p1, cent);
-			double Rt = Distance(p2, cent);
-			
-			if (Math.Abs(R-Rt) > SELF_ACCURACY) {
-				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
-			}
-			
-			// the coordinate system is shifted so that X is 0
-			var pp1 = new PointF(0,10);
-			var pp2 = new PointF(0,20);
-			
-			var i1 = PointF.Empty;
-			var i2 = PointF.Empty;
-			int numIntersections = FindLineCircleIntersections(cent.X, cent.Y, (float) R, pp1, pp2, out i1, out i2);
-			if (numIntersections > 0) {
-				var ip1 = new Point3D(i1.X, i1.Y, p1.Z);
-				if (ip1 != p1) output.Add(ip1);
-				
-				if (numIntersections == 2) {
-					var ip2 = new Point3D(i2.X, i2.Y, p1.Z);
-					if (ip2 != p1) output.Add(ip2);
-				}
-			}
-			
-			return output;
-		}
-
 		/// <summary>
 		/// Routine takes an x and a y coords and does a cordinate transformation
 		/// to a new coordinate system at angle from the initial coordinate system
@@ -572,7 +539,7 @@ namespace GCode
 		/// <param name="code">CommandList, type of arc</param>
 		public static double GetAngle(double x, double y, CommandList code = CommandList.CCWArc)
 		{
-			double angle = 90.0 - RadianToDegree(Math.Atan2(x, y));
+			double angle = 90.0 - Transformation.RadianToDegree(Math.Atan2(x, y));
 			if (angle < 0) {
 				angle = 360 + angle;
 			}
@@ -589,7 +556,7 @@ namespace GCode
 			x = x - offset.X;
 			y = y - offset.Y;
 			z = z - offset.Z;
-			var xy = Transform(x,y, DegreeToRadian(rotate) );
+			var xy = Transform(x,y, Transformation.DegreeToRadian(rotate) );
 			return new Point3D((float)xy.Item1, (float)xy.Item2, z);
 		}
 
@@ -597,120 +564,12 @@ namespace GCode
 			float x = coords.X;
 			float y = coords.Y;
 			float z = coords.Z;
-			var xy = Transform(x, y, DegreeToRadian(-rotate) );
+			var xy = Transform(x, y, Transformation.DegreeToRadian(-rotate) );
 			x = (float) xy.Item1 + offset.X;
 			y = (float) xy.Item2 + offset.Y;
 			z = z + offset.Z;
 			return new Point3D(x, y, z);
 		}
 		
-		private static double DegreeToRadian(double angle)
-		{
-			return Math.PI * angle / 180.0;
-		}
-		
-		private static double RadianToDegree(double angle)
-		{
-			return angle * (180.0 / Math.PI);
-		}
-		
-		/// <summary>
-		/// Calculate the distance between two points in 2D space (x and y)
-		/// (Perform an euclidean calculation of two points)
-		/// </summary>
-		/// <param name="p1">first point</param>
-		/// <param name="p2">second point</param>
-		/// <returns>the euclidean distance between the two points</returns>
-		private static double Distance(IPoint p1, IPoint p2)
-		{
-			return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-		}
-		
-		/// <summary>
-		/// Find the points of intersection between a circle and a line
-		/// </summary>
-		/// <param name="cx">x coordinate of center point of circle</param>
-		/// <param name="cy">y coordinate of center point of circle</param>
-		/// <param name="radius">radius of circle</param>
-		/// <param name="point1">line point 1</param>
-		/// <param name="point2">line point 2</param>
-		/// <param name="intersection1">output coordinate of first intersection if it exists</param>
-		/// <param name="intersection2">output coordinate of second intersection if it exists</param>
-		/// <returns>number of found intersections</returns>
-		/// <see cref="http://csharphelper.com/blog/2014/09/determine-where-a-line-intersects-a-circle-in-c/"/>
-		private static int FindLineCircleIntersections(float cx, float cy, float radius,
-		                                               PointF point1, PointF point2, out PointF intersection1, out PointF intersection2)
-		{
-			float dx, dy, A, B, C, det, t;
-
-			dx = point2.X - point1.X;
-			dy = point2.Y - point1.Y;
-
-			A = dx * dx + dy * dy;
-			B = 2 * (dx * (point1.X - cx) + dy * (point1.Y - cy));
-			C = (point1.X - cx) * (point1.X - cx) + (point1.Y - cy) * (point1.Y - cy) - radius * radius;
-
-			det = B * B - 4 * A * C;
-			if ((A <= SELF_ZERO) || (det < 0))
-			{
-				// No real solutions.
-				intersection1 = new PointF(float.NaN, float.NaN);
-				intersection2 = new PointF(float.NaN, float.NaN);
-				return 0;
-			}
-			else if (det == 0)
-			{
-				// One solution.
-				t = -B / (2 * A);
-				intersection1 = new PointF(point1.X + t * dx, point1.Y + t * dy);
-				intersection2 = new PointF(float.NaN, float.NaN);
-				return 1;
-			}
-			else
-			{
-				// Two solutions.
-				t = (float)((-B + Math.Sqrt(det)) / (2 * A));
-				intersection1 = new PointF(point1.X + t * dx, point1.Y + t * dy);
-				t = (float)((-B - Math.Sqrt(det)) / (2 * A));
-				intersection2 = new PointF(point1.X + t * dx, point1.Y + t * dy);
-				return 2;
-			}
-		}
-		
-		/// <summary>
-		/// Find the point of intersection between two lines
-		/// </summary>
-		/// <param name="ps1">start point of first line</param>
-		/// <param name="pe1">end point of first line</param>
-		/// <param name="ps2">start point of second line</param>
-		/// <param name="pe2">end point of second line</param>
-		/// <returns>Point of intersection</returns>
-		/// <see cref="http://www.wyrmtale.com/blog/2013/115/2d-line-intersection-in-c"/>
-		private static PointF FindLineIntersectionPoint(PointF ps1, PointF pe1,
-		                                                PointF ps2, PointF pe2)
-		{
-			// Get A,B,C of first line - points : ps1 to pe1
-			float A1 = pe1.Y-ps1.Y;
-			float B1 = ps1.X-pe1.X;
-			float C1 = A1*ps1.X+B1*ps1.Y;
-			
-			// Get A,B,C of second line - points : ps2 to pe2
-			float A2 = pe2.Y-ps2.Y;
-			float B2 = ps2.X-pe2.X;
-			float C2 = A2*ps2.X+B2*ps2.Y;
-			
-			// Get delta and check if the lines are parallel
-			float delta = A1*B2 - A2*B1;
-			if(delta == 0) {
-				// Lines are parallell
-				return PointF.Empty;
-			}
-			
-			// now return the intersection point
-			return new PointF(
-				(B2*C1 - B1*C2)/delta,
-				(A1*C2 - A2*C1)/delta
-			);
-		}
 	}
 }

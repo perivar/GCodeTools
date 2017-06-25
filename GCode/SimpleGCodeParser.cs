@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Drawing;
 
 namespace GCode
 {
@@ -325,6 +326,22 @@ namespace GCode
 					return true;
 				}
 				return false;
+			}
+		}
+		
+		public bool HasXY {
+			get {
+				return X.HasValue && Y.HasValue;
+			}
+		}
+		
+		public PointF PointF {
+			get {
+				if (HasXY) {
+					return new PointF(X.Value, Y.Value);
+				} else {
+					return PointF.Empty;
+				}
 			}
 		}
 		#endregion

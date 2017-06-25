@@ -71,6 +71,7 @@
     <Compile Include="GCode\Point3D.cs" />
     <Compile Include="GCode\QuickSettings.cs" />
     <Compile Include="GCode\SimpleGCodeParser.cs" />
+    <Compile Include="GCode\Transformation.cs" />
     <Compile Include="GUI\frmOptions.cs" />
     <Compile Include="GUI\frmOptions.Designer.cs">
       <DependentUpon>frmOptions.cs</DependentUpon>

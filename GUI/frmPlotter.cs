@@ -10,10 +10,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Globalization;
-using System.Diagnostics;
 using GCode;
 using SVG;
 
@@ -356,6 +354,17 @@ namespace GCodePlotter
 			ParseGCodeString(gCode);
 		}
 		
+		void BtnRotateClick(object sender, EventArgs e)
+		{
+			//var center = new PointF(227.3f, 118.65f);
+			var center = new PointF(maxY/2, maxX/2);
+			//var center = new PointF(0, 0);
+			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, 90);
+			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
+			ParseGCodeString(gCode);
+			//transform.Reset();
+		}
+
 		void BtnSVGLoadClick(object sender, EventArgs e)
 		{
 			var dialog = new OpenFileDialog();
@@ -1161,5 +1170,6 @@ namespace GCodePlotter
 				ParseGCodeString(gcodeSplitted);
 			}
 		}
+		
 	}
 }

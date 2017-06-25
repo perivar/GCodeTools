@@ -39,6 +39,7 @@ namespace GCodePlotter
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.btnRotate = new System.Windows.Forms.Button();
 			this.panelMove = new System.Windows.Forms.Panel();
 			this.btnShift = new System.Windows.Forms.Button();
 			this.txtShiftX = new System.Windows.Forms.TextBox();
@@ -191,8 +192,19 @@ namespace GCodePlotter
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
 			// 
+			// btnRotate
+			// 
+			this.btnRotate.Location = new System.Drawing.Point(82, 0);
+			this.btnRotate.Name = "btnRotate";
+			this.btnRotate.Size = new System.Drawing.Size(82, 34);
+			this.btnRotate.TabIndex = 33;
+			this.btnRotate.Text = "Rotate";
+			this.btnRotate.UseVisualStyleBackColor = true;
+			this.btnRotate.Click += new System.EventHandler(this.BtnRotateClick);
+			// 
 			// panelMove
 			// 
+			this.panelMove.Controls.Add(this.btnRotate);
 			this.panelMove.Controls.Add(this.btnShift);
 			this.panelMove.Controls.Add(this.txtShiftX);
 			this.panelMove.Controls.Add(this.txtShiftY);
@@ -207,7 +219,7 @@ namespace GCodePlotter
 			this.btnShift.Location = new System.Drawing.Point(5, 0);
 			this.btnShift.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnShift.Name = "btnShift";
-			this.btnShift.Size = new System.Drawing.Size(159, 34);
+			this.btnShift.Size = new System.Drawing.Size(70, 34);
 			this.btnShift.TabIndex = 21;
 			this.btnShift.Text = "Move";
 			this.btnShift.UseVisualStyleBackColor = true;
@@ -362,10 +374,10 @@ namespace GCodePlotter
 			// 
 			// txtSplit
 			// 
-			this.txtSplit.Location = new System.Drawing.Point(105, 80);
+			this.txtSplit.Location = new System.Drawing.Point(98, 80);
 			this.txtSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtSplit.Name = "txtSplit";
-			this.txtSplit.Size = new System.Drawing.Size(59, 26);
+			this.txtSplit.Size = new System.Drawing.Size(66, 26);
 			this.txtSplit.TabIndex = 14;
 			this.txtSplit.Text = "0.0";
 			// 
@@ -415,12 +427,12 @@ namespace GCodePlotter
 			| System.Windows.Forms.AnchorStyles.Right)));
 			this.txtDimension.BackColor = System.Drawing.SystemColors.Control;
 			this.txtDimension.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.txtDimension.Location = new System.Drawing.Point(4, 651);
+			this.txtDimension.Location = new System.Drawing.Point(3, 653);
 			this.txtDimension.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtDimension.Multiline = true;
 			this.txtDimension.Name = "txtDimension";
 			this.txtDimension.ReadOnly = true;
-			this.txtDimension.Size = new System.Drawing.Size(178, 131);
+			this.txtDimension.Size = new System.Drawing.Size(178, 126);
 			this.txtDimension.TabIndex = 11;
 			// 
 			// cmdSaveLayers
@@ -604,5 +616,6 @@ namespace GCodePlotter
 		private System.Windows.Forms.Panel panelSplitCmds;
 		private System.Windows.Forms.Panel panelMove;
 		private System.Windows.Forms.Panel panelSVG;
+		private System.Windows.Forms.Button btnRotate;
 	}
 }
