@@ -20,7 +20,7 @@ namespace GCodePlotter
 		// zoom transform properties
 		Matrix transform = new Matrix();
 		const float mouseScrollValue = 0.5f;
-		const float DEFAULT_ZOOM_SCALE = 2.0f;
+		const float DEFAULT_ZOOM_SCALE = 1.0f;
 		float zoomScale = DEFAULT_ZOOM_SCALE;
 		
 		const float multiplier = 1.0f; // multiply every coordinate with this when drawing
@@ -551,6 +551,9 @@ namespace GCodePlotter
 			if (gridWidth > 0) {
 				transform.Reset();
 				zoomScale = panelViewer.Width / gridWidth;
+				if (zoomScale <= 0) {
+					zoomScale = DEFAULT_ZOOM_SCALE;
+				}
 				transform.Scale(zoomScale, zoomScale, MatrixOrder.Append);
 			} else {
 				transform.Reset();
@@ -764,6 +767,9 @@ namespace GCodePlotter
 							}
 						}
 					}
+					
+					// draw drill point if neccesary
+					DrawDrillPoint(g, parentBlock);
 				} else {
 					// top level, i.e. the block level or if nothing is selected
 					foreach (Block blockItem in myBlocks) {
@@ -776,7 +782,6 @@ namespace GCodePlotter
 
 									// draw correct segment as selected
 									linePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
-									
 								} else {
 									// nothing is selected, draw segment as normal
 									if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
@@ -784,8 +789,34 @@ namespace GCodePlotter
 									}
 								}
 							}
+							
+							// draw drill point if neccesary
+							DrawDrillPoint(g, blockItem);
 						}
 					}
+				}
+			}
+		}
+		
+		void DrawDrillPoint(Graphics g, Block blockItem) {
+			
+			// if this is a drillblock, paint a circle at the point
+			if (blockItem.IsDrillBlock) {
+				var x = blockItem.PlotPoints[0].X1;
+				var y = blockItem.PlotPoints[0].Y1;
+				var radius = 3/zoomScale;
+				var drillPointBrush = Brushes.Pink;
+				bool drawDrillPoint = !cbSoloSelect.Checked;
+
+				if (treeView.SelectedNode != null
+				    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
+					drillPointBrush = Brushes.DodgerBlue;
+					if (cbSoloSelect.Checked) drawDrillPoint = true;
+				}
+				if (drawDrillPoint) {
+					g.FillEllipse(drillPointBrush, x * multiplier + LEFT_MARGIN - radius,
+					              gridHeigh - (y * multiplier) - BOTTOM_MARGIN - radius,
+					              radius*2, radius*2);
 				}
 			}
 		}
@@ -1008,7 +1039,7 @@ namespace GCodePlotter
 		void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
 			tw.WriteLine();
 			tw.WriteLine("(Footer)");
-			tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
+			//tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
 			tw.WriteLine("M5 (stop the spindle)");
 			//tw.WriteLine("G0 X0 Y0");
 			//tw.WriteLine("G4 P1.0 (Dwell)");

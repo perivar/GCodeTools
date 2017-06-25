@@ -93,12 +93,39 @@ namespace GCode
 		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
 		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
 		
+		public bool IsDrillBlock {
+			get {
+				if (GCodeInstructions.Count == 3) {
+					bool hasRapidMove = false;
+					bool hasZUp = false;
+					bool hasZDown = false;
+					foreach (var instruction in GCodeInstructions) {
+						if ((instruction.CommandEnum == CommandList.RapidMove
+						     || instruction.CommandEnum == CommandList.NormalMove)
+						    && instruction.Z.HasValue
+						    && instruction.Z.Value > 0) {
+							hasZUp = true;
+						} else if (instruction.CommandEnum == CommandList.RapidMove
+						           && !instruction.Z.HasValue) {
+							hasRapidMove = true;
+						} else if (instruction.CommandEnum == CommandList.NormalMove
+						           && instruction.Z.HasValue
+						           && instruction.Z.Value < 0) {
+							hasZDown = true;
+						}
+					}
+					if (hasZUp && hasZDown && hasRapidMove) return true;
+				}
+				return false;
+			}
+		}
+
 		/// <summary>
 		/// Calculate Min and Max values based on all included gcode instructions
 		/// </summary>
 		public void CalculateMinAndMax()
 		{
-			// why was this needed in the first place?
+			// TODO: why was this needed in the first place?
 			/*
 			var first = gcodeInstructions.First();
 			if (first != null)
