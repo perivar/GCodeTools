@@ -1,8 +1,6 @@
 ﻿/**
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
  * Heaviliy Modified by perivar@nerseth.com
- *
- * See LICENCE in the project directory for licence information
  **/
 using System;
 using System.Collections.Generic;
@@ -22,12 +20,14 @@ namespace GCodePlotter
 		// zoom transform properties
 		Matrix transform = new Matrix();
 		const float mouseScrollValue = 0.5f;
-		const float DEFAULT_ZOOM_SCALE = 1.0f;
+		const float DEFAULT_ZOOM_SCALE = 2.0f;
 		float zoomScale = DEFAULT_ZOOM_SCALE;
-
-		float multiplier = 1.0f;	// draw multiplier, originall used for zooming, not anylonger
-		float paintScale = 10.0f;	// draw scale, typically 10 times the multiplier
-
+		
+		const float multiplier = 1.0f; // multiply every coordinate with this when drawing
+		int gridSize = 10; // 10 mm - 10 times the multiplier
+		int gridWidth = 0; // draw grid width, typically maxX + 2 * margin
+		int gridHeigh = 0; // draw grid height, typically maxY + 2 * margin
+		
 		// calculated total min and max sizes
 		float maxX = 0.0f;
 		float maxY = 0.0f;
@@ -155,10 +155,6 @@ namespace GCodePlotter
 				this.Text = fileInfo.Name;
 
 				string data = File.ReadAllText(fileInfo.FullName);
-				
-				// zoom to fit new content
-				ZoomToFit();
-
 				ParseGCodeString(data);
 			}
 		}
@@ -308,8 +304,8 @@ namespace GCodePlotter
 			}
 			
 			// output scaled coordinates
-			float x = (mouseNowLocation.X - LEFT_MARGIN) / paintScale * 10;
-			float y = (pictureBox1.Height - mouseNowLocation.Y - BOTTOM_MARGIN) / paintScale * 10;
+			float x = (mouseNowLocation.X - LEFT_MARGIN);
+			float y = (gridHeigh - mouseNowLocation.Y - BOTTOM_MARGIN);
 			
 			// round
 			x = (float) Math.Round(x, 1, MidpointRounding.AwayFromZero);
@@ -448,7 +444,7 @@ namespace GCodePlotter
 			
 			// Figure out what the new scale will be and
 			// ensure the scale factor remains at a sensible level
-			float newZoomScale = Math.Min(Math.Max(zoomScale + (zoomIn ? mouseScrollValue : -mouseScrollValue), 0.25f), 20f);
+			float newZoomScale = Math.Min(Math.Max(zoomScale + (zoomIn ? mouseScrollValue : -mouseScrollValue), 0.25f), 30f);
 
 			if (newZoomScale != zoomScale)
 			{
@@ -545,35 +541,42 @@ namespace GCodePlotter
 		}
 		
 		Size GetOfflineImageDimensionsFromZoom() {
-
-			// set scale variable
-			paintScale = (10 * multiplier);
-
+			
+			/*
 			// get the widh and height using the max and min values
 			var totalX = Math.Abs(minX) + Math.Abs(maxX);
 			var totalY = Math.Abs(minY) + Math.Abs(maxY);
 			
-			// 10 mm per grid
-			var width = (int)(totalX * paintScale + 1) / 10 + 2 * LEFT_MARGIN;
-			var height = (int)(totalY * paintScale + 1) / 10 + 2 * BOTTOM_MARGIN;
+			var width = (int)(totalX + 2 * LEFT_MARGIN);
+			var height = (int)(totalY + 2 * BOTTOM_MARGIN);
 			
-			if (width < panelViewer.Width) width = panelViewer.Width;
-			if (height < panelViewer.Height) height = panelViewer.Height;
+			//if (width < panelViewer.Width) width = panelViewer.Width;
+			//if (height < panelViewer.Height) height = panelViewer.Height;
+			 */
 			
+			var width = (int) (panelViewer.Size.Width * multiplier);
+			var height = (int) (panelViewer.Size.Height * multiplier);
+			
+			gridSize = (int) (10.0*multiplier); // 10 mm
+			gridWidth = (int) (maxX + 2*LEFT_MARGIN);
+			gridHeigh = (int) (maxY + 2*BOTTOM_MARGIN);
+			//gridWidth = (int) (maxX);
+			//gridHeigh = (int) (maxY);
+
 			return new Size(width, height);
 		}
 
 		void ZoomToFit() {
 			
-			var totalX = Math.Abs(minX) + Math.Abs(maxX);
-
-			if (totalX > 0) {
-				multiplier = (panelViewer.Width-100) / totalX;
+			if (maxX > 0) {
+				transform.Reset();
+				zoomScale = panelViewer.Width / gridWidth;
+				transform.Scale(zoomScale, zoomScale, MatrixOrder.Append);
+			} else {
+				transform.Reset();
+				zoomScale = DEFAULT_ZOOM_SCALE;
+				transform.Scale(zoomScale, zoomScale, MatrixOrder.Append);
 			}
-			
-			transform.Reset();
-			zoomScale = 0.80f;
-			transform.Scale(zoomScale, zoomScale, MatrixOrder.Append);
 		}
 		#endregion
 		
@@ -730,38 +733,37 @@ namespace GCodePlotter
 			// when done with all drawing you can enforce the display update by calling
 			// Invalidate or Refresh
 			//pictureBox1.Invalidate();
-			//pictureBox1.Refresh();
-			//pictureBox1.Image = offlineImage;
 			pictureBox1.Refresh();
 		}
 		
 		void PaintGCode(Graphics g) {
 			
 			// draw grid
-			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines);
-			for (var x = 0; x < pictureBox1.Width / paintScale; x++)
+			Pen gridPen = ColorHelper.GetPen(PenColorList.GridLines, zoomScale);
+			for (var x = 0; x < gridWidth; x += gridSize)
 			{
-				for (var y = 0; y < pictureBox1.Height / paintScale; y++)
+				for (var y = 0; y < gridHeigh; y += gridSize)
 				{
-					g.DrawLine(gridPen, x * paintScale + LEFT_MARGIN, 0, x * paintScale + LEFT_MARGIN, pictureBox1.Height);
-					g.DrawLine(gridPen, 0, pictureBox1.Height - (y * paintScale) - BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height - (y * paintScale) - BOTTOM_MARGIN);
+					g.DrawLine(gridPen, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN-y, gridWidth, gridHeigh-BOTTOM_MARGIN-y);
+					g.DrawLine(gridPen, LEFT_MARGIN+x, gridHeigh-BOTTOM_MARGIN, LEFT_MARGIN+x, 0);
 				}
 			}
 
 			// draw arrow grid
-			using (var penZero = new Pen(Color.WhiteSmoke, 1)) {
-				g.DrawLine(penZero, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, pictureBox1.Width, pictureBox1.Height-BOTTOM_MARGIN);
-				g.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+			float arrowGridPenSize = 4/zoomScale;
+			using (var penZero = new Pen(Color.WhiteSmoke, 2/zoomScale)) {
+				g.DrawLine(penZero, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN, gridWidth, gridHeigh-BOTTOM_MARGIN);
+				g.DrawLine(penZero, LEFT_MARGIN, 0, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN);
 			}
-			using (var penX = new Pen(Color.Red, 3)) {
+			using (var penX = new Pen(Color.Red, arrowGridPenSize)) {
 				penX.StartCap= LineCap.Flat;
 				penX.EndCap = LineCap.ArrowAnchor;
-				g.DrawLine(penX, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN, 5 * paintScale + LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penX, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN, 50 + LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN);
 			}
-			using (var penY = new Pen(Color.Green, 3)) {
+			using (var penY = new Pen(Color.Green, arrowGridPenSize)) {
 				penY.StartCap = LineCap.ArrowAnchor;
 				penY.EndCap = LineCap.Flat;
-				g.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * paintScale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
+				g.DrawLine(penY, LEFT_MARGIN, gridHeigh - 50 - BOTTOM_MARGIN, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN);
 			}
 			
 			// draw gcode
@@ -782,13 +784,13 @@ namespace GCodePlotter
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
 									// draw correct instruction as selected
-									subLinePlots.DrawSegment(g, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									subLinePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 								}
 							}
 						} else {
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
-									subLinePlots.DrawSegment(g, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									subLinePlots.DrawSegment(g, gridHeigh, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 								}
 							}
 						}
@@ -804,12 +806,12 @@ namespace GCodePlotter
 								    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
 
 									// draw correct segment as selected
-									linePlots.DrawSegment(g, pictureBox1.Height, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+									linePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 									
 								} else {
 									// nothing is selected, draw segment as normal
 									if (treeView.SelectedNode == null || !cbSoloSelect.Checked) {
-										linePlots.DrawSegment(g, pictureBox1.Height, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN);
+										linePlots.DrawSegment(g, gridHeigh, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 									}
 								}
 							}
@@ -1109,10 +1111,11 @@ namespace GCodePlotter
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
 			                                  maxX, minX, maxY, minY, maxZ, minZ);
 			
+			RenderBlocks();
+
 			// zoom to fit new content
 			ZoomToFit();
-			
-			RenderBlocks();
+
 			bDataLoaded = true;
 		}
 		#endregion

@@ -122,5 +122,11 @@ namespace GCode
 
 			return _penList[type];
 		}
+		
+		public static Pen GetPen(PenColorList type, float zoomScale) {
+			var pen = GetPen(type);
+			pen.Width = pen.Width / zoomScale;
+			return pen;
+		}
 	}
 }

@@ -37,14 +37,14 @@ namespace GCode
 			Pen = pen;
 		}
 
-		public void DrawSegment(Graphics g, int height, bool highlight = false, float multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0)
+		public void DrawSegment(Graphics g, int height, bool highlight = false, float multiplier = 1, bool renderG0 = true, int left = 0, int bottom = 0, float zoomScale=1.0f)
 		{
 			if (Pen == PenColorList.RapidMove && !renderG0) {
 				return;
 			}
 			
 			if (Pen == PenColorList.RapidMove && highlight) {
-				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHighlight);
+				var rapidPen = ColorHelper.GetPen(PenColorList.RapidMoveHighlight, zoomScale);
 				float[] dashValues = { 5, 2 };
 				rapidPen.DashPattern = dashValues;
 				g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
@@ -52,15 +52,15 @@ namespace GCode
 			}
 
 			if (highlight) {
-				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
+				g.DrawLine(ColorHelper.GetPen(PenColorList.LineHighlight, zoomScale), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 			} else {
 				if (Pen == PenColorList.RapidMove) {
-					var rapidPen = ColorHelper.GetPen(Pen);
+					var rapidPen = ColorHelper.GetPen(Pen, zoomScale);
 					float[] dashValues = { 5, 2 };
 					rapidPen.DashPattern = dashValues;
 					g.DrawLine(rapidPen, X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				} else {
-					g.DrawLine(ColorHelper.GetPen(Pen), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
+					g.DrawLine(ColorHelper.GetPen(Pen, zoomScale), X1 * multiplier + left, height - (Y1 * multiplier) - bottom, X2 * multiplier + left, height - (Y2 * multiplier) - bottom);
 				}
 			}
 		}
