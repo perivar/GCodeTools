@@ -103,8 +103,8 @@ namespace GCodePlotter
 				return;
 			}
 			
-			// calculate optimal multiplier
-			CalculateOptimalZoomMultiplier();
+			// zoom to fit new content
+			ZoomToFit();
 			
 			RenderBlocks();
 		}
@@ -156,8 +156,8 @@ namespace GCodePlotter
 
 				string data = File.ReadAllText(fileInfo.FullName);
 				
-				// reset zoom scale
-				zoomScale = DEFAULT_ZOOM_SCALE;
+				// zoom to fit new content
+				ZoomToFit();
 
 				ParseGCodeString(data);
 			}
@@ -357,12 +357,11 @@ namespace GCodePlotter
 		void BtnRotateClick(object sender, EventArgs e)
 		{
 			//var center = new PointF(227.3f, 118.65f);
-			var center = new PointF(maxY/2, maxX/2);
-			//var center = new PointF(0, 0);
+			//var center = new PointF(maxY/2, maxX/2);
+			var center = new PointF(0, 0);
 			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, 90);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
 			ParseGCodeString(gCode);
-			//transform.Reset();
 		}
 
 		void BtnSVGLoadClick(object sender, EventArgs e)
@@ -550,18 +549,31 @@ namespace GCodePlotter
 			// set scale variable
 			paintScale = (10 * multiplier);
 
+			// get the widh and height using the max and min values
+			var totalX = Math.Abs(minX) + Math.Abs(maxX);
+			var totalY = Math.Abs(minY) + Math.Abs(maxY);
+			
 			// 10 mm per grid
-			var width = (int)(maxX * paintScale + 1) / 10 + 2 * LEFT_MARGIN;
-			var height = (int)(maxY * paintScale + 1) / 10 + 2 * BOTTOM_MARGIN;
+			var width = (int)(totalX * paintScale + 1) / 10 + 2 * LEFT_MARGIN;
+			var height = (int)(totalY * paintScale + 1) / 10 + 2 * BOTTOM_MARGIN;
+			
+			if (width < panelViewer.Width) width = panelViewer.Width;
+			if (height < panelViewer.Height) height = panelViewer.Height;
 			
 			return new Size(width, height);
 		}
 
-		void CalculateOptimalZoomMultiplier() {
-			// calculate optimal multiplier
-			if (maxX > 0) {
-				multiplier = (panelViewer.Width-50) / maxX;
+		void ZoomToFit() {
+			
+			var totalX = Math.Abs(minX) + Math.Abs(maxX);
+
+			if (totalX > 0) {
+				multiplier = (panelViewer.Width-100) / totalX;
 			}
+			
+			transform.Reset();
+			zoomScale = 0.80f;
+			transform.Scale(zoomScale, zoomScale, MatrixOrder.Append);
 		}
 		#endregion
 		
@@ -751,7 +763,7 @@ namespace GCodePlotter
 				penY.EndCap = LineCap.Flat;
 				g.DrawLine(penY, LEFT_MARGIN, pictureBox1.Height - (5 * paintScale) - BOTTOM_MARGIN, LEFT_MARGIN, pictureBox1.Height-BOTTOM_MARGIN);
 			}
-
+			
 			// draw gcode
 			if (myBlocks != null && myBlocks.Count > 0)
 			{
@@ -1097,8 +1109,8 @@ namespace GCodePlotter
 			txtDimension.Text = String.Format("X max: {0:F2} mm \r\nX min: {1:F2} mm\r\nY max: {2:F2} mm \r\nY min: {3:F2} mm \r\nZ max: {4:F2} mm \r\nZ min: {5:F2} mm",
 			                                  maxX, minX, maxY, minY, maxZ, minZ);
 			
-			// calculate optimal multiplier
-			CalculateOptimalZoomMultiplier();
+			// zoom to fit new content
+			ZoomToFit();
 			
 			RenderBlocks();
 			bDataLoaded = true;

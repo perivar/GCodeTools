@@ -515,21 +515,12 @@ namespace GCode
 			// https://www.codeproject.com/Articles/8281/Matrix-Transformation-of-Images-using-NET-GDIplus
 			// http://csharphelper.com/blog/2015/05/rotate-around-a-point-other-than-the-origin-in-c/
 			
-			// see setmatrix in 
+			// see setmatrix in
 			// https://github.com/bkubicek/grecode/blob/master/main.cpp
 			
-			// convert instructions into splitted gcode instructions
-			//var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(instructions);
-			//var point3DBlocks = gcodeSplitObject.AllG0Sections;
-			
-			//var points = new List<PointF>();
 			foreach (var instruction in instructions) {
-				//foreach (var currentPoint3D in point3DBlocks) {
-				//var point = currentPoint3D.PointF;
-				var point = PointF.Empty;
-				point = instruction.PointF;
+				var point = instruction.PointF;
 				if (point != PointF.Empty) {
-					//points.Add(point);
 					
 					var rotatedPoint = Transformation.Rotate(point, center, angle);
 					instruction.X = rotatedPoint.X;
@@ -540,15 +531,6 @@ namespace GCode
 					transformed.Add(instruction);
 				}
 			}
-
-			// setup the rotation matrix
-			/*
-			var mx = new Matrix();
-			mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
-			mx.Rotate(angle, MatrixOrder.Append);
-			mx.Translate(center.X, center.Y, MatrixOrder.Append);
-			mx.TransformPoints(points.ToArray());
-			 */
 			
 			return transformed;
 		}
