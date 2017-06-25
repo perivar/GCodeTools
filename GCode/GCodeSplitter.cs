@@ -247,6 +247,12 @@ namespace GCode
 				numInstructions++;
 			}
 			
+			// add a last raise Z
+			// raise Z to Z clearance (= G0 Za)
+			var lastRaiseBitInstruction = new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null);
+			app[0].Add(lastRaiseBitInstruction);
+			app[1].Add(lastRaiseBitInstruction);
+			
 			return app;
 		}
 		

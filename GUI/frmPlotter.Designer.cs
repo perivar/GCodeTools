@@ -39,8 +39,8 @@ namespace GCodePlotter
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
-			this.btnRotate = new System.Windows.Forms.Button();
 			this.panelMove = new System.Windows.Forms.Panel();
+			this.btnRotate = new System.Windows.Forms.Button();
 			this.btnShift = new System.Windows.Forms.Button();
 			this.txtShiftX = new System.Windows.Forms.TextBox();
 			this.txtShiftY = new System.Windows.Forms.TextBox();
@@ -72,6 +72,8 @@ namespace GCodePlotter
 			this.cbRenderG0 = new System.Windows.Forms.CheckBox();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
+			this.label2 = new System.Windows.Forms.Label();
+			this.txtSplitAngle = new System.Windows.Forms.TextBox();
 			((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
 			this.splitContainer1.Panel1.SuspendLayout();
 			this.splitContainer1.Panel2.SuspendLayout();
@@ -192,16 +194,6 @@ namespace GCodePlotter
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
 			// 
-			// btnRotate
-			// 
-			this.btnRotate.Location = new System.Drawing.Point(82, 0);
-			this.btnRotate.Name = "btnRotate";
-			this.btnRotate.Size = new System.Drawing.Size(82, 34);
-			this.btnRotate.TabIndex = 33;
-			this.btnRotate.Text = "Rotate";
-			this.btnRotate.UseVisualStyleBackColor = true;
-			this.btnRotate.Click += new System.EventHandler(this.BtnRotateClick);
-			// 
 			// panelMove
 			// 
 			this.panelMove.Controls.Add(this.btnRotate);
@@ -213,6 +205,16 @@ namespace GCodePlotter
 			this.panelMove.Name = "panelMove";
 			this.panelMove.Size = new System.Drawing.Size(171, 79);
 			this.panelMove.TabIndex = 32;
+			// 
+			// btnRotate
+			// 
+			this.btnRotate.Location = new System.Drawing.Point(82, 0);
+			this.btnRotate.Name = "btnRotate";
+			this.btnRotate.Size = new System.Drawing.Size(82, 34);
+			this.btnRotate.TabIndex = 33;
+			this.btnRotate.Text = "Rotate";
+			this.btnRotate.UseVisualStyleBackColor = true;
+			this.btnRotate.Click += new System.EventHandler(this.BtnRotateClick);
 			// 
 			// btnShift
 			// 
@@ -318,6 +320,8 @@ namespace GCodePlotter
 			// 
 			// panelSplitCmds
 			// 
+			this.panelSplitCmds.Controls.Add(this.txtSplitAngle);
+			this.panelSplitCmds.Controls.Add(this.label2);
 			this.panelSplitCmds.Controls.Add(this.btnSplit);
 			this.panelSplitCmds.Controls.Add(this.radLeft);
 			this.panelSplitCmds.Controls.Add(this.radRight);
@@ -334,7 +338,7 @@ namespace GCodePlotter
 			this.btnSplit.Location = new System.Drawing.Point(6, 5);
 			this.btnSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSplit.Name = "btnSplit";
-			this.btnSplit.Size = new System.Drawing.Size(160, 34);
+			this.btnSplit.Size = new System.Drawing.Size(69, 34);
 			this.btnSplit.TabIndex = 12;
 			this.btnSplit.Text = "Split";
 			this.btnSplit.UseVisualStyleBackColor = true;
@@ -368,9 +372,9 @@ namespace GCodePlotter
 			this.lblSplit.Location = new System.Drawing.Point(11, 82);
 			this.lblSplit.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
 			this.lblSplit.Name = "lblSplit";
-			this.lblSplit.Size = new System.Drawing.Size(52, 26);
+			this.lblSplit.Size = new System.Drawing.Size(64, 26);
 			this.lblSplit.TabIndex = 13;
-			this.lblSplit.Text = "Split:";
+			this.lblSplit.Text = "Split X:";
 			// 
 			// txtSplit
 			// 
@@ -383,12 +387,12 @@ namespace GCodePlotter
 			// 
 			// btnSaveSplit
 			// 
-			this.btnSaveSplit.Location = new System.Drawing.Point(9, 114);
+			this.btnSaveSplit.Location = new System.Drawing.Point(82, 5);
 			this.btnSaveSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSaveSplit.Name = "btnSaveSplit";
-			this.btnSaveSplit.Size = new System.Drawing.Size(160, 34);
+			this.btnSaveSplit.Size = new System.Drawing.Size(82, 34);
 			this.btnSaveSplit.TabIndex = 19;
-			this.btnSaveSplit.Text = "Save Both";
+			this.btnSaveSplit.Text = "Save";
 			this.btnSaveSplit.UseVisualStyleBackColor = true;
 			this.btnSaveSplit.Click += new System.EventHandler(this.btnSaveSplitClick);
 			// 
@@ -539,6 +543,24 @@ namespace GCodePlotter
 			this.ofdLoadDialog.DefaultExt = "gcode";
 			this.ofdLoadDialog.Filter = "GCode Files|*.gcode;*.nc;*.ngc|All Files|*.*";
 			// 
+			// label2
+			// 
+			this.label2.Location = new System.Drawing.Point(11, 114);
+			this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+			this.label2.Name = "label2";
+			this.label2.Size = new System.Drawing.Size(64, 26);
+			this.label2.TabIndex = 20;
+			this.label2.Text = "Angle:";
+			// 
+			// txtSplitAngle
+			// 
+			this.txtSplitAngle.Location = new System.Drawing.Point(98, 114);
+			this.txtSplitAngle.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.txtSplitAngle.Name = "txtSplitAngle";
+			this.txtSplitAngle.Size = new System.Drawing.Size(66, 26);
+			this.txtSplitAngle.TabIndex = 21;
+			this.txtSplitAngle.Text = "0.0";
+			// 
 			// frmPlotter
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -617,5 +639,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.Panel panelMove;
 		private System.Windows.Forms.Panel panelSVG;
 		private System.Windows.Forms.Button btnRotate;
+		private System.Windows.Forms.TextBox txtSplitAngle;
+		private System.Windows.Forms.Label label2;
 	}
 }

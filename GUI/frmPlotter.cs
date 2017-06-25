@@ -194,6 +194,7 @@ namespace GCodePlotter
 			}
 
 			float xSplit = GetSplitValue();
+			float xSplitAngle = GetSplitAngle();
 			if (xSplit != 0) {
 				
 				ParseData();
@@ -202,7 +203,7 @@ namespace GCodePlotter
 				
 				float zClearance = GetZSafeHeight();
 				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
 				
 				SaveSplittedGCodes(split, splitPoint, (string)txtFile.Tag);
 				
@@ -769,7 +770,7 @@ namespace GCodePlotter
 					}
 					
 					// draw drill point if neccesary
-					DrawDrillPoint(g, parentBlock);
+					PaintDrillPoint(g, parentBlock);
 				} else {
 					// top level, i.e. the block level or if nothing is selected
 					foreach (Block blockItem in myBlocks) {
@@ -791,19 +792,19 @@ namespace GCodePlotter
 							}
 							
 							// draw drill point if neccesary
-							DrawDrillPoint(g, blockItem);
+							PaintDrillPoint(g, blockItem);
 						}
 					}
 				}
 			}
 		}
 		
-		void DrawDrillPoint(Graphics g, Block blockItem) {
+		void PaintDrillPoint(Graphics g, Block blockItem) {
 			
 			// if this is a drillblock, paint a circle at the point
 			if (blockItem.IsDrillBlock) {
-				var x = blockItem.PlotPoints[0].X1;
-				var y = blockItem.PlotPoints[0].Y1;
+				var x = blockItem.PlotPoints[1].X1;
+				var y = blockItem.PlotPoints[1].Y1;
 				var radius = 3/zoomScale;
 				var drillPointBrush = Brushes.Pink;
 				bool drawDrillPoint = !cbSoloSelect.Checked;
@@ -829,6 +830,16 @@ namespace GCodePlotter
 			float splitValue = 0.0f;
 			if (!float.TryParse(txtSplit.Text, style, CultureInfo.InvariantCulture, out splitValue)) {
 				txtSplit.Text = "0.0";
+				splitValue = 0.0f;
+			}
+			return splitValue;
+		}
+		
+		float GetSplitAngle() {
+			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+			float splitValue = 0.0f;
+			if (!float.TryParse(txtSplitAngle.Text, style, CultureInfo.InvariantCulture, out splitValue)) {
+				txtSplitAngle.Text = "0.0";
 				splitValue = 0.0f;
 			}
 			return splitValue;
@@ -1171,6 +1182,7 @@ namespace GCodePlotter
 			}
 
 			float xSplit = GetSplitValue();
+			float xSplitAngle = GetSplitAngle();
 			if (xSplit != 0) {
 				
 				ParseData();
@@ -1179,7 +1191,7 @@ namespace GCodePlotter
 				
 				float zClearance = GetZSafeHeight();
 				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, 0.0f, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
 				
 				// clean up the mess with too many G0 commands
 				var cleaned = GCodeSplitter.CleanGCode(split[index]);
