@@ -265,6 +265,8 @@ namespace GCode
 		private static Point3D GetPreviousPoint(IList<GCodeInstruction> instructions) {
 			var prevPoint = Point3D.Empty;
 			
+			if (instructions.Count == 0) return prevPoint;
+			
 			GCodeInstruction prevInstruction = null;
 			bool foundLastMovement = false;
 			int index = 1;
