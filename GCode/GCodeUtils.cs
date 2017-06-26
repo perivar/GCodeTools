@@ -34,6 +34,8 @@ namespace GCode
 			// temporary list
 			var notG0 = new List<GCodeInstruction>();
 			
+			float? lastX = null;
+			float? lastY = null;
 			foreach (var currentInstruction in instructions) {
 				
 				// check if this line is a G0 command
@@ -46,36 +48,18 @@ namespace GCode
 					// check if x or y exist for this line
 					if (x.HasValue || y.HasValue) {
 						
-						// if x or y here is false we need to use the last coordinate from the previous G0 or G1 in followingLines as that is where the machine would be
-						if (!y.HasValue && notG0.Count > 0) {
+						// if x or y here is false we need to use the last coordinate
+						// from the previous G0 or G1 as that is where the machine would be
+						if (!y.HasValue && lastY != null) {
+							y = lastY.Value;
 							
-							// loop through allG0[-1].followingLines to find the most recent G0 or G1 with a y coordinate
-
-							// We want to use the LINQ to Objects non-invasive
-							// Reverse method, not List<T>.Reverse
-							foreach (GCodeInstruction item in Enumerable.Reverse(notG0)) {
-								if ((item.CanRender)
-								    && item.Y.HasValue) {
-									// set this y coordinate as y
-									y = item.Y.Value;
-									break;
-								}
-							}
-							
-						} else if (!x.HasValue && notG0.Count > 0) {
-							// loop through allG0[-1].followingLines to find the most recent G0 or G1 with a x coordinate
-							
-							// We want to use the LINQ to Objects non-invasive
-							// Reverse method, not List<T>.Reverse
-							foreach (GCodeInstruction item in Enumerable.Reverse(notG0)) {
-								if ((item.CanRender)
-								    && item.X.HasValue) {
-									// set this x coordinate as x
-									x = item.X.Value;
-									break;
-								}
-							}
+						} else if (!x.HasValue && lastX != null) {
+							x = lastX.Value;
 						}
+						
+						// store location state
+						lastX = x;
+						lastY = y;
 						
 						// if y still have no value, force to 0
 						if (!y.HasValue) {
@@ -85,6 +69,10 @@ namespace GCode
 						if (!x.HasValue) {
 							x = 0;
 						}
+						
+						// make sure to update currentInstruction with both X and Y coordinate
+						currentInstruction.X = x;
+						currentInstruction.Y = y;
 						
 						if (allG0.Count > 0) {
 							// allG0 has entries, so we need to add notG0 to the followingLines for the previous entry in allG0
@@ -518,18 +506,41 @@ namespace GCode
 			// see setmatrix in
 			// https://github.com/bkubicek/grecode/blob/master/main.cpp
 			
+			var points = new List<PointF>();
 			foreach (var instruction in instructions) {
 				var point = instruction.PointF;
+				points.Add(point);
 				if (point != PointF.Empty) {
-					
+					/*
 					var rotatedPoint = Transformation.Rotate(point, center, angle);
 					instruction.X = rotatedPoint.X;
 					instruction.Y = rotatedPoint.Y;
-
+					 */
+					//transformed.Add(instruction);
+				} else {
+					//transformed.Add(instruction);
+				}
+			}
+			
+			var mx = new Matrix();
+			mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
+			mx.Rotate(angle, MatrixOrder.Append);
+			mx.Translate(center.X, center.Y, MatrixOrder.Append);
+			var pts = points.ToArray();
+			mx.TransformPoints(pts);
+			
+			int i = 0;
+			foreach (var instruction in instructions) {
+				var point = instruction.PointF;
+				if (point != PointF.Empty) {
+					var rotatedPoint = pts[i];
+					instruction.X = rotatedPoint.X;
+					instruction.Y = rotatedPoint.Y;
 					transformed.Add(instruction);
 				} else {
 					transformed.Add(instruction);
 				}
+				i++;
 			}
 			
 			return transformed;

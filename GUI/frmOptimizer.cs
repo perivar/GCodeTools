@@ -137,8 +137,9 @@ namespace GCodeOptimizer
 
 			// constants
 			const int radius = 4;
+			const int MARGIN = 10;
 
-			var bitmap = new Bitmap((int)(maxX*scale), (int)(maxY*scale));
+			var bitmap = new Bitmap((int)( (maxX+MARGIN)*scale), (int)( (maxY+MARGIN)*scale));
 			Graphics gfx = Graphics.FromImage(bitmap);
 
 			// set background

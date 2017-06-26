@@ -358,6 +358,7 @@ namespace GCodePlotter
 		void BtnOptimizeClick(object sender, EventArgs e)
 		{
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
+			
 			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
 			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
 			
@@ -388,7 +389,7 @@ namespace GCodePlotter
 			if (angle == 0) angle = 90;
 			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
-			ParseGCodeString(gCode);
+			ParseGCodeString(gCode, false);
 		}
 
 		void BtnSVGLoadClick(object sender, EventArgs e)
@@ -1111,7 +1112,7 @@ namespace GCodePlotter
 			}
 		}
 		
-		public void ParseGCodeString(string text)
+		public void ParseGCodeString(string text, bool doZoomToFit=true)
 		{
 			parsedInstructions = SimpleGCodeParser.ParseText(text);
 
@@ -1162,7 +1163,7 @@ namespace GCodePlotter
 			gridWidth = (int) (maxX + 2*LEFT_MARGIN);
 			gridHeigh = (int) (maxY + 2*BOTTOM_MARGIN);
 
-			ZoomToFit();
+			if (doZoomToFit) ZoomToFit();
 			RenderBlocks();
 
 			bDataLoaded = true;

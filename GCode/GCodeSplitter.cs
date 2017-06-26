@@ -304,7 +304,11 @@ namespace GCode
 			return prevPoint;
 		}
 
+		
 		public static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {
+			
+			// TODO: the parsing becomes much more difficult if we don't have absolute coordinates per line
+			// meaning always both X and Y
 			
 			var cleanedList = new List<GCodeInstruction>();
 			var prevInstruction = new GCodeInstruction(CommandList.RapidMove, Point3D.Empty, 0);
