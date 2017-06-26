@@ -39,6 +39,8 @@ namespace GCodePlotter
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.txtAngle = new System.Windows.Forms.TextBox();
+			this.lblAngle = new System.Windows.Forms.Label();
 			this.panelMove = new System.Windows.Forms.Panel();
 			this.btnRotate = new System.Windows.Forms.Button();
 			this.btnShift = new System.Windows.Forms.Button();
@@ -72,8 +74,6 @@ namespace GCodePlotter
 			this.cbRenderG0 = new System.Windows.Forms.CheckBox();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
-			this.label2 = new System.Windows.Forms.Label();
-			this.txtSplitAngle = new System.Windows.Forms.TextBox();
 			((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
 			this.splitContainer1.Panel1.SuspendLayout();
 			this.splitContainer1.Panel2.SuspendLayout();
@@ -177,6 +177,8 @@ namespace GCodePlotter
 			// 
 			// panelCommands
 			// 
+			this.panelCommands.Controls.Add(this.txtAngle);
+			this.panelCommands.Controls.Add(this.lblAngle);
 			this.panelCommands.Controls.Add(this.panelMove);
 			this.panelCommands.Controls.Add(this.panelSVG);
 			this.panelCommands.Controls.Add(this.panelSplitCmds);
@@ -193,6 +195,24 @@ namespace GCodePlotter
 			this.panelCommands.Name = "panelCommands";
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
+			// 
+			// txtAngle
+			// 
+			this.txtAngle.Location = new System.Drawing.Point(108, 477);
+			this.txtAngle.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.txtAngle.Name = "txtAngle";
+			this.txtAngle.Size = new System.Drawing.Size(66, 26);
+			this.txtAngle.TabIndex = 21;
+			this.txtAngle.Text = "0.0";
+			// 
+			// lblAngle
+			// 
+			this.lblAngle.Location = new System.Drawing.Point(21, 477);
+			this.lblAngle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+			this.lblAngle.Name = "lblAngle";
+			this.lblAngle.Size = new System.Drawing.Size(64, 26);
+			this.lblAngle.TabIndex = 20;
+			this.lblAngle.Text = "Angle:";
 			// 
 			// panelMove
 			// 
@@ -229,6 +249,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftX
 			// 
+			this.txtShiftX.AccessibleDescription = "Move in X direction";
 			this.txtShiftX.Location = new System.Drawing.Point(5, 41);
 			this.txtShiftX.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftX.Name = "txtShiftX";
@@ -238,6 +259,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftY
 			// 
+			this.txtShiftY.AccessibleDescription = "Move in Y direction";
 			this.txtShiftY.Location = new System.Drawing.Point(64, 41);
 			this.txtShiftY.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftY.Name = "txtShiftY";
@@ -247,6 +269,7 @@ namespace GCodePlotter
 			// 
 			// txtShiftZ
 			// 
+			this.txtShiftZ.AccessibleDescription = "Move in Z direction";
 			this.txtShiftZ.Location = new System.Drawing.Point(120, 41);
 			this.txtShiftZ.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftZ.Name = "txtShiftZ";
@@ -320,8 +343,6 @@ namespace GCodePlotter
 			// 
 			// panelSplitCmds
 			// 
-			this.panelSplitCmds.Controls.Add(this.txtSplitAngle);
-			this.panelSplitCmds.Controls.Add(this.label2);
 			this.panelSplitCmds.Controls.Add(this.btnSplit);
 			this.panelSplitCmds.Controls.Add(this.radLeft);
 			this.panelSplitCmds.Controls.Add(this.radRight);
@@ -330,7 +351,7 @@ namespace GCodePlotter
 			this.panelSplitCmds.Controls.Add(this.btnSaveSplit);
 			this.panelSplitCmds.Location = new System.Drawing.Point(10, 362);
 			this.panelSplitCmds.Name = "panelSplitCmds";
-			this.panelSplitCmds.Size = new System.Drawing.Size(178, 154);
+			this.panelSplitCmds.Size = new System.Drawing.Size(178, 112);
 			this.panelSplitCmds.TabIndex = 30;
 			// 
 			// btnSplit
@@ -378,7 +399,7 @@ namespace GCodePlotter
 			// 
 			// txtSplit
 			// 
-			this.txtSplit.Location = new System.Drawing.Point(98, 80);
+			this.txtSplit.Location = new System.Drawing.Point(98, 81);
 			this.txtSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtSplit.Name = "txtSplit";
 			this.txtSplit.Size = new System.Drawing.Size(66, 26);
@@ -409,16 +430,16 @@ namespace GCodePlotter
 			// 
 			// lblZClearance
 			// 
-			this.lblZClearance.Location = new System.Drawing.Point(15, 519);
+			this.lblZClearance.Location = new System.Drawing.Point(10, 511);
 			this.lblZClearance.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
 			this.lblZClearance.Name = "lblZClearance";
-			this.lblZClearance.Size = new System.Drawing.Size(114, 29);
+			this.lblZClearance.Size = new System.Drawing.Size(110, 29);
 			this.lblZClearance.TabIndex = 18;
-			this.lblZClearance.Text = "Z-Safe Height:";
+			this.lblZClearance.Text = "Z-Safeheight:";
 			// 
 			// txtZClearance
 			// 
-			this.txtZClearance.Location = new System.Drawing.Point(130, 516);
+			this.txtZClearance.Location = new System.Drawing.Point(128, 508);
 			this.txtZClearance.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtZClearance.Name = "txtZClearance";
 			this.txtZClearance.Size = new System.Drawing.Size(46, 26);
@@ -543,24 +564,6 @@ namespace GCodePlotter
 			this.ofdLoadDialog.DefaultExt = "gcode";
 			this.ofdLoadDialog.Filter = "GCode Files|*.gcode;*.nc;*.ngc|All Files|*.*";
 			// 
-			// label2
-			// 
-			this.label2.Location = new System.Drawing.Point(11, 114);
-			this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			this.label2.Name = "label2";
-			this.label2.Size = new System.Drawing.Size(64, 26);
-			this.label2.TabIndex = 20;
-			this.label2.Text = "Angle:";
-			// 
-			// txtSplitAngle
-			// 
-			this.txtSplitAngle.Location = new System.Drawing.Point(98, 114);
-			this.txtSplitAngle.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.txtSplitAngle.Name = "txtSplitAngle";
-			this.txtSplitAngle.Size = new System.Drawing.Size(66, 26);
-			this.txtSplitAngle.TabIndex = 21;
-			this.txtSplitAngle.Text = "0.0";
-			// 
 			// frmPlotter
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -639,7 +642,7 @@ namespace GCodePlotter
 		private System.Windows.Forms.Panel panelMove;
 		private System.Windows.Forms.Panel panelSVG;
 		private System.Windows.Forms.Button btnRotate;
-		private System.Windows.Forms.TextBox txtSplitAngle;
-		private System.Windows.Forms.Label label2;
+		private System.Windows.Forms.TextBox txtAngle;
+		private System.Windows.Forms.Label lblAngle;
 	}
 }

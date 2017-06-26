@@ -87,37 +87,47 @@ namespace GCode
 		
 		public string Name { get; set; }
 		
+		public bool IsDrillPoint { get; set; }
+		
 		private List<LinePoints> plotPoints = new List<LinePoints>();
 		public List<LinePoints> PlotPoints { get { return plotPoints; } }
 
 		private List<GCodeInstruction> gcodeInstructions = new List<GCodeInstruction>();
 		public List<GCodeInstruction> GCodeInstructions { get { return gcodeInstructions; } }
 		
-		public bool IsDrillBlock {
-			get {
-				if (GCodeInstructions.Count == 3) {
-					bool hasRapidMove = false;
-					bool hasZUp = false;
-					bool hasZDown = false;
-					foreach (var instruction in GCodeInstructions) {
-						if ((instruction.CommandEnum == CommandList.RapidMove
-						     || instruction.CommandEnum == CommandList.NormalMove)
-						    && instruction.Z.HasValue
-						    && instruction.Z.Value > 0) {
-							hasZUp = true;
-						} else if (instruction.CommandEnum == CommandList.RapidMove
-						           && !instruction.Z.HasValue) {
-							hasRapidMove = true;
-						} else if (instruction.CommandEnum == CommandList.NormalMove
-						           && instruction.Z.HasValue
-						           && instruction.Z.Value < 0) {
-							hasZDown = true;
-						}
+		/// <summary>
+		/// Cache whether this is a drill block
+		/// I.e. 3 instructions:
+		/// 1. Move into place
+		/// 2. Drill
+		/// 3. Raise bit
+		/// </summary>
+		public void CheckIfDrillPoint() {
+			if (GCodeInstructions.Count == 3) {
+				bool hasRapidMove = false;
+				bool hasZUp = false;
+				bool hasZDown = false;
+				foreach (var instruction in GCodeInstructions) {
+					if ((instruction.CommandEnum == CommandList.RapidMove
+					     || instruction.CommandEnum == CommandList.NormalMove)
+					    && instruction.Z.HasValue
+					    && instruction.Z.Value > 0) {
+						hasZUp = true;
+					} else if (instruction.CommandEnum == CommandList.RapidMove
+					           && !instruction.Z.HasValue) {
+						hasRapidMove = true;
+					} else if (instruction.CommandEnum == CommandList.NormalMove
+					           && instruction.Z.HasValue
+					           && instruction.Z.Value < 0) {
+						hasZDown = true;
 					}
-					if (hasZUp && hasZDown && hasRapidMove) return true;
 				}
-				return false;
+				if (hasZUp && hasZDown && hasRapidMove) {
+					IsDrillPoint = true;
+					return;
+				}
 			}
+			IsDrillPoint = false;
 		}
 
 		/// <summary>

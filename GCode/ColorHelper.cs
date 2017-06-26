@@ -41,7 +41,7 @@ namespace GCode
 			if (list == PenColorList.LineHighlight) return Color.White;
 			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
 			if (list == PenColorList.GridLines) return Color.DimGray;
-			if (list == PenColorList.GridLinesHighlight) return Color.LightGray;
+			if (list == PenColorList.GridLinesHighlight) return Color.LightSkyBlue;
 			return Color.White;
 		}
 

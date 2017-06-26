@@ -194,7 +194,7 @@ namespace GCodePlotter
 			}
 
 			float xSplit = GetSplitValue();
-			float xSplitAngle = GetSplitAngle();
+			float xSplitAngle = GetAngle();
 			if (xSplit != 0) {
 				
 				ParseData();
@@ -241,6 +241,36 @@ namespace GCodePlotter
 				// store mouse down for mouse drag support
 				// i.e. change scroll bar position based when dragging
 				MouseDownLocation = GetRealCoordinate(e.Location);
+			} else {
+				var mouseNowLocation = GetRealCoordinate(e.Location);
+				
+				// scaled coordinates
+				float x = (mouseNowLocation.X - LEFT_MARGIN);
+				float y = (gridHeigh - mouseNowLocation.Y - BOTTOM_MARGIN);
+				
+				// check if one of the block points has this coordinate
+				float delta = 2.0f;
+				if (myBlocks != null && myBlocks.Count > 0)
+				{
+					foreach(var blockItem in myBlocks) {
+						if (blockItem.IsDrillPoint) {
+							var blockItemX = blockItem.PlotPoints[1].X1;
+							var blockItemY = blockItem.PlotPoints[1].Y1;
+							var distX = Math.Abs(x - blockItemX);
+							var distY = Math.Abs(y - blockItemY);
+							if (distX <= delta && distY <= delta) {
+								txtSplit.Text = string.Format(CultureInfo.InvariantCulture, "{0:0.##}", blockItemX);
+								
+								var treeNode = treeView.Nodes.OfType<TreeNode>()
+									.FirstOrDefault(node=>node.Tag.Equals(blockItem));
+								if (treeNode != null) {
+									treeView.SelectedNode = treeNode;
+								}
+								break;
+							}
+						}
+					}
+				}
 			}
 		}
 		
@@ -354,7 +384,9 @@ namespace GCodePlotter
 			//var center = new PointF(227.3f, 118.65f);
 			//var center = new PointF(maxY/2, maxX/2);
 			var center = new PointF(0, 0);
-			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, 90);
+			var angle = GetAngle();
+			if (angle == 0) angle = 90;
+			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
 			ParseGCodeString(gCode);
 		}
@@ -716,12 +748,13 @@ namespace GCodePlotter
 			{
 				for (int y = 0; y < gridHeigh-2*gridSize; y += gridSize)
 				{
-					if (x % (5*gridSize) == 0 || y % (5*gridSize) == 0 ) {
-						g.DrawLine(gridPenSeparator, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN-y, gridWidth, gridHeigh-BOTTOM_MARGIN-y);
+					if (x % (5*gridSize) == 0) {
 						g.DrawLine(gridPenSeparator, LEFT_MARGIN+x, gridHeigh-BOTTOM_MARGIN, LEFT_MARGIN+x, 0);
+					} else if (y % (5*gridSize) == 0 ) {
+						g.DrawLine(gridPenSeparator, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN-y, gridWidth, gridHeigh-BOTTOM_MARGIN-y);
 					} else {
-						g.DrawLine(gridPen, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN-y, gridWidth, gridHeigh-BOTTOM_MARGIN-y);
 						g.DrawLine(gridPen, LEFT_MARGIN+x, gridHeigh-BOTTOM_MARGIN, LEFT_MARGIN+x, 0);
+						g.DrawLine(gridPen, LEFT_MARGIN, gridHeigh-BOTTOM_MARGIN-y, gridWidth, gridHeigh-BOTTOM_MARGIN-y);
 					}
 				}
 			}
@@ -802,10 +835,10 @@ namespace GCodePlotter
 		void PaintDrillPoint(Graphics g, Block blockItem) {
 			
 			// if this is a drillblock, paint a circle at the point
-			if (blockItem.IsDrillBlock) {
+			if (blockItem.IsDrillPoint) {
 				var x = blockItem.PlotPoints[1].X1;
 				var y = blockItem.PlotPoints[1].Y1;
-				var radius = 3/zoomScale;
+				var radius = 3.5f/zoomScale;
 				var drillPointBrush = Brushes.Pink;
 				bool drawDrillPoint = !cbSoloSelect.Checked;
 
@@ -835,11 +868,11 @@ namespace GCodePlotter
 			return splitValue;
 		}
 		
-		float GetSplitAngle() {
+		float GetAngle() {
 			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 			float splitValue = 0.0f;
-			if (!float.TryParse(txtSplitAngle.Text, style, CultureInfo.InvariantCulture, out splitValue)) {
-				txtSplitAngle.Text = "0.0";
+			if (!float.TryParse(txtAngle.Text, style, CultureInfo.InvariantCulture, out splitValue)) {
+				txtAngle.Text = "0.0";
 				splitValue = 0.0f;
 			}
 			return splitValue;
@@ -1097,6 +1130,9 @@ namespace GCodePlotter
 			minZ = 0.0f;
 			foreach (Block block in myBlocks)
 			{
+				// cache if this is a drill point
+				block.CheckIfDrillPoint();
+				
 				block.CalculateMinAndMax();
 				
 				maxX = Math.Max(maxX, block.MaxX);
@@ -1182,7 +1218,7 @@ namespace GCodePlotter
 			}
 
 			float xSplit = GetSplitValue();
-			float xSplitAngle = GetSplitAngle();
+			float xSplitAngle = GetAngle();
 			if (xSplit != 0) {
 				
 				ParseData();
