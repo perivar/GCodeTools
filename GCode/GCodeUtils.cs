@@ -495,7 +495,7 @@ namespace GCode
 		/// <param name="center">center point to rotate around</param>
 		/// <param name="angle">angle in degrees</param>
 		/// <returns>list of rotated gcode</returns>
-		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float angle) {
+		public static List<GCodeInstruction> GetRotatedGCodeOld(List<GCodeInstruction> instructions, PointF center, float angle) {
 			
 			var transformed = new List<GCodeInstruction>();
 			
@@ -505,35 +505,24 @@ namespace GCode
 			
 			// see setmatrix in
 			// https://github.com/bkubicek/grecode/blob/master/main.cpp
-			
-			var points = new List<PointF>();
-			foreach (var instruction in instructions) {
-				var point = instruction.PointF;
-				points.Add(point);
-				if (point != PointF.Empty) {
-					/*
-					var rotatedPoint = Transformation.Rotate(point, center, angle);
-					instruction.X = rotatedPoint.X;
-					instruction.Y = rotatedPoint.Y;
-					 */
-					//transformed.Add(instruction);
-				} else {
-					//transformed.Add(instruction);
-				}
-			}
-			
+
+			// get all points
+			var points = instructions.Select(item => item.PointF).ToArray();
+
+			// setup the rotation matrix
 			var mx = new Matrix();
 			mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
 			mx.Rotate(angle, MatrixOrder.Append);
 			mx.Translate(center.X, center.Y, MatrixOrder.Append);
-			var pts = points.ToArray();
-			mx.TransformPoints(pts);
+			
+			// rotate the points
+			mx.TransformPoints(points);
 			
 			int i = 0;
 			foreach (var instruction in instructions) {
 				var point = instruction.PointF;
 				if (point != PointF.Empty) {
-					var rotatedPoint = pts[i];
+					var rotatedPoint = points[i];
 					instruction.X = rotatedPoint.X;
 					instruction.Y = rotatedPoint.Y;
 					transformed.Add(instruction);
@@ -543,6 +532,31 @@ namespace GCode
 				i++;
 			}
 			
+			return transformed;
+		}
+		
+		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float angle) {
+			var transformed = new List<GCodeInstruction>();
+			
+			// sources
+			// https://www.codeproject.com/Articles/8281/Matrix-Transformation-of-Images-using-NET-GDIplus
+			// http://csharphelper.com/blog/2015/05/rotate-around-a-point-other-than-the-origin-in-c/
+			
+			// see setmatrix in
+			// https://github.com/bkubicek/grecode/blob/master/main.cpp
+			
+			foreach (var instruction in instructions) {
+				var point = instruction.PointF;
+				if (point != PointF.Empty) {
+					var rotatedPoint = Transformation.Rotate(point, center, angle);
+					instruction.X = rotatedPoint.X;
+					instruction.Y = rotatedPoint.Y;
+					transformed.Add(instruction);
+				} else {
+					transformed.Add(instruction);
+				}
+			}
+
 			return transformed;
 		}
 	}
