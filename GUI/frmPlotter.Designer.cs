@@ -508,12 +508,15 @@ namespace GCodePlotter
 			// 
 			this.treeView.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.treeView.HideSelection = false;
+			this.treeView.LabelEdit = true;
 			this.treeView.Location = new System.Drawing.Point(0, 0);
 			this.treeView.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.treeView.Name = "treeView";
 			this.treeView.Size = new System.Drawing.Size(329, 733);
 			this.treeView.TabIndex = 10;
+			this.treeView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.TreeViewAfterLabelEdit);
 			this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.TreeViewAfterSelect);
+			this.treeView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.TreeViewNodeMouseDoubleClick);
 			this.treeView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.TreeViewKeyDown);
 			this.treeView.MouseUp += new System.Windows.Forms.MouseEventHandler(this.TreeViewMouseUp);
 			// 

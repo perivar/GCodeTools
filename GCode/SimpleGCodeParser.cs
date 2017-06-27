@@ -272,6 +272,11 @@ namespace GCode
 		
 		public GCodeInstruction(string line)
 		{
+			Update(line);
+		}
+		#endregion
+		
+		public void Update(string line) {
 			// parse comments and return the remaining command if any
 			string command = ParseComments(line).Trim();
 			
@@ -313,7 +318,6 @@ namespace GCode
 				}
 			}
 		}
-		#endregion
 		
 		#region Properties
 		public bool CanRender

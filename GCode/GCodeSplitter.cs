@@ -304,11 +304,16 @@ namespace GCode
 			return prevPoint;
 		}
 
-		
-		public static List<GCodeInstruction> CleanGCode(List<GCodeInstruction> instructions) {
+		/// <summary>
+		/// Minimize gcode by removing coordinates that is a repeat of the previous coordinate
+		/// </summary>
+		/// <param name="instructions">instructions</param>
+		/// <returns>minimized gcode</returns>
+		public static List<GCodeInstruction> MinimizeGCode(List<GCodeInstruction> instructions) {
 			
 			// TODO: the parsing becomes much more difficult if we don't have absolute coordinates per line
 			// meaning always both X and Y
+			return instructions;
 			
 			var cleanedList = new List<GCodeInstruction>();
 			var prevInstruction = new GCodeInstruction(CommandList.RapidMove, Point3D.Empty, 0);
@@ -515,20 +520,6 @@ namespace GCode
 			if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta-SELF_ZERO)
 				output.Add(new Point3D(xcross2,ycross2,zcross2));
 
-			/*
-				#print(" start: x1 =%5.2f y1=%5.2f z1=%5.2f" %(p1[0],     p1[1],     p1[2]))
-				#print("   end: x2 =%5.2f y2=%5.2f z2=%5.2f" %(p2[0],     p2[1],     p2[2]))
-				#print("center: xc =%5.2f yc=%5.2f xsplit=%5.2f code=%s" %(cent[0],cent[1],xsplit,code))
-				#print("R = %f" %(R))
-				#print("theta =%5.2f" %(theta))
-				#print("beta  =%5.2f gamma1=%5.2f gamma2=%5.2f\n" %(beta,gamma1,gamma2))
-				#cnt=0
-				#for line in output:
-				#    cnt=cnt+1
-				#    print("arc cross%d: %5.2f, %5.2f, %5.2f" %(cnt, line[0], line[1], line[2]))
-				#print(output)
-				#print("----------------------------------------------\n")
-			 */
 			return output;
 		}
 

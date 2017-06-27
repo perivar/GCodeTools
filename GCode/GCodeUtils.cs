@@ -24,7 +24,7 @@ namespace GCode
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>GCode split object</returns>
-		public static GCodeSplitObject SplitGCodeInstructions(List<GCodeInstruction> instructions) {
+		public static GCodeGroupObject GroupGCodeInstructions(List<GCodeInstruction> instructions) {
 
 			// list that will be returned
 			var allG0 = new List<Point3DBlock>();
@@ -94,6 +94,10 @@ namespace GCode
 					}
 
 				} else {
+					// store location state
+					//lastX = currentInstruction.X;
+					//lastY = currentInstruction.Y;
+
 					// add this line to notG0
 					notG0.Add(currentInstruction);
 				}
@@ -127,7 +131,7 @@ namespace GCode
 			}
 			
 			// add header and footer as special blocks
-			var gcodeBlocks = new GCodeSplitObject();
+			var gcodeBlocks = new GCodeGroupObject();
 			gcodeBlocks.AllG0Sections = allG0;
 			gcodeBlocks.PriorToFirstG0Section = priorToG0;
 			gcodeBlocks.AfterLastG0Section = eof;
@@ -495,7 +499,7 @@ namespace GCode
 		/// <param name="center">center point to rotate around</param>
 		/// <param name="angle">angle in degrees</param>
 		/// <returns>list of rotated gcode</returns>
-		public static List<GCodeInstruction> GetRotatedGCodeOld(List<GCodeInstruction> instructions, PointF center, float angle) {
+		public static List<GCodeInstruction> GetRotatedGCodeMatrix(List<GCodeInstruction> instructions, PointF center, float angle) {
 			
 			var transformed = new List<GCodeInstruction>();
 			
@@ -510,14 +514,16 @@ namespace GCode
 			var points = instructions.Select(item => item.PointF).ToArray();
 
 			// setup the rotation matrix
-			var mx = new Matrix();
-			mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
-			mx.Rotate(angle, MatrixOrder.Append);
-			mx.Translate(center.X, center.Y, MatrixOrder.Append);
+			using (var mx = new Matrix()) {
+				mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
+				mx.Rotate(angle, MatrixOrder.Append);
+				mx.Translate(center.X, center.Y, MatrixOrder.Append);
+				
+				// rotate the points
+				mx.TransformPoints(points);
+			}
 			
-			// rotate the points
-			mx.TransformPoints(points);
-			
+			// append the transformed points to the list of instructions
 			int i = 0;
 			foreach (var instruction in instructions) {
 				var point = instruction.PointF;
@@ -525,6 +531,11 @@ namespace GCode
 					var rotatedPoint = points[i];
 					instruction.X = rotatedPoint.X;
 					instruction.Y = rotatedPoint.Y;
+					
+					// arc
+					//if (instruction.I.HasValue && instruction.J.HasValue) {
+					//
+					//}
 					transformed.Add(instruction);
 				} else {
 					transformed.Add(instruction);
@@ -535,7 +546,15 @@ namespace GCode
 			return transformed;
 		}
 		
+		/// <summary>
+		/// Rotate the passed gcode around the center point by the given degees
+		/// </summary>
+		/// <param name="instructions">list of instruction elements</param>
+		/// <param name="center">center point to rotate around</param>
+		/// <param name="angle">angle in degrees</param>
+		/// <returns>list of rotated gcode</returns>
 		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float angle) {
+			
 			var transformed = new List<GCodeInstruction>();
 			
 			// sources
@@ -564,7 +583,7 @@ namespace GCode
 	/// <summary>
 	/// A class used to organise a gcode file into sections
 	/// </summary>
-	public class GCodeSplitObject {
+	public class GCodeGroupObject {
 		
 		public List<Point3DBlock> AllG0Sections { get; set; }
 		public List<GCodeInstruction> PriorToFirstG0Section { get; set; }

@@ -128,6 +128,12 @@ namespace GCodePlotter
 				{
 					DeleteTreeNode(selectedNode);
 				}
+			} else if (e.KeyCode == Keys.F2) {
+				var selectedNode = treeView.SelectedNode;
+				if (selectedNode != null && selectedNode.Level == 1)
+				{
+					selectedNode.BeginEdit();
+				}
 			}
 		}
 		
@@ -359,8 +365,8 @@ namespace GCodePlotter
 		{
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			
-			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(parsedInstructions);
-			var points = gcodeSplitObject.AllG0Sections.ToList<IPoint>();
+			var gcodeGroupObject = GCodeUtils.GroupGCodeInstructions(parsedInstructions);
+			var points = gcodeGroupObject.AllG0Sections.ToList<IPoint>();
 			
 			// Add the origin as well
 			var origin = new Point3DBlock(0,0);
@@ -387,7 +393,7 @@ namespace GCodePlotter
 			var center = new PointF(0, 0);
 			var angle = GetAngle();
 			if (angle == 0) angle = 90;
-			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
+			var gcodeInstructions = GCodeUtils.GetRotatedGCodeMatrix(parsedInstructions, center, angle);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
 			ParseGCodeString(gCode, false);
 		}
@@ -611,18 +617,18 @@ namespace GCodePlotter
 			var currentPoint = Point3D.Empty;
 
 			// convert instructions into splitted gcode instructions
-			var gcodeSplitObject = GCodeUtils.SplitGCodeInstructions(instructions);
+			var gcodeGroupObject = GCodeUtils.GroupGCodeInstructions(instructions);
 
-			if (gcodeSplitObject == null) return blocks;
+			if (gcodeGroupObject == null) return blocks;
 			
 			// first add header
-			//blocks.AddRange(GetBlockElements(gcodeSplitObject.PriorToFirstG0Section, "Top", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeGroupObject.PriorToFirstG0Section, "Top", ref currentPoint));
 
 			// add main blocks
-			blocks.AddRange(GetBlockElements(gcodeSplitObject.AllG0Sections, ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeGroupObject.AllG0Sections, ref currentPoint));
 			
 			// last add footer
-			//blocks.AddRange(GetBlockElements(gcodeSplitObject.AfterLastG0Section, "Bottom", ref currentPoint));
+			//blocks.AddRange(GetBlockElements(gcodeGroupObject.AfterLastG0Section, "Bottom", ref currentPoint));
 			
 			return blocks;
 		}
@@ -813,8 +819,8 @@ namespace GCodePlotter
 								
 								// check level first
 								if (treeView.SelectedNode != null
-								    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
-
+								    && treeView.SelectedNode.Tag.Equals(blockItem)) {
+									
 									// draw correct segment as selected
 									linePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 								} else {
@@ -844,7 +850,7 @@ namespace GCodePlotter
 				bool drawDrillPoint = !cbSoloSelect.Checked;
 
 				if (treeView.SelectedNode != null
-				    && treeView.SelectedNode.Text.Equals(blockItem.ToString())) {
+				    && treeView.SelectedNode.Tag.Equals(blockItem)) {
 					drillPointBrush = Brushes.DodgerBlue;
 					if (cbSoloSelect.Checked) drawDrillPoint = true;
 				}
@@ -1011,8 +1017,8 @@ namespace GCodePlotter
 			var fileSecond = new FileInfo(dirPath + Path.DirectorySeparatorChar + fileName + "_second.gcode");
 			
 			// clean them
-			var cleanedFirst = GCodeSplitter.CleanGCode(split[0]);
-			var cleanedSecond = GCodeSplitter.CleanGCode(split[1]);
+			var cleanedFirst = GCodeSplitter.MinimizeGCode(split[0]);
+			var cleanedSecond = GCodeSplitter.MinimizeGCode(split[1]);
 			
 			SaveGCodes(cleanedFirst, Point3D.Empty, fileFirst);
 			SaveGCodes(cleanedSecond, splitPoint, fileSecond);
@@ -1231,12 +1237,59 @@ namespace GCodePlotter
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
 				
 				// clean up the mess with too many G0 commands
-				var cleaned = GCodeSplitter.CleanGCode(split[index]);
+				var cleaned = GCodeSplitter.MinimizeGCode(split[index]);
 				
 				var gcodeSplitted = Block.BuildGCodeOutput("Block_1", cleaned, false);
-				ParseGCodeString(gcodeSplitted);
+				ParseGCodeString(gcodeSplitted, false);
 			}
 		}
 		
+		void TreeViewNodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+		{
+			// only care about instruction level
+			if (treeView.SelectedNode != null
+			    && treeView.SelectedNode.Level == 1) {
+				// sub-level, i.e. the instruction level
+				var selectedNode = treeView.SelectedNode;
+				e.Node.BeginEdit();
+			}
+		}
+		
+		void TreeViewAfterLabelEdit(object sender, NodeLabelEditEventArgs e)
+		{
+			this.BeginInvoke(new Action(() => afterAfterLabelEdit(e.Node)));
+		}
+		
+		private void afterAfterLabelEdit(TreeNode node) {
+			// a node is only updated after TreeViewAfterLabelEdit
+			string newGCodeText = node.Text;
+			
+			// only care about instruction level
+			if (treeView.SelectedNode != null
+			    && treeView.SelectedNode.Level == 1) {
+				// sub-level, i.e. the instruction level
+				var selectedInstruction = (GCodeInstruction) treeView.SelectedNode.Tag;
+				
+				// find what block this instruction is a part of
+				var parentBlock = (Block) treeView.SelectedNode.Parent.Tag;
+				
+				// set current point
+				var currentPoint = Point3D.Empty;
+				
+				// update instruction
+				selectedInstruction.Update(newGCodeText);
+				
+				// update plot points for the selected instruction and the rest of the selected block
+				parentBlock.PlotPoints.Clear();
+				foreach (var currentInstruction in parentBlock.GCodeInstructions) {
+					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
+					if (linePointsCollection != null) {
+						currentInstruction.CachedLinePoints = linePointsCollection;
+						parentBlock.PlotPoints.AddRange(linePointsCollection);
+					}
+				}
+				RenderBlocks();
+			}
+		}
 	}
 }
