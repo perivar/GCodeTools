@@ -1,8 +1,6 @@
 ﻿/**
  * Copied from the SimpleGcodeParser file
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
- *
- * See LICENCE in the project directory for licence information
  * Modified by perivar@nerseth.com
  **/
 using System;
@@ -23,12 +21,16 @@ namespace GCode
 		LineHighlight,
 		Background,
 		GridLines,
-		GridLinesHighlight
+		GridLinesHighlight,
+		DrillPoint,
+		DrillPointHighlight,
+		SelectionHighlighted
 	}
 
 	public static class ColorHelper
 	{
 		private static IDictionary<PenColorList, Pen> _penList = new Dictionary<PenColorList, Pen>();
+		private static IDictionary<PenColorList, Brush> _brushList = new Dictionary<PenColorList, Brush>();
 		private static IDictionary<PenColorList, Color> _colorList = new Dictionary<PenColorList, Color>();
 
 		private static Color GetDefaultColor(PenColorList list)
@@ -42,6 +44,9 @@ namespace GCode
 			if (list == PenColorList.Background) return Color.FromArgb(0x20, 0x20, 0x20);
 			if (list == PenColorList.GridLines) return Color.DimGray;
 			if (list == PenColorList.GridLinesHighlight) return Color.LightSkyBlue;
+			if (list == PenColorList.DrillPoint) return Color.Pink;
+			if (list == PenColorList.DrillPointHighlight) return Color.DodgerBlue;
+			if (list == PenColorList.SelectionHighlighted) return Color.DodgerBlue;
 			return Color.White;
 		}
 
@@ -129,6 +134,14 @@ namespace GCode
 			var pen = GetPen(type);
 			pen.Width = pen.Width / zoomScale;
 			return pen;
+		}
+		
+		public static Brush GetBrush(PenColorList type) {
+			if (!_brushList.ContainsKey(type))
+			{
+				_brushList[type] = new SolidBrush(GetColor(type));
+			}
+			return _brushList[type];
 		}
 	}
 }

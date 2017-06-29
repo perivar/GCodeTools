@@ -41,10 +41,6 @@ namespace GCodeOptimizer
 			this._maxY = maxY;
 			this._plotter = plotter;
 			
-			//_points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
-			//this._width = 900;
-			//this._height = 680;
-			
 			_alg = new GAAlgorithm(_points);
 			
 			DrawInitialPoints();
@@ -90,6 +86,12 @@ namespace GCodeOptimizer
 		
 		void BtnUseClick(object sender, EventArgs e)
 		{
+			if (_cancelTokenSource != null) {
+				btnStartStop.Text = "Start";
+				_alg.Running = false;
+				_cancelTokenSource.Cancel();
+			}
+
 			// first sort by z-order
 			var sortedBestPath = GCodeUtils.SortBlocksByZDepth(_alg.BestPath, _points);
 			string gCode = GCodeUtils.GetGCode(sortedBestPath, _points);

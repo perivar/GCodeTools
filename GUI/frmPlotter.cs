@@ -158,8 +158,8 @@ namespace GCodePlotter
 				txtFile.Tag = fileInfo.FullName;
 				this.Text = fileInfo.Name;
 
-				string data = File.ReadAllText(fileInfo.FullName);
-				ParseGCodeString(data);
+				string gCode = File.ReadAllText(fileInfo.FullName);
+				ParseGCodeString(gCode);
 			}
 		}
 
@@ -177,7 +177,7 @@ namespace GCodePlotter
 			SaveGCodes(false);
 		}
 
-		void btnSaveLayersClick(object sender, EventArgs e)
+		void btnSavePeckDrillingClick(object sender, EventArgs e)
 		{
 			using (var options = new frmOptions()) {
 				var result = options.ShowDialog();
@@ -366,7 +366,7 @@ namespace GCodePlotter
 			//var points = DataProvider.GetPoints(@"JavaScript\data.js", "data200");
 			
 			var gcodeGroupObject = GCodeUtils.GroupGCodeInstructions(parsedInstructions);
-			var points = gcodeGroupObject.AllG0Sections.ToList<IPoint>();
+			var points = gcodeGroupObject.G0Sections.ToList<IPoint>();
 			
 			// Add the origin as well
 			var origin = new Point3DBlock(0,0);
@@ -606,8 +606,8 @@ namespace GCodePlotter
 		#region Get Block Methods
 		/// <summary>
 		/// Turn the list of instruction into a list of blocks
-		/// where the blocks are separated if "cutting path id" is found
-		/// and when a rapid move up is found
+		/// where the blocks are separated if a
+		/// G0 command which includes either X and/or Y, is found.
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
 		/// <returns>list of blocks</returns>
@@ -622,13 +622,13 @@ namespace GCodePlotter
 			if (gcodeGroupObject == null) return blocks;
 			
 			// first add header
-			//blocks.AddRange(GetBlockElements(gcodeGroupObject.PriorToFirstG0Section, "Top", ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeGroupObject.PriorToFirstG0Section, "Header", ref currentPoint));
 
 			// add main blocks
-			blocks.AddRange(GetBlockElements(gcodeGroupObject.AllG0Sections, ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeGroupObject.G0Sections, ref currentPoint));
 			
 			// last add footer
-			//blocks.AddRange(GetBlockElements(gcodeGroupObject.AfterLastG0Section, "Bottom", ref currentPoint));
+			blocks.AddRange(GetBlockElements(gcodeGroupObject.AfterLastG0Section, "Footer", ref currentPoint));
 			
 			return blocks;
 		}
@@ -639,29 +639,10 @@ namespace GCodePlotter
 			var blocks = new List<Block>();
 			
 			foreach (var currentPoint3D in point3DBlocks) {
-				
-				var currentBlock = new Block();
-				currentBlock.Name = "Block_" + blockCounter++;
-				
-				foreach (var currentInstruction in currentPoint3D.GCodeInstructions) {
-					// this is where the block is put together and where the linepoints is added
-					var linePointsCollection = currentInstruction.RenderCode(ref currentPoint);
-					if (linePointsCollection != null) {
-						currentInstruction.CachedLinePoints = linePointsCollection;
-						currentBlock.PlotPoints.AddRange(linePointsCollection);
-					}
-
-					// make sure to store the actual instruction as well
-					//if (currentInstruction.CanRender) {
-					// TODO: should we add all commands?
-					if (!currentInstruction.IsEmptyLine) {
-						currentBlock.GCodeInstructions.Add(currentInstruction);
-					}
-				}
-				
-				blocks.Add(currentBlock);
+				string name = "Block_" + blockCounter++;
+				var currentBlocks = GetBlockElements(currentPoint3D.GCodeInstructions, name, ref currentPoint);
+				blocks.AddRange(currentBlocks);
 			}
-			
 			return blocks;
 		}
 		
@@ -680,8 +661,8 @@ namespace GCodePlotter
 				}
 
 				// make sure to store the actual instruction as well
-				//if (currentInstruction.CanRender) {
-				// TODO: should we add all commands?
+				// TODO: could also check if it's is drawable and not add all
+				// e.g currentInstruction.CanRender
 				if (!currentInstruction.IsEmptyLine) {
 					currentBlock.GCodeInstructions.Add(currentInstruction);
 				}
@@ -811,6 +792,9 @@ namespace GCodePlotter
 					
 					// draw drill point if neccesary
 					PaintDrillPoint(g, parentBlock);
+					
+					// and the XY coordinate as higlighted
+					PaintHighlightedPoint(g, selectedInstruction);
 				} else {
 					// top level, i.e. the block level or if nothing is selected
 					foreach (Block blockItem in myBlocks) {
@@ -843,22 +827,30 @@ namespace GCodePlotter
 			
 			// if this is a drillblock, paint a circle at the point
 			if (blockItem.IsDrillPoint) {
-				var x = blockItem.PlotPoints[1].X1;
-				var y = blockItem.PlotPoints[1].Y1;
+				var x = blockItem.PlotPoints[1].X1 * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - (blockItem.PlotPoints[1].Y1 * multiplier) - BOTTOM_MARGIN;
 				var radius = 3.5f/zoomScale;
-				var drillPointBrush = Brushes.Pink;
+				var drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPoint);
 				bool drawDrillPoint = !cbSoloSelect.Checked;
 
 				if (treeView.SelectedNode != null
 				    && treeView.SelectedNode.Tag.Equals(blockItem)) {
-					drillPointBrush = Brushes.DodgerBlue;
+					drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPointHighlight);
 					if (cbSoloSelect.Checked) drawDrillPoint = true;
 				}
 				if (drawDrillPoint) {
-					g.FillEllipse(drillPointBrush, x * multiplier + LEFT_MARGIN - radius,
-					              gridHeigh - (y * multiplier) - BOTTOM_MARGIN - radius,
-					              radius*2, radius*2);
+					g.FillEllipse(drillPointBrush, x - radius, y - radius, radius*2, radius*2);
 				}
+			}
+		}
+		
+		void PaintHighlightedPoint(Graphics g, GCodeInstruction instruction) {
+			if (instruction.HasXY) {
+				var x = instruction.X.Value * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - (instruction.Y.Value * multiplier) - BOTTOM_MARGIN;
+				var radius = 3.5f/zoomScale;
+				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
+				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
 			}
 		}
 		#endregion
@@ -983,28 +975,7 @@ namespace GCodePlotter
 				}
 
 				float zSafeHeight = GetZSafeHeight();
-
-				using (var tw = new StreamWriter(file.OpenWrite())) {
-					WriteGCodeHeader(tw, zSafeHeight);
-					string prevLine = string.Empty;
-					myBlocks.ForEach(x =>
-					                 {
-					                 	tw.WriteLine();
-					                 	
-					                 	string multiLine = x.BuildGCodeOutput(doPeckDrilling);
-					                 	string[] lines = multiLine.Split(new [] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-					                 	
-					                 	foreach (var line in lines) {
-					                 		// check that we are not adding identical lines
-					                 		if (!string.Equals(line, prevLine, StringComparison.OrdinalIgnoreCase)) {
-					                 			tw.WriteLine(line);
-					                 		}
-					                 		prevLine = line;
-					                 	}
-					                 });
-					tw.Flush();
-					WriteGCodeFooter(tw, zSafeHeight);
-				}
+				SaveGCodes(file, myBlocks, zSafeHeight, doPeckDrilling);
 			}
 		}
 		
@@ -1017,14 +988,14 @@ namespace GCodePlotter
 			var fileSecond = new FileInfo(dirPath + Path.DirectorySeparatorChar + fileName + "_second.gcode");
 			
 			// clean them
-			var cleanedFirst = GCodeSplitter.MinimizeGCode(split[0]);
-			var cleanedSecond = GCodeSplitter.MinimizeGCode(split[1]);
+			var cleanedFirst = GCodeUtils.GetMinimizeGCode(split[0]);
+			var cleanedSecond = GCodeUtils.GetMinimizeGCode(split[1]);
 			
-			SaveGCodes(cleanedFirst, Point3D.Empty, fileFirst);
-			SaveGCodes(cleanedSecond, splitPoint, fileSecond);
+			SaveAndShiftGCodes(cleanedFirst, Point3D.Empty, fileFirst);
+			SaveAndShiftGCodes(cleanedSecond, splitPoint, fileSecond);
 		}
 
-		void SaveGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
+		void SaveAndShiftGCodes(List<GCodeInstruction> instructions, Point3D splitPoint, FileInfo file)
 		{
 			List<Block> blocks = null;
 			
@@ -1037,7 +1008,7 @@ namespace GCodePlotter
 				
 				foreach (var instruction in instructions) {
 					if (instruction.CanRender) {
-						// transform
+						// move the tiles to zero origin
 						if (splitPoint.X > 0 && instruction.X.HasValue) {
 							instruction.X = instruction.X - splitPoint.X;
 						}
@@ -1052,7 +1023,7 @@ namespace GCodePlotter
 				}
 				
 				// turn the instructins into blocks
-				blocks =  GetBlocks(transformedInstructions);
+				blocks = GetBlocks(transformedInstructions);
 			}
 			
 			if (file.Exists) {
@@ -1060,20 +1031,43 @@ namespace GCodePlotter
 			}
 			
 			float zSafeHeight = GetZSafeHeight();
+			SaveGCodes(file, blocks, zSafeHeight, false);
+		}
+
+		static void SaveGCodes(FileInfo file, List<Block> blocks, float zSafeHeight, bool doPeckDrilling) {
+			
+			string prevLine = string.Empty;
+			var excludeBlockNames = new HashSet<string>();
+			excludeBlockNames.Add("Header");
+			excludeBlockNames.Add("Footer");
 			
 			using (var tw = new StreamWriter(file.OpenWrite())) {
+				
 				WriteGCodeHeader(tw, zSafeHeight);
-				blocks.ForEach(x =>
-				               {
-				               	tw.WriteLine();
-				               	tw.Write(x.BuildGCodeOutput(false));
-				               });
+				
+				blocks.Where(x => !excludeBlockNames.Contains(x.Name))
+					.ToList()
+					.ForEach(x =>
+					         {
+					         	tw.WriteLine();
+					         	
+					         	string multiLine = x.BuildGCodeOutput(doPeckDrilling);
+					         	string[] lines = multiLine.Split(new [] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+					         	
+					         	foreach (var line in lines) {
+					         		// check that we are not adding identical lines
+					         		if (!string.Equals(line, prevLine, StringComparison.OrdinalIgnoreCase)) {
+					         			tw.WriteLine(line);
+					         		}
+					         		prevLine = line;
+					         	}
+					         });
 				tw.Flush();
 				WriteGCodeFooter(tw, zSafeHeight);
 			}
 		}
 		
-		void WriteGCodeHeader(TextWriter tw, float zSafeHeight) {
+		static void WriteGCodeHeader(TextWriter tw, float zSafeHeight) {
 			tw.WriteLine("(File built with GCodeTools)");
 			tw.WriteLine("(Generated on " + DateTime.Now + ")");
 			tw.WriteLine();
@@ -1087,7 +1081,7 @@ namespace GCodePlotter
 			tw.WriteLine("(Header end.)");
 		}
 
-		void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
+		static void WriteGCodeFooter(TextWriter tw, float zSafeHeight) {
 			tw.WriteLine();
 			tw.WriteLine("(Footer)");
 			//tw.WriteLine("G0 Z{0:0.####}", zSafeHeight);
@@ -1112,8 +1106,8 @@ namespace GCodePlotter
 				if (fileInfo.Extension.ToLower().Equals(".svg")) {
 					LoadSVG(fileInfo.FullName);
 				} else {
-					string data = File.ReadAllText(fileInfo.FullName);
-					ParseGCodeString(data);
+					string gCode = File.ReadAllText(fileInfo.FullName);
+					ParseGCodeString(gCode);
 				}
 			}
 		}
@@ -1237,7 +1231,7 @@ namespace GCodePlotter
 				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
 				
 				// clean up the mess with too many G0 commands
-				var cleaned = GCodeSplitter.MinimizeGCode(split[index]);
+				var cleaned = GCodeUtils.GetMinimizeGCode(split[index]);
 				
 				var gcodeSplitted = Block.BuildGCodeOutput("Block_1", cleaned, false);
 				ParseGCodeString(gcodeSplitted, false);

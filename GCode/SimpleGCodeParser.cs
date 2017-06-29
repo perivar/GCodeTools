@@ -1,9 +1,7 @@
 ﻿/**
  * Copied from the SimpleGcodeParser file
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
- *
- * See LICENCE in the project directory for licence information
- * Modified by perivar@nerseth.com
+ * Heavily Modified by perivar@nerseth.com
  **/
 using System;
 using System.Collections.Generic;
@@ -41,7 +39,7 @@ namespace GCode
 		}
 	}
 
-	public enum CommandList
+	public enum CommandType
 	{
 		RapidMove = 0,
 		NormalMove = 1,
@@ -88,12 +86,10 @@ namespace GCode
 		public float? J { get; set; }	// arc y coordinate
 		public float? P { get; set; }
 		public int? T { get; set; }		// tool change
-		public int? M { get; set; }		// 
+		public int? M { get; set; }		// machine commands
 
 		internal float minX, minY, minZ;
 		internal float maxX, maxY, maxZ;
-		internal Point3D StartPoint;
-		internal Point3D EndPoint;
 		
 		public List<LinePoints> CachedLinePoints { get; set; }
 
@@ -110,15 +106,12 @@ namespace GCode
 		}
 		
 		// Lines
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
+		public static List<GCodeInstruction> GetInstructions(CommandType commandType, Point3D p1, Point3D p2, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
 			bool skipRapidMove = false;
-			// if the command is a line and the previous X Y Z and the p1 X Y Z is the same
-			//if (prevPoint == p1) {
-			// if last command didn't include a Z-coordinate, like a G2 or G3 arc mode
-			// only check whether X and Y are similar between prevPoint and p1
+			// if the command is a line and the previous X Y and the p1 X Y is the same
 			if (prevPoint.X == p1.X && prevPoint.Y == p1.Y) {
 				skipRapidMove = true;
 			} else if (p1 == p2) {
@@ -139,18 +132,18 @@ namespace GCode
 				}
 				
 				// first raise Z to Z clearance (= G0 Za)
-				output.Add(new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null));
+				output.Add(new GCodeInstruction(CommandType.RapidMove, null, null, zClearance, null));
 				
 				// secondly move X and Y to right place  (= G0 Xa Yb)
-				output.Add(new GCodeInstruction(CommandList.RapidMove, p1.X, p1.Y, null, null));
+				output.Add(new GCodeInstruction(CommandType.RapidMove, p1.X, p1.Y, null, null));
 			}
-			output.Add(new GCodeInstruction(command, p2, feed));
+			output.Add(new GCodeInstruction(commandType, p2, feed));
 			
 			return output;
 		}
 		
 		// Arcs
-		public static List<GCodeInstruction> GetInstructions(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
+		public static List<GCodeInstruction> GetInstructions(CommandType commandType, Point3D p1, Point3D p2, Point3D p3, float feed, Point3D shift, int side, Point3D prevPoint, float zClearance) {
 			
 			var output = new List<GCodeInstruction>();
 			
@@ -176,86 +169,41 @@ namespace GCode
 				}
 				
 				// first raise Z to Z clearance (= G0 Za)
-				output.Add(new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null));
+				output.Add(new GCodeInstruction(CommandType.RapidMove, null, null, zClearance, null));
 				
 				// secondly move X and Y to right place  (= G0 Xa Yb)
-				output.Add(new GCodeInstruction(CommandList.RapidMove, p1.X, p1.Y, null, null));
+				output.Add(new GCodeInstruction(CommandType.RapidMove, p1.X, p1.Y, null, null));
 			}
-			output.Add(new GCodeInstruction(command, p1, p2, p3, feed));
+			output.Add(new GCodeInstruction(commandType, p1, p2, p3, feed));
 			
 			return output;
 		}
 		
 		#region Constructors
-		public GCodeInstruction(CommandList command, float? x, float? y, float? z, float? feed) {
-			switch (command) {
-				case CommandList.RapidMove:
-					Command = "G0";
-					break;
-				case CommandList.NormalMove:
-					Command = "G1";
-					break;
-				case CommandList.CWArc:
-					Command = "G2";
-					break;
-				case CommandList.CCWArc:
-					Command = "G3";
-					break;
-				case CommandList.Other:
-					break;
-			}
+		public GCodeInstruction(CommandType commandType, float? x, float? y, float? z, float? feed) {
+			SetCommand(commandType);
 			
 			if (x.HasValue) this.X = x.Value;
 			if (y.HasValue) this.Y = y.Value;
 			if (z.HasValue) this.Z = z.Value;
-			if (command != CommandList.RapidMove && feed.HasValue) this.F = feed.Value;
+			if (commandType != CommandType.RapidMove && feed.HasValue) this.F = feed.Value;
 		}
 		
-		public GCodeInstruction(CommandList command, Point3D point, float feed) {
-			switch (command) {
-				case CommandList.RapidMove:
-					Command = "G0";
-					break;
-				case CommandList.NormalMove:
-					Command = "G1";
-					break;
-				case CommandList.CWArc:
-					Command = "G2";
-					break;
-				case CommandList.CCWArc:
-					Command = "G3";
-					break;
-				case CommandList.Other:
-					break;
-			}
+		public GCodeInstruction(CommandType commandType, Point3D point, float feed) {
+			SetCommand(commandType);
 			
 			this.X = point.X;
 			this.Y = point.Y;
 			this.Z = point.Z;
-			if (command != CommandList.RapidMove) this.F = feed;
+			if (commandType != CommandType.RapidMove) this.F = feed;
 		}
 		
-		public GCodeInstruction(CommandList command, Point3D p1, Point3D p2, Point3D p3, float feed, bool absoluteArcCenterMode = false) {
-			switch (command) {
-				case CommandList.RapidMove:
-					Command = "G0";
-					break;
-				case CommandList.NormalMove:
-					Command = "G1";
-					break;
-				case CommandList.CWArc:
-					Command = "G2";
-					break;
-				case CommandList.CCWArc:
-					Command = "G3";
-					break;
-				case CommandList.Other:
-					break;
-			}
+		public GCodeInstruction(CommandType commandType, Point3D p1, Point3D p2, Point3D p3, float feed, bool absoluteArcCenterMode = false) {
+			SetCommand(commandType);
 			
 			this.X = p2.X;
 			this.Y = p2.Y;
-			if (command != CommandList.RapidMove) this.F = feed;
+			if (commandType != CommandType.RapidMove) this.F = feed;
 
 			if (absoluteArcCenterMode) {
 				// if G90.1 (absolute distance mode for arc centers)
@@ -276,57 +224,14 @@ namespace GCode
 		}
 		#endregion
 		
-		public void Update(string line) {
-			// parse comments and return the remaining command if any
-			string command = ParseComments(line).Trim();
-			
-			if (!string.IsNullOrEmpty(Comment) && string.IsNullOrEmpty(command)) {
-				IsOnlyComment = true;
-			} else {
-				IsOnlyComment = false;
-				
-				// use regexp for the part that remains after removing the comment
-				// or a line that hasn't a comment at all
-				MatchCollection matches = GCodeSplitter.Matches(command.ToUpper());
-
-				if (matches.Count == 1) {
-					// only matched the command, store this
-					this.Command = matches[0].Groups[0].Value;
-				} else if (matches.Count > 1) {
-					// matched the command and something more
-					this.Command = matches[0].Groups[0].Value;
-					
-					for (int index = 0; index < matches.Count; index++)
-					{
-						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
-
-						switch (matches[index].Groups[1].Value)
-						{
-								case "X": X = value; break; // x
-								case "Y": Y = value; break; // y
-								case "Z": Z = value; break; // z
-								case "F": F = value; break; // feedrate
-								case "I": I = value; break; // arc x
-								case "J": J = value; break; // arc y
-								case "P": P = value; break;
-								//case "T": T = (int) value; break;
-								//case "M": M = (int) value; break;
-						}
-					}
-				} else {
-					// empty - ignore
-				}
-			}
-		}
-		
 		#region Properties
 		public bool CanRender
 		{
 			get {
-				if (CommandEnum == CommandList.NormalMove ||
-				    CommandEnum == CommandList.RapidMove ||
-				    CommandEnum == CommandList.CWArc ||
-				    CommandEnum == CommandList.CCWArc) {
+				if (CommandType == CommandType.NormalMove ||
+				    CommandType == CommandType.RapidMove ||
+				    CommandType == CommandType.CWArc ||
+				    CommandType == CommandType.CCWArc) {
 					return true;
 				}
 				return false;
@@ -350,6 +255,147 @@ namespace GCode
 		}
 		#endregion
 		
+		#region Helper Methods
+		public void SetCommand(CommandType commandType) {
+			switch (commandType) {
+				case CommandType.RapidMove:
+					Command = "G0";
+					break;
+				case CommandType.NormalMove:
+					Command = "G1";
+					break;
+				case CommandType.CWArc:
+					Command = "G2";
+					break;
+				case CommandType.CCWArc:
+					Command = "G3";
+					break;
+				case CommandType.Other:
+					break;
+			}
+		}
+
+		public string CommandDescription
+		{
+			get
+			{
+				switch (Command)
+				{
+					case "G0":
+					case "G00":
+						return "Rapid Move";
+					case "G1":
+					case "G01":
+						return "Coordinated motion";
+					case "G2":
+					case "G02":
+						return "Clockwise arc motion";
+					case "G3":
+					case "G03":
+						return "Counter clockwise arc motion";
+					case "G4":
+					case "G04":
+						return "Dwell";
+					case "G90":
+						return "Absolute Mode";
+					case "G91":
+						return "Relative Mode";
+					case "G20":
+						return "Set Units to Inches";
+					case "G21":
+						return "Set Units to Millimeters";
+				}
+				return "Unknown " + Command;
+			}
+		}
+
+		public CommandType CommandType
+		{
+			get
+			{
+				switch (Command)
+				{
+					case "G0":
+					case "G00":
+						return CommandType.RapidMove;
+					case "G1":
+					case "G01":
+						return CommandType.NormalMove;
+					case "G2":
+					case "G02":
+						return CommandType.CWArc;
+					case "G3":
+					case "G03":
+						return CommandType.CCWArc;
+					case "G4":
+					case "G04":
+						return CommandType.Dwell;
+				}
+				return CommandType.Other;
+			}
+		}
+
+		public void Update(string line) {
+			// parse comments and return the remaining command if any
+			string command = ParseComments(line).Trim();
+			
+			if (!string.IsNullOrEmpty(Comment) && string.IsNullOrEmpty(command)) {
+				IsOnlyComment = true;
+			} else {
+				IsOnlyComment = false;
+				
+				// use regexp for the part that remains after removing the comment
+				// or a line that hasn't a comment at all
+				MatchCollection matches = GCodeSplitter.Matches(command.ToUpper());
+
+				if (matches.Count == 1) {
+					// only matched the command, store this
+					this.Command = matches[0].Groups[0].Value;
+				} else if (matches.Count > 1) {
+					// matched the command and something more
+					this.Command = matches[0].Groups[0].Value;
+					
+					// loop through the elements that have coordinate values and store them
+					for (int index = 0; index < matches.Count; index++)
+					{
+						// get coordinate value
+						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
+
+						// get coordinate
+						switch (matches[index].Groups[1].Value)
+						{
+								case "X": X = value; break; // x
+								case "Y": Y = value; break; // y
+								case "Z": Z = value; break; // z
+								case "F": F = value; break; // feedrate
+								case "I": I = value; break; // arc x
+								case "J": J = value; break; // arc y
+								case "P": P = value; break;
+							case "M":
+								// M3 (Start Spindle)
+								// M7 (Flood Coolant On)
+								// etc.
+								if ("M" + value != this.Command) {
+									// concatinate
+									this.Command = string.Format(CultureInfo.InvariantCulture, "{0} M{1:0.##}", this.Command, value);
+								}
+								break;
+							case "T":
+								// M6 T1 (Change Tool: Diameter: 1.0000 mm)
+								if ("T" + value != this.Command) {
+									// concatinate
+									this.Command = string.Format(CultureInfo.InvariantCulture, "{0} T{1:0.##}", this.Command, value);
+								}
+								break;
+						}
+					}
+				} else {
+					// empty - ignore
+				}
+			}
+		}
+		#endregion
+
 		/// <summary>
 		/// Parse the comments out from the passed line
 		/// and store the Comments, return the remaining command if it exists or the full line
@@ -390,66 +436,6 @@ namespace GCode
 			return command;
 		}
 		
-		public string CommandType
-		{
-			get
-			{
-				switch (Command)
-				{
-					case "G0":
-					case "G00":
-						return "Rapid Move";
-					case "G1":
-					case "G01":
-						return "Coordinated motion";
-					case "G2":
-					case "G02":
-						return "Clockwise arc motion";
-					case "G3":
-					case "G03":
-						return "Counter clockwise arc motion";
-					case "G4":
-					case "G04":
-						return "Dwell";
-					case "G90":
-						return "Absolute Mode";
-					case "G91":
-						return "Relative Mode";
-					case "G20":
-						return "Set Units to Inches";
-					case "G21":
-						return "Set Units to Millimeters";
-				}
-				return "Unknown " + Command;
-			}
-		}
-
-		public CommandList CommandEnum
-		{
-			get
-			{
-				switch (Command)
-				{
-					case "G0":
-					case "G00":
-						return CommandList.RapidMove;
-					case "G1":
-					case "G01":
-						return CommandList.NormalMove;
-					case "G2":
-					case "G02":
-						return CommandList.CWArc;
-					case "G3":
-					case "G03":
-						return CommandList.CCWArc;
-					case "G4":
-					case "G04":
-						return CommandList.Dwell;
-				}
-				return CommandList.Other;
-			}
-		}
-
 		public override string ToString()
 		{
 			return this.ToString(false);
@@ -497,9 +483,9 @@ namespace GCode
 			return sb.ToString();
 		}
 		
-		internal List<LinePoints> RenderCode(ref Point3D currentPoint)
+		internal List<LinePoints> RenderCode(ref Point3D currentPosition)
 		{
-			if (CommandEnum == CommandList.Other)
+			if (CommandType == CommandType.Other)
 			{
 				if (Command == "G90") { AbsoluteMode = true; }
 				if (Command == "G90.1") { AbsoluteArcCenterMode = true; }
@@ -509,12 +495,12 @@ namespace GCode
 				if (Command == "G20") { Metric = false; }
 				return null;
 			}
-			if (CommandEnum == CommandList.Dwell) {
+			if (CommandType == CommandType.Dwell) {
 				// ignore
 				return null;
 			}
 
-			var pos = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
+			var pos = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
 			if (AbsoluteMode) {
 				if (X.HasValue)
 					pos.X = X.Value;
@@ -538,30 +524,27 @@ namespace GCode
 				pos.Z *= 25.4f;
 			}
 			
-			if (CommandEnum == CommandList.RapidMove || CommandEnum == CommandList.NormalMove)
+			if (CommandType == CommandType.RapidMove || CommandType == CommandType.NormalMove)
 			{
-				maxX = Math.Max(currentPoint.X, pos.X);
-				maxY = Math.Max(currentPoint.Y, pos.Y);
-				maxZ = Math.Max(currentPoint.Z, pos.Z);
+				maxX = Math.Max(currentPosition.X, pos.X);
+				maxY = Math.Max(currentPosition.Y, pos.Y);
+				maxZ = Math.Max(currentPosition.Z, pos.Z);
 
-				minX = Math.Min(currentPoint.X, pos.X);
-				minY = Math.Min(currentPoint.Y, pos.Y);
-				minZ = Math.Min(currentPoint.Z, pos.Z);
+				minX = Math.Min(currentPosition.X, pos.X);
+				minY = Math.Min(currentPosition.Y, pos.Y);
+				minZ = Math.Min(currentPosition.Z, pos.Z);
 
-				StartPoint = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
-				EndPoint = new Point3D(pos.X, pos.Y, pos.Z);
-
-				var line = new LinePoints(currentPoint, pos, CommandEnum == CommandList.RapidMove ? PenColorList.RapidMove : PenColorList.NormalMove);
-				currentPoint.X = pos.X;
-				currentPoint.Y = pos.Y;
-				currentPoint.Z = pos.Z;
+				var line = new LinePoints(currentPosition, pos, CommandType == CommandType.RapidMove ? PenColorList.RapidMove : PenColorList.NormalMove);
+				currentPosition.X = pos.X;
+				currentPosition.Y = pos.Y;
+				currentPosition.Z = pos.Z;
 				return new List<LinePoints>() { line };
 			}
 
-			if (CommandEnum == CommandList.CWArc || CommandEnum == CommandList.CCWArc)
+			if (CommandType == CommandType.CWArc || CommandType == CommandType.CCWArc)
 			{
 				var center = new Point3D(0f, 0f, 0f);
-				var current = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
+				var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
 				
 				if (AbsoluteArcCenterMode) {
 					center.X = this.I ?? 0;
@@ -571,14 +554,11 @@ namespace GCode
 					center.Y = current.Y + this.J ?? 0;
 				}
 
-				minX = currentPoint.X;
-				minY = currentPoint.Y;
-				minZ = currentPoint.Z;
+				minX = currentPosition.X;
+				minY = currentPosition.Y;
+				minZ = currentPosition.Z;
 
-				StartPoint = new Point3D(current.X, current.Y, current.Z);
-
-				var arcPoints = RenderArc(center, pos, (CommandEnum == CommandList.CWArc), ref currentPoint);
-				EndPoint = new Point3D(currentPoint.X, currentPoint.Y, currentPoint.Z);
+				var arcPoints = RenderArc(center, pos, (CommandType == CommandType.CWArc), ref currentPosition);
 				
 				return arcPoints;
 			}
@@ -586,7 +566,7 @@ namespace GCode
 			return null;
 		}
 
-		private List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
+		List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
 		{
 			// angle variables.
 			double angleA;
@@ -675,11 +655,6 @@ namespace GCode
 				currentPosition.Y = newPoint.Y;
 			}
 			return output;
-		}
-
-		public StringBuilder GetXY(StringBuilder sb)
-		{
-			return sb.AppendFormat(" ({0:0.####},{1:0.####} - {2:0.####},{3:0.####})", StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y);
 		}
 
 		public bool EqualsXYZ(GCodeInstruction other)

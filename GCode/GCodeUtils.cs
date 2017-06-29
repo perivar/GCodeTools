@@ -19,7 +19,7 @@ namespace GCode
 		
 		/// <summary>
 		/// Split the list of gcode instructions into gcode blocks.
-		/// splits a G0 commands that includes either X and/or Y.
+		/// Splits on G0 commands that includes either X and/or Y.
 		/// Returns everything before the first G0, all G0 blocks and everything after last block
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
@@ -29,82 +29,63 @@ namespace GCode
 			// list that will be returned
 			var allG0 = new List<Point3DBlock>();
 			var priorToG0 = new List<GCodeInstruction>();
-			var eof = new List<GCodeInstruction>();
+			var afterLastG0 = new List<GCodeInstruction>();
 
 			// temporary list
-			var notG0 = new List<GCodeInstruction>();
+			var tempNotG0 = new List<GCodeInstruction>();
 			
-			float? lastX = null;
-			float? lastY = null;
+			float lastX = 0.0f;
+			float lastY = 0.0f;
 			foreach (var currentInstruction in instructions) {
 				
-				// check if this line is a G0 command
-				if (currentInstruction.CommandEnum == CommandList.RapidMove) {
+				// Check if this line is a G0 command with an X or Y coordinate
+				if (currentInstruction.CommandType == CommandType.RapidMove
+				    && (currentInstruction.X.HasValue || currentInstruction.Y.HasValue)) {
 
-					// this line is a G0 command, get the X and Y values
-					float? x = currentInstruction.X;
-					float? y = currentInstruction.Y;
-
-					// check if x or y exist for this line
-					if (x.HasValue || y.HasValue) {
-						
-						// if x or y here is false we need to use the last coordinate
-						// from the previous G0 or G1 as that is where the machine would be
-						if (!y.HasValue && lastY != null) {
-							y = lastY.Value;
-							
-						} else if (!x.HasValue && lastX != null) {
-							x = lastX.Value;
-						}
-						
-						// store location state
-						lastX = x;
-						lastY = y;
-						
-						// if y still have no value, force to 0
-						if (!y.HasValue) {
-							y = 0;
-						}
-						// if x still have no value, force to 0
-						if (!x.HasValue) {
-							x = 0;
-						}
-						
-						// make sure to update currentInstruction with both X and Y coordinate
-						currentInstruction.X = x;
-						currentInstruction.Y = y;
-						
-						if (allG0.Count > 0) {
-							// allG0 has entries, so we need to add notG0 to the followingLines for the previous entry in allG0
-							var lastElement = allG0.Last();
-							lastElement.GCodeInstructions.AddRange(notG0);
-						}
-
-						// this G0 has a valid X or Y coordinate, add it to allG0 with itself (the G0) as the first entry in followingLines
-						var point = new Point3DBlock(x.Value, y.Value);
-						point.GCodeInstructions.Add(currentInstruction);
-						allG0.Add(point);
-						
-						// reset notG0
-						notG0.Clear();
-
-					} else {
-						// there is no X or Y coordinate for this G0, we can just add it as a normal line
-						notG0.Add(currentInstruction);
+					// If x or y here is false we need to use the last coordinate
+					// from a previous G0 or G1 as that is where the machine would be
+					// or force to 0
+					if (!currentInstruction.X.HasValue) {
+						currentInstruction.X = lastX;
+					}
+					if (!currentInstruction.Y.HasValue) {
+						currentInstruction.Y = lastY;
+					}
+					
+					// allG0 already has entries,
+					// therefore we need to add all the temporary notG0's
+					// to the followingLines for the previous entry in allG0
+					if (allG0.Count > 0) {
+						var lastElement = allG0.Last();
+						lastElement.GCodeInstructions.AddRange(tempNotG0);
 					}
 
+					// Add this G0 to allG0 with itself (the G0) as the first entry in followingLines
+					var point = new Point3DBlock(currentInstruction.X.Value, currentInstruction.Y.Value);
+					point.GCodeInstructions.Add(currentInstruction);
+					allG0.Add(point);
+					
+					// Empty notG0 so it's ready for next block
+					tempNotG0.Clear();
+					
 				} else {
-					// store location state
-					//lastX = currentInstruction.X;
-					//lastY = currentInstruction.Y;
-
-					// add this line to notG0
-					notG0.Add(currentInstruction);
+					// Add this line to notG0 since it's not a G0 with X or Y coordinates
+					tempNotG0.Add(currentInstruction);
 				}
 
+				// if allG0 at this point is zero, it means we haven't
+				// detected the first G0 group yet.
+				// add to the priorToG0 group
 				if (allG0.Count == 0) {
-					// this holds lines prior to the first G0 for use later
 					priorToG0.Add(currentInstruction);
+				}
+				
+				// store position state
+				if (currentInstruction.X.HasValue) {
+					lastX = currentInstruction.X.Value;
+				}
+				if (currentInstruction.Y.HasValue) {
+					lastY = currentInstruction.Y.Value;
 				}
 			}
 			
@@ -118,7 +99,7 @@ namespace GCode
 			// this gets the lines after the last G0 in the file
 			// we also need to check if the commands here are not G0, G1, G2, G3, or G4
 			// because in this case they should be left at the end of the file, not put into the parent G0 block
-			foreach (var currentInstruction in notG0) {
+			foreach (var currentInstruction in tempNotG0) {
 
 				// check if this line is a G0, G1, G2 or G3
 				if (currentInstruction.CanRender) {
@@ -126,15 +107,15 @@ namespace GCode
 					allG0.Last().GCodeInstructions.Add(currentInstruction);
 				} else {
 					// this should be added to the end of the file as it was already there
-					eof.Add(currentInstruction);
+					afterLastG0.Add(currentInstruction);
 				}
 			}
 			
 			// add header and footer as special blocks
 			var gcodeBlocks = new GCodeGroupObject();
-			gcodeBlocks.AllG0Sections = allG0;
+			gcodeBlocks.G0Sections = allG0;
 			gcodeBlocks.PriorToFirstG0Section = priorToG0;
-			gcodeBlocks.AfterLastG0Section = eof;
+			gcodeBlocks.AfterLastG0Section = afterLastG0;
 			
 			return gcodeBlocks;
 		}
@@ -223,7 +204,7 @@ namespace GCode
 			bool found = false;
 
 			foreach (var instruction in instructions) {
-				if (instruction.CommandEnum == CommandList.NormalMove
+				if (instruction.CommandType == CommandType.NormalMove
 				    && !instruction.X.HasValue
 				    && !instruction.Y.HasValue
 				    && instruction.Z.HasValue) {
@@ -461,6 +442,83 @@ namespace GCode
 				}
 			}
 		}
+		
+		/// <summary>
+		/// Minimize gcode by removing coordinates that is a repeat of the previous coordinate
+		/// </summary>
+		/// <param name="instructions">instructions</param>
+		/// <returns>minimized gcode</returns>
+		public static List<GCodeInstruction> GetMinimizeGCode(List<GCodeInstruction> instructions) {
+			
+			var cleanedList = new List<GCodeInstruction>();
+			var prevInstruction = new GCodeInstruction(CommandType.RapidMove, Point3D.Empty, 0);
+			
+			CommandType mvtype = CommandType.Other;
+			
+			float lastX = 0.0f;
+			float lastY = 0.0f;
+			float lastZ = 0.0f;
+			float lastF = 0.0f;
+			
+			foreach (GCodeInstruction currentInstruction in instructions) {
+				
+				if (currentInstruction.Equals(prevInstruction)) {
+					continue;
+				}
+
+				// store move type
+				mvtype = currentInstruction.CommandType;
+				
+				if (mvtype == CommandType.RapidMove
+				    || mvtype == CommandType.NormalMove
+				    || mvtype == CommandType.CWArc
+				    || mvtype == CommandType.CCWArc) {
+					
+					// merge previous coordinates with newer ones to maintain correct point coordinates
+					if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
+					     || currentInstruction.F.HasValue)) {
+						
+						if ((currentInstruction.X.HasValue && prevInstruction.X.HasValue
+						     && currentInstruction.X.Value == prevInstruction.X.Value)
+						    || currentInstruction.X.HasValue && currentInstruction.X.Value == lastX) {
+							// X is similar
+							currentInstruction.X = (float?) null;
+						}
+						if ((currentInstruction.Y.HasValue && prevInstruction.Y.HasValue
+						     && currentInstruction.Y.Value == prevInstruction.Y.Value)
+						    || currentInstruction.Y.HasValue && currentInstruction.Y.Value == lastY) {
+							// Y is similar
+							currentInstruction.Y = (float?) null;
+						}
+						if ((currentInstruction.Z.HasValue && prevInstruction.Z.HasValue
+						     && currentInstruction.Z.Value == prevInstruction.Z.Value)
+						    || currentInstruction.Z.HasValue && currentInstruction.Z.Value == lastZ) {
+							// Z is similar
+							currentInstruction.Z = (float?) null;
+						}
+						if ((currentInstruction.F.HasValue && prevInstruction.F.HasValue
+						     && currentInstruction.F.Value == prevInstruction.F.Value)
+						    || currentInstruction.F.HasValue && currentInstruction.F.Value == lastF) {
+							// F is similar
+							currentInstruction.F = (float?) null;
+						}
+					}
+					
+					// store latest movement instructions as previous instrucion
+					prevInstruction = currentInstruction;
+					
+					// at all times store the latest X, Y, Z and feedrate
+					if (currentInstruction.X.HasValue) lastX = currentInstruction.X.Value;
+					if (currentInstruction.Y.HasValue) lastY = currentInstruction.Y.Value;
+					if (currentInstruction.Z.HasValue) lastZ = currentInstruction.Z.Value;
+					if (currentInstruction.F.HasValue) lastF = currentInstruction.F.Value;
+				}
+				
+				cleanedList.Add(currentInstruction);
+			}
+
+			return cleanedList;
+		}
 
 		/// <summary>
 		/// Shift the gcode instructions in x, y or z direction
@@ -585,7 +643,7 @@ namespace GCode
 	/// </summary>
 	public class GCodeGroupObject {
 		
-		public List<Point3DBlock> AllG0Sections { get; set; }
+		public List<Point3DBlock> G0Sections { get; set; }
 		public List<GCodeInstruction> PriorToFirstG0Section { get; set; }
 		public List<GCodeInstruction> AfterLastG0Section { get; set; }
 		
@@ -594,7 +652,7 @@ namespace GCode
 			return string.Format(CultureInfo.CurrentCulture,
 			                     "PriorToG0: {0}, AllG0: {1}, Eof: {2}",
 			                     this.PriorToFirstG0Section.Count,
-			                     this.AllG0Sections.Count,
+			                     this.G0Sections.Count,
 			                     this.AfterLastG0Section.Count
 			                    );
 		}

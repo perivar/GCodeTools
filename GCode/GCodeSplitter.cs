@@ -34,7 +34,7 @@ namespace GCode
 		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
 		{
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
-			CommandList mvtype = CommandList.Other;
+			CommandType mvtype = CommandType.Other;
 
 			var app = new List<List<GCodeInstruction>>();
 			app.Add(new List<GCodeInstruction>());
@@ -66,7 +66,7 @@ namespace GCode
 			foreach (var instruction in instructions)
 			{
 				// store move type
-				mvtype = instruction.CommandEnum;
+				mvtype = instruction.CommandType;
 				
 				// merge previous coordinates with newer ones to maintain correct point coordinates
 				if ((instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
@@ -85,9 +85,9 @@ namespace GCode
 					}
 				}
 				
-				if (mvtype == CommandList.NormalMove
-				    || mvtype == CommandList.CWArc
-				    || mvtype == CommandList.CCWArc) {
+				if (mvtype == CommandType.NormalMove
+				    || mvtype == CommandType.CWArc
+				    || mvtype == CommandType.CCWArc) {
 					
 					pos = SetOffsetAndRotation(currentPos, shift, angle);
 					pos_last = SetOffsetAndRotation(previousPos, shift, angle);
@@ -107,13 +107,13 @@ namespace GCode
 					} else if (pos_last.X < SELF_ZERO) {
 						flag_side = Position.L;
 					} else {
-						if (mvtype == CommandList.NormalMove) {
+						if (mvtype == CommandType.NormalMove) {
 							if (pos.X >= 0) {
 								flag_side = Position.R;
 							} else {
 								flag_side = Position.L;
 							}
-						} else if (mvtype == CommandList.CWArc) {
+						} else if (mvtype == CommandType.CWArc) {
 							if (Math.Abs(pos_last.Y-center.Y) < SELF_ZERO) {
 								if (center.X > 0) {
 									flag_side = Position.R;
@@ -153,7 +153,7 @@ namespace GCode
 					}
 					
 					// Handle normal moves
-					if (mvtype == CommandList.NormalMove) {
+					if (mvtype == CommandType.NormalMove) {
 						A = UnsetOffsetAndRotation(pos_last, shift, angle);
 						C = UnsetOffsetAndRotation(pos, shift, angle);
 						cross = GetLineIntersect(pos_last, pos);
@@ -180,7 +180,7 @@ namespace GCode
 					}
 					
 					// Handle Arc moves
-					if (mvtype == CommandList.CWArc || mvtype == CommandList.CCWArc ) {
+					if (mvtype == CommandType.CWArc || mvtype == CommandType.CCWArc ) {
 						A = UnsetOffsetAndRotation(pos_last, shift, angle);
 						C = UnsetOffsetAndRotation(pos, shift, angle);
 						D  = UnsetOffsetAndRotation(center, shift, angle);
@@ -226,7 +226,7 @@ namespace GCode
 					
 					// if not any normal or arc moves, store the instruction in both lists
 					// rapid moves are also handled here
-					if (instruction.CommandEnum != CommandList.RapidMove) {
+					if (instruction.CommandType != CommandType.RapidMove) {
 						app[0].Add(instruction);
 						app[1].Add(instruction);
 					}
@@ -249,7 +249,7 @@ namespace GCode
 			
 			// add a last raise Z
 			// raise Z to Z clearance (= G0 Za)
-			var lastRaiseBitInstruction = new GCodeInstruction(CommandList.RapidMove, null, null, zClearance, null);
+			var lastRaiseBitInstruction = new GCodeInstruction(CommandType.RapidMove, null, null, zClearance, null);
 			app[0].Add(lastRaiseBitInstruction);
 			app[1].Add(lastRaiseBitInstruction);
 			
@@ -273,10 +273,10 @@ namespace GCode
 			while (!foundLastMovement) {
 				prevInstruction = instructions[instructions.Count - index];
 				
-				if (prevInstruction.CommandEnum == CommandList.CWArc
-				    || prevInstruction.CommandEnum == CommandList.CCWArc
-				    || prevInstruction.CommandEnum == CommandList.NormalMove
-				    || prevInstruction.CommandEnum == CommandList.RapidMove) {
+				if (prevInstruction.CommandType == CommandType.CWArc
+				    || prevInstruction.CommandType == CommandType.CCWArc
+				    || prevInstruction.CommandType == CommandType.NormalMove
+				    || prevInstruction.CommandType == CommandType.RapidMove) {
 					foundLastMovement = true;
 				}
 				
@@ -302,87 +302,6 @@ namespace GCode
 			}
 
 			return prevPoint;
-		}
-
-		/// <summary>
-		/// Minimize gcode by removing coordinates that is a repeat of the previous coordinate
-		/// </summary>
-		/// <param name="instructions">instructions</param>
-		/// <returns>minimized gcode</returns>
-		public static List<GCodeInstruction> MinimizeGCode(List<GCodeInstruction> instructions) {
-			
-			// TODO: the parsing becomes much more difficult if we don't have absolute coordinates per line
-			// meaning always both X and Y
-			return instructions;
-			
-			var cleanedList = new List<GCodeInstruction>();
-			var prevInstruction = new GCodeInstruction(CommandList.RapidMove, Point3D.Empty, 0);
-			
-			CommandList mvtype = CommandList.Other;
-			
-			float lastX = 0.0f;
-			float lastY = 0.0f;
-			float lastZ = 0.0f;
-			float lastF = 0.0f;
-			
-			foreach (GCodeInstruction currentInstruction in instructions) {
-				
-				if (currentInstruction.Equals(prevInstruction)) {
-					continue;
-				}
-
-				// store move type
-				mvtype = currentInstruction.CommandEnum;
-				
-				if (mvtype == CommandList.RapidMove
-				    || mvtype == CommandList.NormalMove
-				    || mvtype == CommandList.CWArc
-				    || mvtype == CommandList.CCWArc) {
-					
-					// merge previous coordinates with newer ones to maintain correct point coordinates
-					if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
-					     || currentInstruction.F.HasValue)) {
-						
-						if ((currentInstruction.X.HasValue && prevInstruction.X.HasValue
-						     && currentInstruction.X.Value == prevInstruction.X.Value)
-						    || currentInstruction.X.HasValue && currentInstruction.X.Value == lastX) {
-							// X is similar
-							currentInstruction.X = (float?) null;
-						}
-						if ((currentInstruction.Y.HasValue && prevInstruction.Y.HasValue
-						     && currentInstruction.Y.Value == prevInstruction.Y.Value)
-						    || currentInstruction.Y.HasValue && currentInstruction.Y.Value == lastY) {
-							// Y is similar
-							currentInstruction.Y = (float?) null;
-						}
-						if ((currentInstruction.Z.HasValue && prevInstruction.Z.HasValue
-						     && currentInstruction.Z.Value == prevInstruction.Z.Value)
-						    || currentInstruction.Z.HasValue && currentInstruction.Z.Value == lastZ) {
-							// Z is similar
-							currentInstruction.Z = (float?) null;
-						}
-						if ((currentInstruction.F.HasValue && prevInstruction.F.HasValue
-						     && currentInstruction.F.Value == prevInstruction.F.Value)
-						    || currentInstruction.F.HasValue && currentInstruction.F.Value == lastF) {
-							// F is similar
-							currentInstruction.F = (float?) null;
-						}
-					}
-					
-					// store latest movement instructions as previous instrucion
-					prevInstruction = currentInstruction;
-					
-					// at all times store the latest X, Y, Z and feedrate
-					if (currentInstruction.X.HasValue) lastX = currentInstruction.X.Value;
-					if (currentInstruction.Y.HasValue) lastY = currentInstruction.Y.Value;
-					if (currentInstruction.Z.HasValue) lastZ = currentInstruction.Z.Value;
-					if (currentInstruction.F.HasValue) lastF = currentInstruction.F.Value;
-				}
-				
-				cleanedList.Add(currentInstruction);
-			}
-
-			return cleanedList;
 		}
 		
 		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2) {
@@ -444,7 +363,7 @@ namespace GCode
 			return output;
 		}
 		
-		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, CommandList code) {
+		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, CommandType code) {
 			
 			var output = new List<Point3D>();
 			
@@ -540,13 +459,13 @@ namespace GCode
 		/// <param name="x"></param>
 		/// <param name="y"></param>
 		/// <param name="code">CommandList, type of arc</param>
-		public static double GetAngle(double x, double y, CommandList code = CommandList.CCWArc)
+		public static double GetAngle(double x, double y, CommandType code = CommandType.CCWArc)
 		{
 			double angle = 90.0 - Transformation.RadianToDegree(Math.Atan2(x, y));
 			if (angle < 0) {
 				angle = 360 + angle;
 			}
-			if (code == CommandList.CWArc) {
+			if (code == CommandType.CWArc) {
 				return (360.0 - angle);
 			}
 			return angle;

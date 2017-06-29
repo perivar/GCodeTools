@@ -469,7 +469,7 @@ namespace GCodePlotter
 			this.cmdSaveLayers.TabIndex = 9;
 			this.cmdSaveLayers.Text = "Save (Peck Drill)";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
-			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSaveLayersClick);
+			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSavePeckDrillingClick);
 			// 
 			// btnSave
 			// 

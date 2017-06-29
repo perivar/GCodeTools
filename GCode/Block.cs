@@ -1,14 +1,11 @@
 ﻿/**
  * Copied from the SimpleGcodeParser file
  * Copyright (c) David-John Miller AKA Anoyomouse 2014
- *
- * See LICENCE in the project directory for licence information
  * Modified by perivar@nerseth.com
  **/
 using System;
 using System.Drawing;
 using System.Collections.Generic;
-using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -108,15 +105,15 @@ namespace GCode
 				bool hasZUp = false;
 				bool hasZDown = false;
 				foreach (var instruction in GCodeInstructions) {
-					if ((instruction.CommandEnum == CommandList.RapidMove
-					     || instruction.CommandEnum == CommandList.NormalMove)
+					if ((instruction.CommandType == CommandType.RapidMove
+					     || instruction.CommandType == CommandType.NormalMove)
 					    && instruction.Z.HasValue
 					    && instruction.Z.Value > 0) {
 						hasZUp = true;
-					} else if (instruction.CommandEnum == CommandList.RapidMove
+					} else if (instruction.CommandType == CommandType.RapidMove
 					           && !instruction.Z.HasValue) {
 						hasRapidMove = true;
-					} else if (instruction.CommandEnum == CommandList.NormalMove
+					} else if (instruction.CommandType == CommandType.NormalMove
 					           && instruction.Z.HasValue
 					           && instruction.Z.Value < 0) {
 						hasZDown = true;
@@ -135,21 +132,6 @@ namespace GCode
 		/// </summary>
 		public void CalculateMinAndMax()
 		{
-			// TODO: why was this needed in the first place?
-			/*
-			var first = gcodeInstructions.First();
-			if (first != null)
-			{
-				maxX = first.maxX;
-				maxY = first.maxY;
-				maxZ = first.maxZ;
-
-				minX = first.StartPoint.X;
-				minY = first.StartPoint.Y;
-				minZ = first.StartPoint.Z;
-			}
-			 */
-
 			foreach (var currentInstruction in gcodeInstructions)
 			{
 				minX = Math.Min(minX, currentInstruction.minX);
