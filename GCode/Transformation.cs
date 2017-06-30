@@ -49,7 +49,7 @@ namespace GCode
 		/// <param name="point">point to be rotated</param>
 		/// <param name="center">center point</param>
 		/// <param name="angle">angle in degrees is negative for clockwise rotation</param>
-		/// <returns></returns>
+		/// <returns>rotated point</returns>
 		public static PointF Rotate(PointF point, PointF center, float angle) {
 			
 			// If you want to rotate about arbitrary center (cx, cy)
@@ -68,6 +68,28 @@ namespace GCode
 			// If that's not the case, then you would need to reverse the sign on the terms involving sin(x).
 			float newX = (float)(center.X + (point.X-center.X)*Math.Cos(theta) - (point.Y-center.Y)*Math.Sin(theta));
 			float newY = (float)(center.Y + (point.X-center.X)*Math.Sin(theta) + (point.Y-center.Y)*Math.Cos(theta));
+			return new PointF(newX, newY);
+		}
+		
+		/// <summary>
+		/// Rotate point through origin (0,0) with a certain angle
+		/// (note that angle is negative for clockwise rotation)
+		/// </summary>
+		/// <param name="point">point to be rotated</param>
+		/// <param name="angle">angle in degrees is negative for clockwise rotation</param>
+		/// <returns>rotated point</returns>
+		public static PointF Rotate(PointF point, float angle) {
+			
+			// Example of a 2D rotation through an angle w where the coordinates
+			// x, y go into x', y'.
+			// Note that rotation is about the origin (0, 0).
+			// x' = x * Cos(theta) - y * Sin(theta)
+			// y' = y * Cos(theta) + x * Sin(theta)
+			
+			double theta = Transformation.DegreeToRadian(angle);
+			
+			float newX = (float)(point.X * Math.Cos(theta) - point.Y * Math.Sin(theta));
+			float newY = (float)(point.Y * Math.Cos(theta) + point.X * Math.Sin(theta));
 			return new PointF(newX, newY);
 		}
 		
@@ -131,6 +153,7 @@ namespace GCode
 		/// <param name="pe2">end point of second line</param>
 		/// <returns>Point of intersection</returns>
 		/// <see cref="http://www.wyrmtale.com/blog/2013/115/2d-line-intersection-in-c"/>
+		/// <see cref="https://www.topcoder.com/community/data-science/data-science-tutorials/geometry-concepts-line-intersection-and-its-applications/"/>
 		public static PointF FindLineIntersectionPoint(PointF ps1, PointF pe1,
 		                                               PointF ps2, PointF pe2)
 		{

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace GCode
 {
@@ -31,7 +32,7 @@ namespace GCode
 		/// Copied from the G-Code_Ripper-0.12 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
+		public static List<List<GCodeInstruction>> SplitOld(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
 		{
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType mvtype = CommandType.Other;
@@ -256,6 +257,85 @@ namespace GCode
 			return app;
 		}
 		
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance) {
+			
+			return SplitOld(instructions, shift, angle, zClearance);
+			
+			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
+			CommandType mvtype = CommandType.Other;
+			
+			var app = new List<List<GCodeInstruction>>();
+			app.Add(new List<GCodeInstruction>());
+			app.Add(new List<GCodeInstruction>());
+			
+			var currentPos = Point3D.Empty;		// current position as read
+			float currentFeedrate = 0.0f;
+			
+			// original rectangle
+			var origRect = new RectangleF(0, 0, 100, 100);
+			
+			int numTiles = 9;
+
+			// split into equal sized rectangles (tiles)
+			int numColumns = (int) (Math.Ceiling(Math.Sqrt(numTiles)));
+			int numRows = (int) Math.Ceiling(numTiles / (double)numColumns);
+			
+			float width =  origRect.Width / numColumns;
+			float height = origRect.Height / numRows;
+			
+			var tileRects = new Dictionary<RectangleF, List<GCodeInstruction>>();
+			for (int y = 0; y < numRows; ++y) {
+				for (int x = 0; x < numColumns; ++x) {
+					tileRects.Add(new RectangleF(x * width, y * height, width, height), new List<GCodeInstruction>());
+				}
+			}
+			
+			// for each tile, add corresponding gcode instructions
+			foreach (var instruction in instructions)
+			{
+				// store move type
+				mvtype = instruction.CommandType;
+				
+				// merge previous coordinates with newer ones to maintain correct point coordinates
+				if ((instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
+				     || instruction.F.HasValue)) {
+					if (instruction.X.HasValue && instruction.X.Value != currentPos.X) {
+						currentPos.X = instruction.X.Value;
+					}
+					if (instruction.Y.HasValue && instruction.Y.Value != currentPos.Y) {
+						currentPos.Y = instruction.Y.Value;
+					}
+					if (instruction.Z.HasValue && instruction.Z.Value != currentPos.Z) {
+						currentPos.Z = instruction.Z.Value;
+					}
+					if (instruction.F.HasValue && instruction.F.Value != currentFeedrate) {
+						currentFeedrate = instruction.F.Value;
+					}
+				}
+				
+				if (mvtype == CommandType.NormalMove
+				    || mvtype == CommandType.CWArc
+				    || mvtype == CommandType.CCWArc) {
+					
+					// Handle normal moves
+					if (mvtype == CommandType.NormalMove) {
+						
+					}
+					
+					// Handle Arc moves
+					if (mvtype == CommandType.CWArc || mvtype == CommandType.CCWArc ) {
+					}
+					
+				} else {
+					// if not any normal or arc moves, store the instruction in all tiles
+					// rapid moves are also handled here
+				}
+				
+			}
+			
+			return app;
+		}
+		
 		/// <summary>
 		/// traverse the instructions backwards until a movement is found,
 		/// return as Point3D
@@ -397,7 +477,7 @@ namespace GCode
 
 			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // Note! no code
 
-			var betaTuple = Transform(p2.X-cent.X,p2.Y-cent.Y,Transformation.DegreeToRadian(-theta));
+			var betaTuple = Rotate(p2.X-cent.X,p2.Y-cent.Y,-theta);
 			double xbeta = betaTuple.Item1;
 			double ybeta = betaTuple.Item2;
 			double beta = GetAngle(xbeta, ybeta, code);
@@ -406,12 +486,12 @@ namespace GCode
 				beta = 360.0;
 			}
 
-			var xyTransTuple = Transform(-cent.X,ycross1-cent.Y,Transformation.DegreeToRadian(-theta));
+			var xyTransTuple = Rotate(-cent.X,ycross1-cent.Y,-theta);
 			double xt = xyTransTuple.Item1;
 			double yt = xyTransTuple.Item2;
 			double gt1 = GetAngle(xt,yt,code);
 			
-			var xyTransTuple2 = Transform(-cent.X,ycross2-cent.Y,Transformation.DegreeToRadian(-theta));
+			var xyTransTuple2 = Rotate(-cent.X,ycross2-cent.Y,-theta);
 			double xt2 = xyTransTuple2.Item1;
 			double yt2 = xyTransTuple2.Item2;
 			double gt2 = GetAngle(xt2,yt2,code);
@@ -447,17 +527,22 @@ namespace GCode
 		/// to a new coordinate system at angle from the initial coordinate system
 		/// Returns new x,y tuple
 		/// </summary>
-		public static Tuple<double,double> Transform(double x, double y, double angle) {
-			double newx = x * Math.Cos(angle) - y * Math.Sin(angle);
-			double newy = x * Math.Sin(angle) + y * Math.Cos(angle);
-			return new Tuple<double, double>(newx, newy);
+		/// <param name="x">x</param>
+		/// <param name="y">y</param>
+		/// <param name="angle">angle in degrees</param>
+		/// <returns>rotated coordinates</returns>
+		public static Tuple<double,double> Rotate(double x, double y, double angle) {
+			
+			var point = new PointF((float)x, (float)y);
+			var newPoint = Transformation.Rotate(point, (float)angle);
+			return new Tuple<double, double>(newPoint.X, newPoint.Y);
 		}
 
 		/// <summary>
 		/// Routine takes an sin and cos and returns the angle (between 0 and 360)
 		/// </summary>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
+		/// <param name="x">x</param>
+		/// <param name="y">y</param>
 		/// <param name="code">CommandList, type of arc</param>
 		public static double GetAngle(double x, double y, CommandType code = CommandType.CCWArc)
 		{
@@ -478,7 +563,7 @@ namespace GCode
 			x = x - offset.X;
 			y = y - offset.Y;
 			z = z - offset.Z;
-			var xy = Transform(x,y, Transformation.DegreeToRadian(rotate) );
+			var xy = Rotate(x, y, rotate);
 			return new Point3D((float)xy.Item1, (float)xy.Item2, z);
 		}
 
@@ -486,7 +571,7 @@ namespace GCode
 			float x = coords.X;
 			float y = coords.Y;
 			float z = coords.Z;
-			var xy = Transform(x, y, Transformation.DegreeToRadian(-rotate) );
+			var xy = Rotate(x, y, -rotate);
 			x = (float) xy.Item1 + offset.X;
 			y = (float) xy.Item2 + offset.Y;
 			z = z + offset.Z;
