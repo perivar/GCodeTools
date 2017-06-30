@@ -43,7 +43,17 @@ namespace GCodeOptimizer
 			
 			_alg = new GAAlgorithm(_points);
 			
+			_scale = CalculateOptimalScale(maxX, maxY);
 			DrawInitialPoints();
+		}
+		
+		float CalculateOptimalScale(float maxX, float maxY) {
+			float w = pnlViewer.Width - 10;
+			float h = pnlViewer.Height - 10;
+			float f1 = w / maxX;
+			float f2 = h / maxY;
+			
+			return Math.Max(0.25f, Math.Min(f1, f2));
 		}
 		
 		void RadScaleCheckedChanged(object sender, EventArgs e)
@@ -230,6 +240,19 @@ namespace GCodeOptimizer
 			// print initial distance
 			label1.Text = string.Format("Initially there are {0} G0 points. Best value: {1}",
 			                            _points.Count, _alg.BestValue);
+		}
+		
+		void MainFormResizeEnd(object sender, EventArgs e)
+		{
+			if (this.WindowState == FormWindowState.Minimized)
+			{
+				return;
+			}
+			_scale = CalculateOptimalScale(_maxX, _maxY);
+
+			if (_alg != null && !_alg.Running) {
+				DrawInitialPoints();
+			}
 		}
 		#endregion
 	}

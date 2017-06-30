@@ -45,8 +45,8 @@ namespace GCode
 			if (list == PenColorList.GridLines) return Color.DimGray;
 			if (list == PenColorList.GridLinesHighlight) return Color.LightSkyBlue;
 			if (list == PenColorList.DrillPoint) return Color.Pink;
-			if (list == PenColorList.DrillPointHighlight) return Color.DodgerBlue;
-			if (list == PenColorList.SelectionHighlighted) return Color.DodgerBlue;
+			if (list == PenColorList.DrillPointHighlight) return Color.White;
+			if (list == PenColorList.SelectionHighlighted) return Color.White;
 			return Color.White;
 		}
 

@@ -61,9 +61,9 @@ namespace GCodeOptimizer
 			this.radScaleFour = new System.Windows.Forms.RadioButton();
 			this.btnSave = new System.Windows.Forms.Button();
 			this.pnlBottom = new System.Windows.Forms.Panel();
+			this.btnUse = new System.Windows.Forms.Button();
 			this.radScaleEight = new System.Windows.Forms.RadioButton();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
-			this.btnUse = new System.Windows.Forms.Button();
 			this.pnlTop.SuspendLayout();
 			this.pnlViewer.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -202,17 +202,6 @@ namespace GCodeOptimizer
 			this.pnlBottom.Size = new System.Drawing.Size(958, 45);
 			this.pnlBottom.TabIndex = 7;
 			// 
-			// radScaleEight
-			// 
-			this.radScaleEight.Location = new System.Drawing.Point(285, 3);
-			this.radScaleEight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-			this.radScaleEight.Name = "radScaleEight";
-			this.radScaleEight.Size = new System.Drawing.Size(54, 37);
-			this.radScaleEight.TabIndex = 7;
-			this.radScaleEight.Text = "8x";
-			this.radScaleEight.UseVisualStyleBackColor = true;
-			this.radScaleEight.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
-			// 
 			// btnUse
 			// 
 			this.btnUse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -225,6 +214,17 @@ namespace GCodeOptimizer
 			this.btnUse.UseVisualStyleBackColor = true;
 			this.btnUse.Click += new System.EventHandler(this.BtnUseClick);
 			// 
+			// radScaleEight
+			// 
+			this.radScaleEight.Location = new System.Drawing.Point(285, 3);
+			this.radScaleEight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.radScaleEight.Name = "radScaleEight";
+			this.radScaleEight.Size = new System.Drawing.Size(54, 37);
+			this.radScaleEight.TabIndex = 7;
+			this.radScaleEight.Text = "8x";
+			this.radScaleEight.UseVisualStyleBackColor = true;
+			this.radScaleEight.CheckedChanged += new System.EventHandler(this.RadScaleCheckedChanged);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -236,6 +236,8 @@ namespace GCodeOptimizer
 			this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.Name = "MainForm";
 			this.Text = "GCodeOptimizer";
+			this.ResizeEnd += new System.EventHandler(this.MainFormResizeEnd);
+			this.ClientSizeChanged += new System.EventHandler(this.MainFormResizeEnd);
 			this.pnlTop.ResumeLayout(false);
 			this.pnlViewer.ResumeLayout(false);
 			this.pnlViewer.PerformLayout();
