@@ -24,7 +24,8 @@ namespace GCode
 		GridLinesHighlight,
 		DrillPoint,
 		DrillPointHighlight,
-		SelectionHighlighted
+		SelectionHighlighted,
+		SplitLine
 	}
 
 	public static class ColorHelper
@@ -47,6 +48,7 @@ namespace GCode
 			if (list == PenColorList.DrillPoint) return Color.Pink;
 			if (list == PenColorList.DrillPointHighlight) return Color.White;
 			if (list == PenColorList.SelectionHighlighted) return Color.White;
+			if (list == PenColorList.SplitLine) return Color.LightYellow;
 			return Color.White;
 		}
 
@@ -109,9 +111,10 @@ namespace GCode
 		{
 			if (!_penList.ContainsKey(type))
 			{
-				if (type == PenColorList.LineHighlight) {
+				if (type == PenColorList.SplitLine) {
+					_penList[type] = new Pen(GetColor(type), 2.5f);
+				} else if (type == PenColorList.LineHighlight) {
 					_penList[type] = new Pen(GetColor(type), 1.5f);
-
 				} else {
 					_penList[type] = new Pen(GetColor(type), 1f);
 				}
@@ -123,7 +126,7 @@ namespace GCode
 					_penList[type].StartCap = LineCap.Flat;
 					_penList[type].EndCap = LineCap.ArrowAnchor;
 				} else {
-					QuickSettings.Get["LineDrawing"] = "Normal";
+					QuickSettings.Get["LineDrawing"] = "Arrow";
 				}
 			}
 
@@ -131,7 +134,7 @@ namespace GCode
 		}
 		
 		public static Pen GetPen(PenColorList type, float zoomScale) {
-			var pen = GetPen(type);
+			var pen = (Pen) GetPen(type).Clone();
 			pen.Width = pen.Width / zoomScale;
 			return pen;
 		}

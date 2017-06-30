@@ -821,6 +821,9 @@ namespace GCodePlotter
 					}
 				}
 			}
+			
+			// draw split lines
+			PaintSplitLines(g);
 		}
 		
 		void PaintDrillPoint(Graphics g, Block blockItem) {
@@ -851,6 +854,16 @@ namespace GCodePlotter
 				var radius = 3.5f/zoomScale;
 				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
 				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
+			}
+		}
+		
+		void PaintSplitLines(Graphics g) {
+			float splitX = 0.0f;
+			if ((splitX = GetSplitValue()) > 0) {
+				Pen splitPen = ColorHelper.GetPen(PenColorList.SplitLine, zoomScale);
+				var x = splitX * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - BOTTOM_MARGIN;
+				g.DrawLine(splitPen, x, y, x, 0);
 			}
 		}
 		#endregion
