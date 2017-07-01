@@ -24,7 +24,7 @@ namespace GCode
 		/// Split a gcode file into tiles
 		/// </summary>
 		/// <param name="instructions">list of gcode instructions</param>
-		/// <param name="shift">Point3D describing the split coordinates</param>
+		/// <param name="splitPoint">Point3D describing the split coordinates</param>
 		/// <param name="angle">Whether the split should happen in an angle</param>
 		/// <param name="zClearance">z-height (clearance) to use in added rapid moves</param>
 		/// <returns>List of tiles</returns>
@@ -32,7 +32,7 @@ namespace GCode
 		/// Copied from the G-Code_Ripper-0.12 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
-		public static List<List<GCodeInstruction>> SplitOld(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance)
+		public static List<List<GCodeInstruction>> SplitOld(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance)
 		{
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType mvtype = CommandType.Other;
@@ -90,8 +90,8 @@ namespace GCode
 				    || mvtype == CommandType.CWArc
 				    || mvtype == CommandType.CCWArc) {
 					
-					pos = SetOffsetAndRotation(currentPos, shift, angle);
-					pos_last = SetOffsetAndRotation(previousPos, shift, angle);
+					pos = SetOffsetAndRotation(currentPos, splitPoint, angle);
+					pos_last = SetOffsetAndRotation(previousPos, splitPoint, angle);
 					
 					// store center point
 					if (instruction.I.HasValue && instruction.J.HasValue) {
@@ -99,7 +99,7 @@ namespace GCode
 						                        previousPos.Y+instruction.J.Value,
 						                        currentPos.Z);
 						
-						center = SetOffsetAndRotation(centerPos, shift, angle);
+						center = SetOffsetAndRotation(centerPos, splitPoint, angle);
 					}
 					
 					// determine what side the move belongs to
@@ -155,71 +155,71 @@ namespace GCode
 					
 					// Handle normal moves
 					if (mvtype == CommandType.NormalMove) {
-						A = UnsetOffsetAndRotation(pos_last, shift, angle);
-						C = UnsetOffsetAndRotation(pos, shift, angle);
+						A = UnsetOffsetAndRotation(pos_last, splitPoint, angle);
+						C = UnsetOffsetAndRotation(pos, splitPoint, angle);
 						cross = GetLineIntersect(pos_last, pos);
 						//cross = GetLineIntersect2(pos_last, pos);
 
 						if (cross.Count > 0) {
 							// Line crosses boundary
-							B = UnsetOffsetAndRotation(cross[0], shift, angle);
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
-							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+							B = UnsetOffsetAndRotation(cross[0], splitPoint, angle);
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						} else {
 							// Lines doesn't intersect
 							
 							// check if this point is the same as centerpoint
 							// if so add it to both sides
 							// TODO: check if this works in all cases?
-							if (currentPos.X == shift.X) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
-								app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
+							if (currentPos.X == splitPoint.X) {
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
 							} else {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 						}
 					}
 					
 					// Handle Arc moves
 					if (mvtype == CommandType.CWArc || mvtype == CommandType.CCWArc ) {
-						A = UnsetOffsetAndRotation(pos_last, shift, angle);
-						C = UnsetOffsetAndRotation(pos, shift, angle);
-						D  = UnsetOffsetAndRotation(center, shift, angle);
+						A = UnsetOffsetAndRotation(pos_last, splitPoint, angle);
+						C = UnsetOffsetAndRotation(pos, splitPoint, angle);
+						D  = UnsetOffsetAndRotation(center, splitPoint, angle);
 						cross = GetArcIntersects(pos_last, pos, center, mvtype);
 						//cross = GetArcIntersects2(pos_last, pos, center, mvtype);
 
 						if (cross.Count > 0) {
 							// Arc crosses boundary at least once
-							B = UnsetOffsetAndRotation(cross[0], shift, angle);
+							B = UnsetOffsetAndRotation(cross[0], splitPoint, angle);
 							
 							// Check length of arc before writing
 							if (Transformation.Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Transformation.Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 							}
 							
 							if (cross.Count == 2) { // Arc crosses boundary twice
-								E = UnsetOffsetAndRotation(cross[1], shift, angle);
+								E = UnsetOffsetAndRotation(cross[1], splitPoint, angle);
 								
 								// Check length of arc before writing
 								if (Transformation.Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, shift, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 								
 								// Check length of arc before writing
 								if (Transformation.Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, shift, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 						}
 					}
 					
@@ -257,9 +257,9 @@ namespace GCode
 			return app;
 		}
 		
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D shift, float angle, float zClearance) {
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance) {
 			
-			return SplitOld(instructions, shift, angle, zClearance);
+			return SplitOld(instructions, splitPoint, angle, zClearance);
 			
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType mvtype = CommandType.Other;
@@ -269,6 +269,8 @@ namespace GCode
 			app.Add(new List<GCodeInstruction>());
 			
 			var currentPos = Point3D.Empty;		// current position as read
+			var previousPos = Point3D.Empty;	// current position as read
+			var centerPos = Point3D.Empty;		// center position converted
 			float currentFeedrate = 0.0f;
 			
 			// original rectangle
@@ -283,14 +285,15 @@ namespace GCode
 			float width =  origRect.Width / numColumns;
 			float height = origRect.Height / numRows;
 			
-			var tileRects = new Dictionary<RectangleF, List<GCodeInstruction>>();
+			var allTileRectangles = new Dictionary<RectangleF, List<GCodeInstruction>>();
 			for (int y = 0; y < numRows; ++y) {
 				for (int x = 0; x < numColumns; ++x) {
-					tileRects.Add(new RectangleF(x * width, y * height, width, height), new List<GCodeInstruction>());
+					allTileRectangles.Add(new RectangleF(x * width, y * height, width, height), new List<GCodeInstruction>());
 				}
 			}
 			
 			// for each tile, add corresponding gcode instructions
+			int numInstructions = 1;
 			foreach (var instruction in instructions)
 			{
 				// store move type
@@ -313,10 +316,20 @@ namespace GCode
 					}
 				}
 				
+				// figure out what tile(s) this instruction belongs to
+				var tileRectangles = GetImpactedTileRectangles(allTileRectangles, instruction, previousPos, currentPos);
+
 				if (mvtype == CommandType.NormalMove
 				    || mvtype == CommandType.CWArc
 				    || mvtype == CommandType.CCWArc) {
 					
+					// store center point
+					if (instruction.I.HasValue && instruction.J.HasValue) {
+						centerPos = new Point3D(previousPos.X+instruction.I.Value,
+						                        previousPos.Y+instruction.J.Value,
+						                        currentPos.Z);
+					}
+
 					// Handle normal moves
 					if (mvtype == CommandType.NormalMove) {
 						
@@ -331,9 +344,26 @@ namespace GCode
 					// rapid moves are also handled here
 				}
 				
+				// store current position
+				previousPos = currentPos;
+				
+				// count number of instructions processed
+				numInstructions++;
 			}
 			
 			return app;
+		}
+		
+		static List<RectangleF> GetImpactedTileRectangles(Dictionary<RectangleF, List<GCodeInstruction>> tileRects, GCodeInstruction instruction, Point3D previousPos, Point3D currentPos) {
+			var rectangles = new List<RectangleF>();
+			
+			foreach (var rect in tileRects.Keys) {
+				if (Transformation.RectangleContains(rect, currentPos)) {
+					
+				}
+			}
+			
+			return rectangles;
 		}
 		
 		/// <summary>

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Drawing;
 
 namespace GCode
@@ -39,7 +41,13 @@ namespace GCode
 		/// <returns>the euclidean distance between the two points</returns>
 		public static double Distance(IPoint p1, IPoint p2)
 		{
-			return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+			// From a Math point of view, the distance between two points in the same plane
+			// is the square root of the sum from the power of two from each side in a triangle
+			// distance = Math.Sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+			// Or alternatively:
+			// distance = Math.Sqrt(Math.Pow((x1-x2), 2) + Math.Pow((y1-y2), 2));
+			
+			return Math.Sqrt( Math.Pow(Math.Abs(p2.X - p1.X), 2) + Math.Pow(Math.Abs(p2.Y - p1.Y), 2) );
 		}
 		
 		/// <summary>
@@ -179,6 +187,136 @@ namespace GCode
 				(B2*C1 - B1*C2)/delta,
 				(A1*C2 - A2*C1)/delta
 			);
+		}
+		
+		/// <summary>
+		/// Determine Area of a triangle given by the three coordinate points
+		/// </summary>
+		/// <param name="A">point A</param>
+		/// <param name="B">point B</param>
+		/// <param name="C">point C</param>
+		/// <returns>area</returns>
+		public static double AreaOfTriangle(IPoint A, IPoint B, IPoint C)
+		{
+			// Heron's formula states that the area of a triangle whose sides have lengths
+			// a, b, and c is:
+			// A = sqrt ( s(s-a)(s-b)(s-c) )
+			// where s is the semiperimeter of the triangle; that is,
+			// s = (a + b + c) / 2;
+			
+			double a = Distance(A, B);
+			double b = Distance(A, C);
+			double c = Distance(B, C);
+			double s = (a + b + c) / 2;
+			return Math.Sqrt(s * (s-a) * (s-b) * (s-c));
+		}
+
+		/// <summary>
+		/// Determine Area of a triangle given by the three coordinate points
+		/// </summary>
+		/// <param name="A">point A</param>
+		/// <param name="B">point B</param>
+		/// <param name="C">point C</param>
+		/// <returns>area</returns>
+		/// <seealso cref="http://www.mathopenref.com/coordtrianglearea.html"/>
+		/// <seealso cref="https://stackoverflow.com/questions/17136084/checking-if-a-point-is-inside-a-rotated-rectangle"/>
+		public static double AreaOfTriangleFast(IPoint A, IPoint B, IPoint C) {
+			
+			// Given the coordinates of the three vertices of any triangle,
+			// the area of the triangle is given by:
+			// area = abs (Ax(By−Cy) + Bx(Cy−Ay) + Cx(Ay−By)) / 2
+			//
+			// where Ax and Ay are the x and y coordinates of the point A etc..
+			// i.e
+			// area = Math.Abs( (Ax * By - Ax * Cy) + (Bx * Cy - Bx * Ay) + (Cx * Ay - Cx * By) ) / 2
+			return Math.Abs( (A.X * B.Y - A.X * C.Y) + (B.X * C.Y - B.X * A.Y) + (C.X * A.Y - C.X * B.Y) ) / 2;
+		}
+		
+		/// <summary>
+		/// Determine Area of a rectangle given by the only three coordinate points
+		/// </summary>
+		/// <param name="A">point A</param>
+		/// <param name="B">point B</param>
+		/// <param name="C">point C</param>
+		/// <param name="D">point D</param>
+		/// <returns>area of rectangle</returns>
+		/// <seealso cref="http://www.mathopenref.com/coordrectangle.html"/>
+		public static double AreaOfRectangle(IPoint A, IPoint B, IPoint C, IPoint D) {
+			
+			double side1 = Distance(A, B);
+			double side2 = Distance(B, C);
+			double area = side1 * side2;
+			return area;
+		}
+		
+		/// <summary>
+		/// Determine Area of a rectangle given by the only three coordinate points
+		/// </summary>
+		/// <param name="A">point A</param>
+		/// <param name="B">point B</param>
+		/// <param name="C">point C</param>
+		/// <param name="D">point D</param>
+		/// <returns>area of rectangle</returns>
+		/// <seealso cref="http://www.mathopenref.com/coordrectangle.html"/>
+		/// <seealso cref="http://www.mathopenref.com/coordpolygonarea.html"/>
+		/// <seealso cref="https://martin-thoma.com/how-to-check-if-a-point-is-inside-a-rectangle/"/>
+		public static double AreaOfRectangleFast(IPoint A, IPoint B, IPoint C, IPoint D) {
+
+			// If you know the coordinates of the points, you can calculate the area of the rectangle like this:
+			// A = 1/2 | ( Ay−Cy) * (Dx−Bx) + (By−Dy) * (Ax−Cx) |
+			return Math.Abs( ((A.Y-C.Y) * (D.X-B.X)) + ((B.Y-D.Y) * (A.X-C.X)) ) / 2;
+		}
+		
+		/// <summary>
+		/// Check if a given point is within the rectangle
+		/// (the rectangle can be both rotated or straight)
+		/// </summary>
+		/// <param name="A">rectangle point A</param>
+		/// <param name="B">rectangle point B</param>
+		/// <param name="C">rectangle point C</param>
+		/// <param name="D">rectangle point D</param>
+		/// <param name="P">point to check</param>
+		/// <returns>true if point can be found within the rectangle</returns>
+		/// <seealso cref="https://martin-thoma.com/how-to-check-if-a-point-is-inside-a-rectangle/"/>
+		/// <seealso cref="https://math.stackexchange.com/questions/190111/how-to-check-if-a-point-is-inside-a-rectangle"/>
+		public static bool RectangleContains(IPoint A, IPoint B, IPoint C, IPoint D, IPoint P) {
+
+			double triangle1Area = AreaOfTriangleFast(A, B, P);
+			double triangle2Area = AreaOfTriangleFast(B, C, P);
+			double triangle3Area = AreaOfTriangleFast(C, D, P);
+			double triangle4Area = AreaOfTriangleFast(D, A, P);
+
+			double rectArea = AreaOfRectangleFast(A, B, C, D);
+
+			double triangleAreaSum = (triangle1Area + triangle2Area + triangle3Area + triangle4Area);
+
+			const int precision = 14;
+			if(triangleAreaSum % (Math.Pow(10, precision)) >= 0.999999999999999)
+			{
+				triangleAreaSum = Math.Ceiling(triangleAreaSum);
+			}
+			
+			if(triangleAreaSum == rectArea) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Check if a given point is within the rectangle
+		/// </summary>
+		/// <param name="rect">rectangle</param>
+		/// <param name="P">point to check</param>
+		/// <returns>true if point can be found within the rectangle</returns>
+		public static bool RectangleContains(RectangleF rect, IPoint P) {
+			
+			var A = new Point3D(rect.X, rect.Y);
+			var B = new Point3D(rect.X, rect.Y+rect.Height);
+			var C = new Point3D(rect.X+rect.Width, rect.Y+rect.Height);
+			var D = new Point3D(rect.X+rect.Width, rect.Y);
+
+			return RectangleContains(A, B, C, D, P);
 		}
 	}
 }

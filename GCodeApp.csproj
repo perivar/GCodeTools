@@ -47,6 +47,9 @@
     <Reference Include="Microsoft.CSharp">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="NUnit.Framework">
+      <HintPath>$(SharpDevelopBinPath)\Tools\NUnit\NUnit.Framework.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -90,6 +93,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SVG\Bezier.cs" />
     <Compile Include="SVG\SVGParser.cs" />
+    <Compile Include="Tests\CoordinateUtilTests.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -121,6 +125,7 @@
     <Folder Include="GUI" />
     <Folder Include="JavaScript" />
     <Folder Include="GeneticAlgorithm" />
+    <Folder Include="Tests" />
     <Folder Include="Samples" />
     <Folder Include="SVG" />
   </ItemGroup>
