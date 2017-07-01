@@ -69,6 +69,12 @@ namespace GCode
 			this.z = 0;
 		}
 		
+		public Point3D(PointF point) {
+			this.x = point.X;
+			this.y = point.Y;
+			this.z = 0;
+		}
+		
 		public static bool operator ==(Point3D left, Point3D right) {
 			return left.X == right.X && left.Y == right.Y && left.Z == right.Z;
 		}

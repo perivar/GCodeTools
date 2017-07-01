@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.Diagnostics;
 
 namespace GCode
 {
@@ -32,10 +32,10 @@ namespace GCode
 		/// Copied from the G-Code_Ripper-0.12 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
-		public static List<List<GCodeInstruction>> SplitOld(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance)
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance)
 		{
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
-			CommandType mvtype = CommandType.Other;
+			CommandType command = CommandType.Other;
 
 			var app = new List<List<GCodeInstruction>>();
 			app.Add(new List<GCodeInstruction>());
@@ -49,25 +49,29 @@ namespace GCode
 			
 			var currentPos = Point3D.Empty;		// current position as read
 			var previousPos = Point3D.Empty;	// current position as read
-			var centerPos = Point3D.Empty;		// center position converted
+			var centerPos = Point3D.Empty;		// center position as read
 			
+			var currentPosAtOrigin = Point3D.Empty;		// current position, shifted
+			var previousPosAtOrigin = Point3D.Empty;	// last position, shifted
+			var centerPosAtOrigin = Point3D.Empty;		// center position, shifted
+
 			var A = Point3D.Empty;
 			var B = Point3D.Empty;
 			var C = Point3D.Empty;
 			var D = Point3D.Empty;
 			var E = Point3D.Empty;
 			
-			var pos = Point3D.Empty;			// current position, shifted
-			var pos_last = Point3D.Empty;		// last position, shifted
-			var center = Point3D.Empty;			// center position converteed, shifted
-			
 			var cross = new List<Point3D>();	// number of intersections found
 			
+			#if DEBUG
+			Debug.WriteLine("Split point: {0}, angle: {1} z-clearance: {2}", splitPoint, angle, zClearance);
+			#endif
+
 			int numInstructions = 1;
 			foreach (var instruction in instructions)
 			{
 				// store move type
-				mvtype = instruction.CommandType;
+				command = instruction.CommandType;
 				
 				// merge previous coordinates with newer ones to maintain correct point coordinates
 				if ((instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
@@ -86,12 +90,13 @@ namespace GCode
 					}
 				}
 				
-				if (mvtype == CommandType.NormalMove
-				    || mvtype == CommandType.CWArc
-				    || mvtype == CommandType.CCWArc) {
+				if (command == CommandType.NormalMove
+				    || command == CommandType.CWArc
+				    || command == CommandType.CCWArc) {
 					
-					pos = SetOffsetAndRotation(currentPos, splitPoint, angle);
-					pos_last = SetOffsetAndRotation(previousPos, splitPoint, angle);
+					// shift and rotate so that we can work with the coordinate system at origin (0, 0)
+					currentPosAtOrigin = SetOffsetAndRotation(currentPos, splitPoint, angle);
+					previousPosAtOrigin = SetOffsetAndRotation(previousPos, splitPoint, angle);
 					
 					// store center point
 					if (instruction.I.HasValue && instruction.J.HasValue) {
@@ -99,44 +104,44 @@ namespace GCode
 						                        previousPos.Y+instruction.J.Value,
 						                        currentPos.Z);
 						
-						center = SetOffsetAndRotation(centerPos, splitPoint, angle);
+						centerPosAtOrigin = SetOffsetAndRotation(centerPos, splitPoint, angle);
 					}
 					
 					// determine what side the move belongs to
-					if (pos_last.X > SELF_ZERO) {
+					if (previousPosAtOrigin.X > SELF_ZERO) {
 						flag_side = Position.R;
-					} else if (pos_last.X < SELF_ZERO) {
+					} else if (previousPosAtOrigin.X < SELF_ZERO) {
 						flag_side = Position.L;
 					} else {
-						if (mvtype == CommandType.NormalMove) {
-							if (pos.X >= 0) {
+						if (command == CommandType.NormalMove) {
+							if (currentPosAtOrigin.X >= 0) {
 								flag_side = Position.R;
 							} else {
 								flag_side = Position.L;
 							}
-						} else if (mvtype == CommandType.CWArc) {
-							if (Math.Abs(pos_last.Y-center.Y) < SELF_ZERO) {
-								if (center.X > 0) {
+						} else if (command == CommandType.CWArc) {
+							if (Math.Abs(previousPosAtOrigin.Y - centerPosAtOrigin.Y) < SELF_ZERO) {
+								if (centerPosAtOrigin.X > 0) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							} else {
-								if (pos_last.Y >= center.Y) {
+								if (previousPosAtOrigin.Y >= centerPosAtOrigin.Y) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							}
 						} else { //(mvtype == 3) {
-							if (Math.Abs(pos_last.Y-center.Y) < SELF_ZERO) {
-								if (center.X > 0) {
+							if (Math.Abs(previousPosAtOrigin.Y - centerPosAtOrigin.Y) < SELF_ZERO) {
+								if (centerPosAtOrigin.X > 0) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
 								}
 							} else {
-								if (pos_last.Y >= center.Y) {
+								if (previousPosAtOrigin.Y >= centerPosAtOrigin.Y) {
 									flag_side = Position.L;
 								} else {
 									flag_side = Position.R;
@@ -154,17 +159,16 @@ namespace GCode
 					}
 					
 					// Handle normal moves
-					if (mvtype == CommandType.NormalMove) {
-						A = UnsetOffsetAndRotation(pos_last, splitPoint, angle);
-						C = UnsetOffsetAndRotation(pos, splitPoint, angle);
-						cross = GetLineIntersect(pos_last, pos);
-						//cross = GetLineIntersect2(pos_last, pos);
+					if (command == CommandType.NormalMove) {
+						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
+						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
+						cross = GetLineIntersect(previousPosAtOrigin, currentPosAtOrigin);
 
 						if (cross.Count > 0) {
 							// Line crosses boundary
 							B = UnsetOffsetAndRotation(cross[0], splitPoint, angle);
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
-							app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, B, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, B, C, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 						} else {
 							// Lines doesn't intersect
 							
@@ -172,21 +176,20 @@ namespace GCode
 							// if so add it to both sides
 							// TODO: check if this works in all cases?
 							if (currentPos.X == splitPoint.X) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
-								app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
 							} else {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 						}
 					}
 					
 					// Handle Arc moves
-					if (mvtype == CommandType.CWArc || mvtype == CommandType.CCWArc ) {
-						A = UnsetOffsetAndRotation(pos_last, splitPoint, angle);
-						C = UnsetOffsetAndRotation(pos, splitPoint, angle);
-						D  = UnsetOffsetAndRotation(center, splitPoint, angle);
-						cross = GetArcIntersects(pos_last, pos, center, mvtype);
-						//cross = GetArcIntersects2(pos_last, pos, center, mvtype);
+					if (command == CommandType.CWArc || command == CommandType.CCWArc ) {
+						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
+						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
+						D  = UnsetOffsetAndRotation(centerPosAtOrigin, splitPoint, angle);
+						cross = GetArcIntersects(previousPosAtOrigin, currentPosAtOrigin, centerPosAtOrigin, command);
 
 						if (cross.Count > 0) {
 							// Arc crosses boundary at least once
@@ -194,13 +197,13 @@ namespace GCode
 							
 							// Check length of arc before writing
 							if (Transformation.Distance(B, A) > SELF_ACCURACY) {
-								app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, B, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+								app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, B, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
 							
 							if (cross.Count == 1) { // Arc crosses boundary only once
 								// Check length of arc before writing
 								if (Transformation.Distance(C, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, C, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, B, C, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 							}
 							
@@ -209,17 +212,17 @@ namespace GCode
 								
 								// Check length of arc before writing
 								if (Transformation.Distance(E, B) > SELF_ACCURACY) {
-									app[otherSide].AddRange(GCodeInstruction.GetInstructions(mvtype, B, E, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
+									app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, B, E, D, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 								}
 								
 								// Check length of arc before writing
 								if (Transformation.Distance(C, E) > SELF_ACCURACY) {
-									app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, E, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+									app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, E, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 								}
 							}
 						} else {
 							// Arc does not cross boundary
-							app[thisSide].AddRange(GCodeInstruction.GetInstructions(mvtype, A, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
+							app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, D, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 						}
 					}
 					
@@ -233,13 +236,12 @@ namespace GCode
 					}
 				}
 				
-				// Debug
-				/*
-				if (mvtype == CommandList.RapidMove) Console.WriteLine("{0} {1} {2}", mvtype, previousPos, currentPos);
-				if (mvtype == CommandList.NormalMove) Console.WriteLine("{0} {1} {2} {3}", mvtype, previousPos, currentPos, currentFeedrate);
-				if (mvtype == CommandList.CWArc || mvtype == CommandList.CCWArc)
-					Console.WriteLine("{0} {1} {2} {3} {4}", mvtype, previousPos, currentPos, centerPos, currentFeedrate);
-				 */
+				#if DEBUG
+				if (command == CommandType.RapidMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}]", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin);
+				if (command == CommandType.NormalMove) Debug.WriteLine("{0} [{1}={2}], [{3}={4}] {5}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, currentFeedrate);
+				if (command  == CommandType.CWArc || command == CommandType.CCWArc)
+					Debug.WriteLine("{0} [{1}={2}], [{3}={4}] [{5}={6}] {7}", command, previousPos, previousPosAtOrigin, currentPos, currentPosAtOrigin, centerPos, centerPosAtOrigin, currentFeedrate);
+				#endif
 				
 				// store current position
 				previousPos = currentPos;
@@ -257,9 +259,9 @@ namespace GCode
 			return app;
 		}
 		
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance) {
+		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance, float minX, float maxX, float minY, float maxY) {
 			
-			return SplitOld(instructions, splitPoint, angle, zClearance);
+			return Split(instructions, splitPoint, angle, zClearance);
 			
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType mvtype = CommandType.Other;
@@ -274,9 +276,9 @@ namespace GCode
 			float currentFeedrate = 0.0f;
 			
 			// original rectangle
-			var origRect = new RectangleF(0, 0, 100, 100);
+			var origRect = new RectangleF(minX, minY, Math.Abs(maxX-minX), Math.Abs(maxY-minY));
 			
-			int numTiles = 9;
+			int numTiles = 2; //9;
 
 			// split into equal sized rectangles (tiles)
 			int numColumns = (int) (Math.Ceiling(Math.Sqrt(numTiles)));
@@ -359,10 +361,9 @@ namespace GCode
 			
 			foreach (var rect in tileRects.Keys) {
 				if (Transformation.RectangleContains(rect, currentPos)) {
-					
+					rectangles.Add(rect);
 				}
 			}
-			
 			return rectangles;
 		}
 		
@@ -453,26 +454,6 @@ namespace GCode
 			return output;
 		}
 		
-		public static List<Point3D> GetLineIntersect2(Point3D p1, Point3D p2) {
-			
-			var output = new List<Point3D>();
-
-			// the coordinate system is shifted so that X is 0
-			var ps1 = new PointF(0,10);
-			var pe1 = new PointF(0,20);
-			
-			var ps2 = new PointF(p1.X, p1.Y);
-			var pe2 = new PointF(p2.X, p2.Y);
-			
-			var intersection = Transformation.FindLineIntersectionPoint(ps1, pe1, ps2, pe2);
-			
-			if (!intersection.IsEmpty) {
-				output.Add(new Point3D(intersection.X, intersection.Y));
-			}
-			
-			return output;
-		}
-		
 		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, CommandType code) {
 			
 			var output = new List<Point3D>();
@@ -492,7 +473,7 @@ namespace GCode
 			double Rt = Transformation.Distance(p2, cent);
 			
 			if (Math.Abs(R-Rt) > SELF_ACCURACY) {
-				Console.WriteLine("Radius Warning: R1={0} R2={0}", R, Rt);
+				Console.WriteLine("Radius Warning: R1={0} R2={1}", R, Rt);
 			}
 
 			double val =  Math.Pow(R,2) - Math.Pow(-cent.X,2);
@@ -505,26 +486,21 @@ namespace GCode
 				return output;
 			}
 
-			double theta = GetAngle(p1.X-cent.X,p1.Y-cent.Y); // Note! no code
+			// Note! no code, defaults to CommandType.CCWArc
+			float theta = GetAngle(p1.X-cent.X, p1.Y-cent.Y);
 
-			var betaTuple = Rotate(p2.X-cent.X,p2.Y-cent.Y,-theta);
-			double xbeta = betaTuple.Item1;
-			double ybeta = betaTuple.Item2;
-			double beta = GetAngle(xbeta, ybeta, code);
+			var betaPoint = Rotate(p2.X-cent.X, p2.Y-cent.Y, -theta);
+			float betaAngle = GetAngle(betaPoint.X, betaPoint.Y, code);
 			
-			if (Math.Abs(beta) <= SELF_ZERO) {
-				beta = 360.0;
+			if (Math.Abs(betaAngle) <= SELF_ZERO) {
+				betaAngle = 360.0f;
 			}
 
-			var xyTransTuple = Rotate(-cent.X,ycross1-cent.Y,-theta);
-			double xt = xyTransTuple.Item1;
-			double yt = xyTransTuple.Item2;
-			double gt1 = GetAngle(xt,yt,code);
+			var transPoint1 = Rotate(-cent.X, ycross1-cent.Y, -theta);
+			float gt1 = GetAngle(transPoint1.X,transPoint1.Y, code);
 			
-			var xyTransTuple2 = Rotate(-cent.X,ycross2-cent.Y,-theta);
-			double xt2 = xyTransTuple2.Item1;
-			double yt2 = xyTransTuple2.Item2;
-			double gt2 = GetAngle(xt2,yt2,code);
+			var transPoint2 = Rotate(-cent.X, ycross2-cent.Y, -theta);
+			float gt2 = GetAngle(transPoint2.X, transPoint2.Y, code);
 
 			if (gt1 < gt2) {
 				gamma1 = gt1;
@@ -537,17 +513,17 @@ namespace GCode
 				ycross2 = temp;
 			}
 			
-			var dz = p2.Z - p1.Z;
-			var da = beta;
-			var mz = dz/da;
+			var deltaZ = p2.Z - p1.Z;
+			var deltaAngle = betaAngle;
+			var mz = deltaZ / deltaAngle;
 			zcross1 = (float) (p1.Z + gamma1 * mz);
 			zcross2 = (float) (p1.Z + gamma2 * mz);
 			
-			if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta-SELF_ZERO)
-				output.Add(new Point3D(xcross1,ycross1,zcross1));
+			if (gamma1 < betaAngle && gamma1 > SELF_ZERO && gamma1 < betaAngle-SELF_ZERO)
+				output.Add(new Point3D(xcross1, ycross1, zcross1));
 			
-			if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta-SELF_ZERO)
-				output.Add(new Point3D(xcross2,ycross2,zcross2));
+			if (gamma2 < betaAngle && gamma1 > SELF_ZERO && gamma2 < betaAngle-SELF_ZERO)
+				output.Add(new Point3D(xcross2, ycross2, zcross2));
 
 			return output;
 		}
@@ -555,58 +531,66 @@ namespace GCode
 		/// <summary>
 		/// Routine takes an x and a y coords and does a cordinate transformation
 		/// to a new coordinate system at angle from the initial coordinate system
-		/// Returns new x,y tuple
+		/// Returns new x,y point
+		/// Note! this rotates through origin (0,0)
 		/// </summary>
 		/// <param name="x">x</param>
 		/// <param name="y">y</param>
 		/// <param name="angle">angle in degrees</param>
 		/// <returns>rotated coordinates</returns>
-		public static Tuple<double,double> Rotate(double x, double y, double angle) {
-			
-			var point = new PointF((float)x, (float)y);
-			var newPoint = Transformation.Rotate(point, (float)angle);
-			return new Tuple<double, double>(newPoint.X, newPoint.Y);
+		public static Point3D Rotate(float x, float y, float angle) {
+			var point = new PointF(x, y);
+			var newPoint = Transformation.Rotate(point, angle);
+			return new Point3D(newPoint);
 		}
-
+		
 		/// <summary>
-		/// Routine takes an sin and cos and returns the angle (between 0 and 360)
+		/// Routine takes an x and y coordinate and returns the angle in degrees (between 0 and 360)
 		/// </summary>
 		/// <param name="x">x</param>
 		/// <param name="y">y</param>
-		/// <param name="code">CommandList, type of arc</param>
-		public static double GetAngle(double x, double y, CommandType code = CommandType.CCWArc)
+		/// <param name="code">CommandType, type of arc</param>
+		/// <returns>angle in degrees (0 - 360)</returns>
+		public static float GetAngle(float x, float y, CommandType code = CommandType.CCWArc)
 		{
-			double angle = 90.0 - Transformation.RadianToDegree(Math.Atan2(x, y));
+			float angle = 90.0f - (float) Transformation.RadianToDegree(Math.Atan2(x, y));
 			if (angle < 0) {
 				angle = 360 + angle;
 			}
 			if (code == CommandType.CWArc) {
-				return (360.0 - angle);
+				return (360.0f - angle);
 			}
 			return angle;
 		}
 		
-		private static Point3D SetOffsetAndRotation(Point3D coords, Point3D offset, double rotate) {
-			float x = coords.X;
-			float y = coords.Y;
-			float z = coords.Z;
-			x = x - offset.X;
-			y = y - offset.Y;
-			z = z - offset.Z;
-			var xy = Rotate(x, y, rotate);
-			return new Point3D((float)xy.Item1, (float)xy.Item2, z);
+		private static Point3D SetOffsetAndRotation(Point3D point, Point3D center, float degrees) {
+			
+			// How to properly rotate point around another point
+			// 1. A translation that brings point 1 to the origin (0,0)
+			// 2. Rotation around the origin by the required angle
+			// 3. A translation that brings point 1 back to its original position
+
+			// bring point to origin
+			float x = point.X - center.X;
+			float y = point.Y - center.Y;
+			float z = point.Z - center.Z;
+			
+			// rotate
+			var newPoint = Rotate(x, y, degrees);
+			return new Point3D(newPoint.X, newPoint.Y, z);
 		}
 
-		private static Point3D UnsetOffsetAndRotation(Point3D coords, Point3D offset, double rotate) {
-			float x = coords.X;
-			float y = coords.Y;
-			float z = coords.Z;
-			var xy = Rotate(x, y, -rotate);
-			x = (float) xy.Item1 + offset.X;
-			y = (float) xy.Item2 + offset.Y;
-			z = z + offset.Z;
+		private static Point3D UnsetOffsetAndRotation(Point3D point, Point3D center, float degrees) {
+
+			// rotate back
+			var newPoint = Rotate(point.X, point.Y, -degrees);
+			
+			// translate point back to it's original position
+			float x = newPoint.X + center.X;
+			float y = newPoint.Y + center.Y;
+			float z = point.Z + center.Z;
 			return new Point3D(x, y, z);
+			
 		}
-		
 	}
 }

@@ -209,7 +209,7 @@ namespace GCodePlotter
 				
 				float zClearance = GetZSafeHeight();
 				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance, minX, maxX, minY, maxY);
 				
 				SaveSplittedGCodes(split, splitPoint, (string)txtFile.Tag);
 				
@@ -388,8 +388,6 @@ namespace GCodePlotter
 		
 		void BtnRotateClick(object sender, EventArgs e)
 		{
-			//var center = new PointF(227.3f, 118.65f);
-			//var center = new PointF(maxY/2, maxX/2);
 			var center = new PointF(0, 0);
 			var angle = GetAngle();
 			if (angle == 0) angle = 90;
@@ -1241,7 +1239,7 @@ namespace GCodePlotter
 				
 				float zClearance = GetZSafeHeight();
 				
-				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance);
+				var split = GCodeSplitter.Split(parsedInstructions, splitPoint, xSplitAngle, zClearance, minX, maxX, minY, maxY);
 				
 				// clean up the mess with too many G0 commands
 				var cleaned = GCodeUtils.GetMinimizeGCode(split[index]);
