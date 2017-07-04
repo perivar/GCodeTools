@@ -1,0 +1,11 @@
+;http://www.helmancnc.com/g02-g03-g-code-circular-interpolation-example-program/
+N20 G50 S2000 T0300
+G96 S200 M03
+G42 G00 X35.0 Z5.0 T0303 M08
+G01 Z-20.0 F0.2
+G02 X67.0 Z-36.0 I16.0 K0
+G01 X68.0 :
+G03 X100.0 Z-52.0 I0 K-16.0
+G01 Z-82.0
+G40 G00 X200.0 Z200.0 M09 T0300
+M30
