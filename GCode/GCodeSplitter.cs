@@ -177,7 +177,7 @@ namespace GCode
 							// TODO: check if this works in all cases?
 							if (currentPos.X == splitPoint.X) {
 								app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
-								app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[otherSide]), zClearance));
+								app[otherSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, otherSide, GetPreviousPoint(app[otherSide]), zClearance));
 							} else {
 								app[thisSide].AddRange(GCodeInstruction.GetInstructions(command, A, C, currentFeedrate, splitPoint, thisSide, GetPreviousPoint(app[thisSide]), zClearance));
 							}
@@ -419,26 +419,33 @@ namespace GCode
 			
 			var output = new List<Point3D>();
 			
-			float dx = p2.X - p1.X;
-			float dy = p2.Y - p1.Y;
-			float dz = p2.Z - p1.Z;
-			
 			// the coordinate system is shifted so that X is 0
 			float xcross = 0.0f;
 			float ycross = 0.0f;
 			float zcross = 0.0f;
+
+			// if a line is on the form: y = a*x + b
+			// then:
+			// a1 = (y2-y1)/(x2-x1)
+			// b1 = y1 - a1*x1
 			
+			float dx = p2.X - p1.X;
+			float dy = p2.Y - p1.Y;
+			float dz = p2.Z - p1.Z;
+			
+			// x and y plane
 			try {
-				float my = dy/dx;
-				float by = p1.Y - my * p1.X;
-				ycross = by;
+				float ay = dy / dx;
+				float b1 = p1.Y - ay * p1.X;
+				ycross = b1;
 			} catch (Exception) {
 				ycross = p1.Y;
 			}
 
+			// x and z plane
 			try {
-				float mz = dz/dx;
-				float bz = p1.Z - mz * p1.X;
+				float az = dz / dx;
+				float bz = p1.Z - az * p1.X;
 				zcross = bz;
 			} catch (Exception) {
 				zcross = p1.Z;
@@ -454,7 +461,7 @@ namespace GCode
 			return output;
 		}
 		
-		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, CommandType code) {
+		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D c, CommandType code) {
 			
 			var output = new List<Point3D>();
 			
@@ -469,37 +476,44 @@ namespace GCode
 			double gamma2 = 0.0f;
 			
 			// find radius of circle
-			double R = Transformation.Distance(p1, cent);
-			double Rt = Transformation.Distance(p2, cent);
+			double R = Transformation.Distance(p1, c);
+			double Rt = Transformation.Distance(p2, c);
 			
+			// check that the radiuses are equal
 			if (Math.Abs(R-Rt) > SELF_ACCURACY) {
-				Console.WriteLine("Radius Warning: R1={0} R2={1}", R, Rt);
+				Debug.WriteLine("Radius Warning: R1={0} R2={1}", R, Rt);
 			}
 
-			double val =  Math.Pow(R,2) - Math.Pow(-cent.X,2);
+			// calculate the ycrosses using c as a full circle
+			// using pythagoras:
+			// cX^2 + v^2 = r^2
+			// v^2 = r^2 - cX^2
+			double vSquared =  Math.Pow(R,2) - Math.Pow(c.X,2);
 			
-			if (val >= 0.0) {
-				double root = Math.Sqrt( val );
-				ycross1 = (float) (cent.Y - root);
-				ycross2 = (float) (cent.Y + root);
+			if (vSquared >= 0.0) {
+				double v = Math.Sqrt(vSquared);
+				ycross1 = (float) (c.Y - v);
+				ycross2 = (float) (c.Y + v);
 			} else {
+				// if v^2 is less than zero, no intersections at all
 				return output;
 			}
 
 			// Note! no code, defaults to CommandType.CCWArc
-			float theta = GetAngle(p1.X-cent.X, p1.Y-cent.Y);
+			// theta = angle of the position of the start point relative to the X axis
+			float theta = GetAngle(p1.X-c.X, p1.Y-c.Y);
 
-			var betaPoint = Rotate(p2.X-cent.X, p2.Y-cent.Y, -theta);
+			var betaPoint = Rotate(p2.X-c.X, p2.Y-c.Y, -theta);
 			float betaAngle = GetAngle(betaPoint.X, betaPoint.Y, code);
 			
 			if (Math.Abs(betaAngle) <= SELF_ZERO) {
 				betaAngle = 360.0f;
 			}
 
-			var transPoint1 = Rotate(-cent.X, ycross1-cent.Y, -theta);
+			var transPoint1 = Rotate(-c.X, ycross1-c.Y, -theta);
 			float gt1 = GetAngle(transPoint1.X,transPoint1.Y, code);
 			
-			var transPoint2 = Rotate(-cent.X, ycross2-cent.Y, -theta);
+			var transPoint2 = Rotate(-c.X, ycross2-c.Y, -theta);
 			float gt2 = GetAngle(transPoint2.X, transPoint2.Y, code);
 
 			if (gt1 < gt2) {
