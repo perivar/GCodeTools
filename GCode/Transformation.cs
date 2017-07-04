@@ -166,14 +166,14 @@ namespace GCode
 		                                               PointF ps2, PointF pe2)
 		{
 			// Get A,B,C of first line - points : ps1 to pe1
-			float A1 = pe1.Y-ps1.Y;
-			float B1 = ps1.X-pe1.X;
-			float C1 = A1*ps1.X+B1*ps1.Y;
+			float A1 = pe1.Y - ps1.Y;
+			float B1 = ps1.X - pe1.X;
+			float C1 = A1*ps1.X + B1*ps1.Y;
 			
 			// Get A,B,C of second line - points : ps2 to pe2
-			float A2 = pe2.Y-ps2.Y;
-			float B2 = ps2.X-pe2.X;
-			float C2 = A2*ps2.X+B2*ps2.Y;
+			float A2 = pe2.Y - ps2.Y;
+			float B2 = ps2.X - pe2.X;
+			float C2 = A2*ps2.X + B2*ps2.Y;
 			
 			// Get delta and check if the lines are parallel
 			float delta = A1*B2 - A2*B1;
