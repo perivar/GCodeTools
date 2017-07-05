@@ -34,19 +34,25 @@ namespace GCode
 			// try to parse multi-line instructions
 			foreach (string s in lines) {
 				var currentInstruction = ParseLine(s);
+				
+				// includes X, Y or Z but missing movement command
+				// therefore use the last command instead
 				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue)
 				    && !currentInstruction.Command.StartsWith("G")) {
-					// includes X, Y or Z but missing movement command
 					currentInstruction.Command = lastCommand;
 				}
+
+				// for arcs it's important that both I and J is used, even if they are zero
 				if (currentInstruction.CommandType == CommandType.CCWArc
 				    || currentInstruction.CommandType == CommandType.CWArc) {
 					if (!currentInstruction.I.HasValue) currentInstruction.I = 0.0f;
 					if (!currentInstruction.J.HasValue) currentInstruction.J = 0.0f;
 				}
+
+				// always add instruction
 				parsed.Add(currentInstruction);
 				
-				// merge previous coordinates with newer ones to maintain correct point coordinates
+				// maintain correct point coordinates by storing last values
 				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
 				     || currentInstruction.F.HasValue)) {
 					
@@ -63,6 +69,7 @@ namespace GCode
 						lastF = currentInstruction.F.Value;
 					}
 				}
+				// maintain correct movement by storing last values
 				if (currentInstruction.Command != null && !currentInstruction.Command.Equals(lastCommand)) {
 					lastCommand = currentInstruction.Command;
 				}
@@ -360,10 +367,8 @@ namespace GCode
 
 		public CommandType CommandType
 		{
-			get
-			{
-				switch (Command)
-				{
+			get {
+				switch (Command) {
 					case "G0":
 					case "G00":
 						return CommandType.RapidMove;
@@ -406,10 +411,9 @@ namespace GCode
 					// get coordinate value
 					float value = float.Parse(matches[0].Groups[2].Value, InvariantCulture);
 
-					// get coordinate
+					// get coordinate letter
 					string letterCode = matches[0].Groups[1].Value;
-					switch (letterCode)
-					{
+					switch (letterCode) {
 							case "X": X = value; break; // x
 							case "Y": Y = value; break; // y
 							case "Z": Z = value; break; // z
@@ -420,15 +424,13 @@ namespace GCode
 					this.Command = matches[0].Groups[0].Value;
 					
 					// loop through the elements that have coordinate values and store them
-					for (int index = 0; index < matches.Count; index++)
-					{
+					for (int index = 0; index < matches.Count; index++) {
 						// get coordinate value
 						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
 
 						// get coordinate
 						string letterCode = matches[index].Groups[1].Value;
-						switch (letterCode)
-						{
+						switch (letterCode) {
 								case "X": X = value; break; // x
 								case "Y": Y = value; break; // y
 								case "Z": Z = value; break; // z
@@ -454,14 +456,12 @@ namespace GCode
 								// M6 T1 (Change Tool: Diameter: 1.0000 mm)
 								// etc.
 								if (NonMovementCommands==null) {
-									// add new non movement command
-									// if this is not already the main command
-									// match G1
+									// add new non movement command if this is not already the main command
+									// match e.g. G1
 									var tmpCommand1 = string.Format(CultureInfo.InvariantCulture, "{0}{1:0.##}", letterCode, value);
-									// match G01
+									// match e.g. G01
 									var tmpCommand2 = string.Format(CultureInfo.InvariantCulture, "{0}{1:00.##}", letterCode, value);
-									if (!tmpCommand1.Equals(this.Command)
-									    && !tmpCommand2.Equals(this.Command)) {
+									if (!tmpCommand1.Equals(this.Command) && !tmpCommand2.Equals(this.Command)) {
 										this.NonMovementCommands = tmpCommand1;
 									}
 								} else {
@@ -476,17 +476,12 @@ namespace GCode
 				}
 				
 				// check if the first letter is in fact a command
+				// if not, replace the command with nothing
 				if (this.Command != null) {
 					firstChar = this.Command[0];
 					if (firstChar == 'X' || firstChar == 'Y' || firstChar == 'Z') {
 						// replace command with nothing
 						this.Command = "(no cmd)";
-					} else {
-						// remove everything exceept the command from original command
-						var commands = this.Command.Split(' ');
-						if (commands.Count() > 1) {
-							this.Command = commands[0];
-						}
 					}
 				}
 			}
@@ -583,8 +578,7 @@ namespace GCode
 		
 		internal List<LinePoints> RenderCode(ref Point3D currentPosition)
 		{
-			if (CommandType == CommandType.Other)
-			{
+			if (CommandType == CommandType.Other) {
 				if (Command == "G90") { AbsoluteMode = true; }
 				if (Command == "G90.1") { AbsoluteArcCenterMode = true; }
 				if (Command == "G91") { AbsoluteMode = false; }
@@ -622,8 +616,8 @@ namespace GCode
 				pos.Z *= 25.4f;
 			}
 			
-			if (CommandType == CommandType.RapidMove || CommandType == CommandType.NormalMove)
-			{
+			if (CommandType == CommandType.RapidMove || CommandType == CommandType.NormalMove) {
+				
 				maxX = Math.Max(currentPosition.X, pos.X);
 				maxY = Math.Max(currentPosition.Y, pos.Y);
 				maxZ = Math.Max(currentPosition.Z, pos.Z);
@@ -639,8 +633,7 @@ namespace GCode
 				return new List<LinePoints>() { line };
 			}
 
-			if (CommandType == CommandType.CWArc || CommandType == CommandType.CCWArc)
-			{
+			if (CommandType == CommandType.CWArc || CommandType == CommandType.CCWArc) {
 				var center = new Point3D(0f, 0f, 0f);
 				var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
 				
@@ -687,14 +680,12 @@ namespace GCode
 			bY = endpoint.Y - center.Y;
 
 			// Clockwise
-			if (clockwise)
-			{
+			if (clockwise) {
 				angleA = Math.Atan2(bY, bX);
 				angleB = Math.Atan2(aY, aX);
 			}
 			// Counterclockwise
-			else
-			{
+			else {
 				angleA = Math.Atan2(aY, aX);
 				angleB = Math.Atan2(bY, bX);
 			}
@@ -727,8 +718,8 @@ namespace GCode
 			var lastPoint = new Point3D(current.X, current.Y, current.Z);
 			var output = new List<LinePoints>();
 			var p = clockwise ? PenColorList.CWArc : PenColorList.CCWArc;
-			for (s = 1; s <= steps; s++)
-			{
+			
+			for (s = 1; s <= steps; s++) {
 				// Forwards for CCW, backwards for CW
 				if (!clockwise) {
 					step = s;
@@ -761,8 +752,7 @@ namespace GCode
 			
 			if (X.HasValue && other.X.HasValue && X.Value == other.X.Value
 			    && Y.HasValue && other.Y.HasValue && Y.Value == other.Y.Value
-			    && Z.HasValue && other.Z.HasValue && Z.Value == other.Z.Value)
-			{
+			    && Z.HasValue && other.Z.HasValue && Z.Value == other.Z.Value) {
 				return true;
 			}
 			

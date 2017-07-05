@@ -134,8 +134,7 @@ namespace SVG
 		/// <param name="radius">out radius</param>
 		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius) {
 
-			center = new PointF
-			{
+			center = new PointF {
 				X = (float)(points.Average(p => p.X)),
 				Y = (float)(points.Average(p => p.Y))
 			};
@@ -291,7 +290,7 @@ namespace SVG
 			// subdivide the Bezier into 250 line segments
 			double segments = 0;
 			//segments = 250 * distance;
-			segments = distance / 4;
+			segments = distance / 4; // turns out distance / 4 works pretty OK
 			
 			return Math.Max(0.01, 1.0 / segments);
 		}
@@ -316,28 +315,30 @@ namespace SVG
 		/// Rotate point around a center point
 		/// </summary>
 		/// <param name="inPoint">point to rotate</param>
-		/// <param name="theta">theta angle</param>
+		/// <param name="theta">angle in radians</param>
 		/// <param name="centerPoint">center point</param>
 		/// <returns>rotated point</returns>
 		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
-		public static PointF RotatePoint(PointF inPoint, double theta, PointF centerPoint)
+		public static PointF RotatePoint(PointF inPoint, PointF centerPoint, double theta)
 		{
 			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
 			// the coordinates of the new point would be located at (x',y').
 			// x′= xcosθ − ysinθ
-			// x′= xcos⁡θ − ysin⁡θ
 			// y′= ycosθ + xsinθ
 			
 			PointF tempRotatePoint = PointF.Empty;
 
 			tempRotatePoint = inPoint;
 
+			// first move point to origin
 			tempRotatePoint.X = tempRotatePoint.X - centerPoint.X;
 			tempRotatePoint.Y = tempRotatePoint.Y - centerPoint.Y;
 
+			// rotate
 			tempRotatePoint.X = (float)((Math.Cos(theta) * tempRotatePoint.X) + (-Math.Sin(theta) * tempRotatePoint.Y));
 			tempRotatePoint.Y = (float)((Math.Sin(theta) * tempRotatePoint.X) + (Math.Cos(theta) * tempRotatePoint.Y));
 
+			// then move point back to where it was originally
 			tempRotatePoint.X = tempRotatePoint.X + centerPoint.X;
 			tempRotatePoint.Y = tempRotatePoint.Y + centerPoint.Y;
 
@@ -354,27 +355,6 @@ namespace SVG
 			return inDeg / (180 / Math.PI);
 		}
 		
-		public static double AngleFromVector(double vTop, double vBot, double diffX, double diffY)
-		{
-			double tempAngleFromVect = 0;
-			
-			// Not sure if this working
-			if (vBot == 0)
-			{
-				tempAngleFromVect = ((vTop > 0) ? Math.PI / 2 : -Math.PI / 2);
-			}
-			else if (diffX >= 0)
-			{
-				tempAngleFromVect = Math.Atan(vTop / vBot);
-			}
-			else
-			{
-				tempAngleFromVect = Math.Atan(vTop / vBot) - Math.PI;
-			}
-
-			return tempAngleFromVect;
-		}
-
 		public static double AngleFromPoint(PointF pCenter, PointF pPoint)
 		{
 			double tempAngleFromPoint = 0;
@@ -383,27 +363,21 @@ namespace SVG
 			// Slope is rise over run
 			double slope = 0;
 
-			if (pPoint.X == pCenter.X)
-			{
+			if (pPoint.X == pCenter.X) {
 				// Either 90 or 270
 				tempAngleFromPoint = ((pPoint.Y > pCenter.Y) ? Math.PI / 2 : -Math.PI / 2);
 
-			}
-			else if (pPoint.X > pCenter.X)
-			{
-				// 0 - 90 and 270-360
+			} else if (pPoint.X > pCenter.X) {
+				// 0 - 90 and 270 - 360
 				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
 				tempAngleFromPoint = Math.Atan(slope);
-			}
-			else
-			{
+			} else {
 				// 180 - 270
 				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
 				tempAngleFromPoint = Math.Atan(slope) + Math.PI;
 			}
 
-			if (tempAngleFromPoint < 0)
-			{
+			if (tempAngleFromPoint < 0) {
 				tempAngleFromPoint = tempAngleFromPoint + (Math.PI * 2);
 			}
 			
@@ -464,30 +438,24 @@ namespace SVG
 			}
 
 			qBot = (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) + (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
-			if (qBot != 0)
-			{
+			if (qBot != 0) {
 				Q = Math.Sqrt((qTop) / (qBot));
-			}
-			else
-			{
+			} else {
 				Q = 0;
 			}
 
 			// Q is negative
-			if (largeArcFlag == sweepFlag)
-			{
+			if (largeArcFlag == sweepFlag) {
 				Q = -Q;
 			}
 
 			// Calculate Center Prime
 			CPrime.X = 0;
 
-			if (RY != 0)
-			{
+			if (RY != 0) {
 				CPrime.X = (float)(Q * ((RX * P1Prime.Y) / RY));
 			}
-			if (RX != 0)
-			{
+			if (RX != 0) {
 				CPrime.Y = (float)(Q * -((RY * P1Prime.X) / RX));
 			}
 
@@ -504,15 +472,13 @@ namespace SVG
 
 			if (sweepFlag) // Sweep is POSITIVE
 			{
-				if (thetaDelta < theta1)
-				{
+				if (thetaDelta < theta1) {
 					thetaDelta = thetaDelta + (Math.PI * 2);
 				}
 			}
 			else // Sweep is NEGATIVE
 			{
-				if (thetaDelta > theta1)
-				{
+				if (thetaDelta > theta1) {
 					thetaDelta = thetaDelta - (Math.PI * 2);
 				}
 			}
@@ -529,8 +495,7 @@ namespace SVG
 			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Rad2Deg(startAng), Rad2Deg(endAng), Rad2Deg(angStep));
 
 			ang = startAng;
-			do
-			{
+			do {
 				tempPoint.X = (float)((RX * Math.Cos(ang)) + centerPoint.X);
 				tempPoint.Y = (float)((RY * Math.Sin(ang)) + centerPoint.Y);
 
@@ -568,17 +533,16 @@ namespace SVG
 			// E.g. transform="translate(269.81467,-650.62904)"
 			
 			e = (transformText.IndexOf("(", 0) + 1);
-			if (e > 0)
-			{
+			if (e > 0) {
+				
 				functionName = transformText.Substring(0, e - 1);
 				f = (transformText.IndexOf(")", e) + 1);
-				if (f > 0)
-				{
+				
+				if (f > 0) {
 					functionParams = transformText.Substring(e, f - e - 1);
 				}
 
-				switch (functionName.ToLower())
-				{
+				switch (functionName.ToLower()) {
 					case "translate":
 						// Just move everything
 						splitParams = functionParams.Split(',');
@@ -588,13 +552,10 @@ namespace SVG
 						// [ 0  1  ty ]
 						// [ 0  0  1  ]
 
-						if (splitParams.GetUpperBound(0) == 0)
-						{
+						if (splitParams.GetUpperBound(0) == 0) {
 							p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
 							matrix = new Matrix(1, 0, 0, 1, p0, 0);
-						}
-						else
-						{
+						} else {
 							p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
 							p1 = float.Parse(splitParams[1], CultureInfo.InvariantCulture);
 							matrix = new Matrix(1, 0, 0, 1, p0, p1);
@@ -608,8 +569,7 @@ namespace SVG
 							Where( tag => !string.IsNullOrEmpty(tag)).ToArray();
 						 */
 						splitParams = functionParams.Split(',');
-						if (splitParams.GetUpperBound(0) == 0)
-						{
+						if (splitParams.GetUpperBound(0) == 0) {
 							splitParams = functionParams.Split(' ');
 						}
 						if (splitParams.Count() == 6) {
@@ -632,8 +592,7 @@ namespace SVG
 						
 					case "scale": // scale(-1,-1)
 						splitParams = functionParams.Split(',');
-						if (splitParams.GetUpperBound(0) == 0)
-						{
+						if (splitParams.GetUpperBound(0) == 0) {
 							splitParams = functionParams.Split(' ');
 						}
 						p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
@@ -704,34 +663,27 @@ namespace SVG
 		public SVGShapeBase(XmlTextReader reader, Dictionary<string, SVGStyle> styleDictionary)
 		{
 			string styleText = reader.GetAttribute("class");
-			if (styleText != null)
-			{
+			if (styleText != null) {
 				string[] styleNames = styleText.Split(new [] { ' ', '\t' });
 
-				foreach (string styleName in styleNames)
-				{
+				foreach (string styleName in styleNames) {
 					SVGStyle style = styleDictionary[styleName];
 
-					if (style.FillColorPresent)
-					{
+					if (style.FillColorPresent) {
 						FillColor = style.FillColor;
 					}
-					if (style.OutlineColorPresent)
-					{
+					if (style.OutlineColorPresent) {
 						OutlineColor = style.OutlineColor;
 					}
-					if (style.OutlineWidthPresent)
-					{
+					if (style.OutlineWidthPresent) {
 						OutlineWidth = style.OutlineWidth;
 					}
 				}
 			}
 
 			string xfs = reader.GetAttribute("transform");
-			if (xfs != null)
-			{
-				if (xfs.StartsWith("matrix"))
-				{
+			if (xfs != null) {
+				if (xfs.StartsWith("matrix")) {
 					xfs = xfs.Substring(6);
 				}
 				xfs = xfs.Trim(new [] { '(', ')' });
@@ -763,24 +715,19 @@ namespace SVG
 		{
 			// check if this element refers to a style class (should exist in the style dictionary)
 			string styleText = SVGUtils.GetAttribute(element, "class");
-			if (styleText != null)
-			{
+			if (styleText != null) {
 				string[] styleNames = styleText.Split(new [] { ' ', '\t' });
 
-				foreach (string styleName in styleNames)
-				{
+				foreach (string styleName in styleNames) {
 					SVGStyle style = styleDictionary[styleName];
 
-					if (style.FillColorPresent)
-					{
+					if (style.FillColorPresent) {
 						FillColor = style.FillColor;
 					}
-					if (style.OutlineColorPresent)
-					{
+					if (style.OutlineColorPresent) {
 						OutlineColor = style.OutlineColor;
 					}
-					if (style.OutlineWidthPresent)
-					{
+					if (style.OutlineWidthPresent) {
 						OutlineWidth = style.OutlineWidth;
 					}
 				}
@@ -788,8 +735,7 @@ namespace SVG
 
 			// check if this element has in-element styling
 			string styleData = SVGUtils.GetAttribute(element, "style");
-			if (styleData != null)
-			{
+			if (styleData != null) {
 				// https://stackoverflow.com/questions/21740264/parse-style-attribute-collection-using-linq
 				var styleMap = styleData
 					.Split(new []{';'}, StringSplitOptions.RemoveEmptyEntries)
@@ -799,16 +745,13 @@ namespace SVG
 					string styleName = styleElem[0];
 					string styleValue = styleElem[1];
 					var style = new SVGStyle(styleName, styleName+":"+styleValue);
-					if (style.FillColorPresent)
-					{
+					if (style.FillColorPresent) {
 						FillColor = style.FillColor;
 					}
-					if (style.OutlineColorPresent)
-					{
+					if (style.OutlineColorPresent) {
 						OutlineColor = style.OutlineColor;
 					}
-					if (style.OutlineWidthPresent)
-					{
+					if (style.OutlineWidthPresent) {
 						OutlineWidth = style.OutlineWidth;
 					}
 				}
@@ -816,8 +759,7 @@ namespace SVG
 
 			// check if this element includes a transform element
 			string xfs = SVGUtils.GetAttribute(element, "transform");
-			if (xfs != null)
-			{
+			if (xfs != null) {
 				matrix = SVGUtils.ParseTransformText(xfs);
 			}
 		}
@@ -871,7 +813,6 @@ namespace SVG
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
-
 			return result;
 		}
 	}
@@ -903,13 +844,11 @@ namespace SVG
 			long rr = 0;
 
 			rr = 2;
-			if (rx > 100 | ry > 100)
-			{
+			if (rx > 100 | ry > 100) {
 				rr = 1;
 			}
 
-			for (a = 0; a <= 360; a += rr)
-			{
+			for (a = 0; a <= 360; a += rr) {
 				x = Math.Cos(a * (Math.PI / 180)) * rx + cx;
 				y = Math.Sin(a * (Math.PI / 180)) * ry + cy;
 
@@ -926,7 +865,6 @@ namespace SVG
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
-
 			return result;
 		}
 	}
@@ -962,7 +900,6 @@ namespace SVG
 		{
 			var result = new List<List<PointF>>();
 			result.Add(points);
-
 			return result;
 		}
 	}
@@ -1006,7 +943,6 @@ namespace SVG
 		public List<List<PointF>> GetContours()
 		{
 			var result = new List<List<PointF>>();
-
 			return result;
 		}
 	}
@@ -1085,8 +1021,7 @@ namespace SVG
 				float deltaX = currentContour[0].X - currentContour[currentContour.Count - 1].X;
 				float deltaY = currentContour[0].Y - currentContour[currentContour.Count - 1].Y;
 
-				if (Math.Abs(deltaX) + Math.Abs(deltaY) > 0.001)
-				{
+				if (Math.Abs(deltaX) + Math.Abs(deltaY) > 0.001) {
 					currentContour.Add(currentContour[0]);
 				}
 			}
@@ -1095,8 +1030,7 @@ namespace SVG
 			contours.Add(currentContour);
 
 			_path = new GraphicsPath();
-			if (currentContour.Count > 2)
-			{
+			if (currentContour.Count > 2) {
 				_path.AddPolygon(currentContour.ToArray());
 			}
 		}
@@ -1123,8 +1057,7 @@ namespace SVG
 			_path = new GraphicsPath();
 
 			string data = SVGUtils.GetAttribute(element, "d");
-			if (data == null)
-			{
+			if (data == null) {
 				return;
 			}
 
@@ -1672,13 +1605,10 @@ namespace SVG
 			
 			if (currentContour.Count > 0)
 			{
-				if (currentContour.Count <= 2)
-				{
+				if (currentContour.Count <= 2) {
 					// Happens sometimes. This is either a point or
 					// a line. Empty area, so just toss it.
-				}
-				else
-				{
+				} else {
 					currentContour.Add(currentContour.First());
 					currentContour = Transform(currentContour);
 					contours.Add(currentContour);
@@ -1726,8 +1656,7 @@ namespace SVG
 		{
 			Color result;
 
-			if ( c.Length == 7 && c[0] == '#' )
-			{
+			if ( c.Length == 7 && c[0] == '#' ) {
 				string s1 = c.Substring(1, 2);
 				string s2 = c.Substring(3, 2);
 				string s3 = c.Substring(5, 2);
@@ -1736,25 +1665,18 @@ namespace SVG
 				byte g = 0;
 				byte b = 0;
 
-				try
-				{
+				try {
 					r = Convert.ToByte(s1, 16);
 					g = Convert.ToByte(s2, 16);
 					b = Convert.ToByte(s3, 16);
-				}
-				catch
-				{
-				}
+				} catch { }
 
 				result = Color.FromArgb(r, g, b);
-			}
-			else
-			{
+			} else {
 				result = Color.FromName(c);
 			}
 
 			return result;
-
 		}
 
 		public SVGStyle(string name, string style)
@@ -1768,15 +1690,12 @@ namespace SVG
 			string[] stylePairs = style.Split(new [] { ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
 			// check we have pairs (can divide by 2)
-			if ((stylePairs.Count() & 1) != 0)
-			{
+			if ((stylePairs.Count() & 1) != 0) {
 				throw new ArgumentException("Failed to parse style");
 			}
 
-			for (int index=0; index<stylePairs.Count(); index += 2)
-			{
-				switch (stylePairs[index])
-				{
+			for (int index=0; index<stylePairs.Count(); index += 2) {
+				switch (stylePairs[index]) {
 					case "stroke":
 						OutlineColor = ParseColor(stylePairs[index+1]);
 						OutlineColorPresent = true;
@@ -1857,8 +1776,7 @@ namespace SVG
 				var styleData = String.Join("", element.Nodes()).Trim();
 				var styleReader = new StringReader(styleData);
 				string line;
-				while ((line = styleReader.ReadLine()) != null)
-				{
+				while ((line = styleReader.ReadLine()) != null) {
 					string[] splitLine;
 
 					line = line.Trim();
@@ -1867,12 +1785,10 @@ namespace SVG
 					splitLine = line.Split(new [] { ' ', '\t', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
 
 					string name = splitLine[0];
-					if (name.StartsWith("."))
-					{
+					if (name.StartsWith(".")) {
 						name = name.Substring(1);
 					}
-					if (splitLine.Count() == 2)
-					{
+					if (splitLine.Count() == 2) {
 						styleDictionary.Add(name, new SVGStyle(name, splitLine[1]));
 					}
 				}
@@ -1904,8 +1820,7 @@ namespace SVG
 
 				// check if this element includes a transform element
 				string xfs = SVGUtils.GetAttribute(element, "transform");
-				if (xfs != null)
-				{
+				if (xfs != null) {
 					matrix = SVGUtils.ParseTransformText(xfs);
 				}
 			}
@@ -1951,8 +1866,7 @@ namespace SVG
 			}
 			
 			// if the element have no children
-			if (!element.HasElements)
-			{
+			if (!element.HasElements) {
 				if (PRINT_DEBUG) {
 					// print attributes
 					if (element.HasAttributes) {
@@ -2015,8 +1929,7 @@ namespace SVG
 				depth++;
 				
 				// for each child, recursively process the child
-				foreach (XElement child in element.Elements())
-				{
+				foreach (XElement child in element.Elements()) {
 					ProcessSVG(child, depth, doc, layerName, matrix, styleDictionary, path);
 				}
 				
@@ -2209,8 +2122,7 @@ namespace SVG
 				var viewBoxArgs = viewboxValue.Split(' ').Where(t => !string.IsNullOrEmpty(t));
 				float[] viewBoxFloatArgs = viewBoxArgs.Select(arg => float.Parse(arg, CultureInfo.InvariantCulture)).ToArray();
 				
-				if (viewBoxArgs.Count() == 4)
-				{
+				if (viewBoxArgs.Count() == 4) {
 					// Get the width in pixels
 					if (realW == 0) {
 						realDPI = 25.4f;
@@ -2237,26 +2149,22 @@ namespace SVG
 			foreach (ISVGElement shape in shapes)
 			{
 				var sVGImage = shape as SVGImage;
-				if (sVGImage != null)
-				{
+				if (sVGImage != null) {
 					g.DrawImage(sVGImage.image, sVGImage.DestBounds);
 				}
 
 				// don't draw if the ouline width is too small, alpha is 0 and raster only is set
-				if (shape.OutlineWidth < .01 && shape.FillColor.A == 0 && rasterOnly)
-				{
+				if (shape.OutlineWidth < .01 && shape.FillColor.A == 0 && rasterOnly) {
 					continue;
 				}
 
 				GraphicsPath p = shape.GetPath();
-				if (shape.FillColor.A > 0)
-				{
+				if (shape.FillColor.A > 0) {
 					Brush b = new SolidBrush(shape.FillColor);
 					g.FillPath(b, p);
 					b.Dispose();
 				}
-				if (shape.OutlineWidth > 0 && shape.OutlineColor.A > 0)
-				{
+				if (shape.OutlineWidth > 0 && shape.OutlineColor.A > 0) {
 					var pen = new Pen(shape.OutlineColor, (float)shape.OutlineWidth);
 					g.DrawPath(pen, p);
 					pen.Dispose();
@@ -2279,31 +2187,24 @@ namespace SVG
 
 			foreach (ISVGElement shape in shapes)
 			{
-				if ((shape.OutlineWidth >= .01 && shape.OutlineColor.A == 255) || shape.FillColor.A == 255)
-				{
+				if ((shape.OutlineWidth >= .01 && shape.OutlineColor.A == 255) || shape.FillColor.A == 255) {
 					continue;
 				}
 
-				foreach (var contour in shape.GetContours())
-				{
+				foreach (var contour in shape.GetContours()) {
 					var thinnedContour = new List<PointF>();
 					PointF lastPoint = contour.First();
 					bool first = true;
 
-					foreach (PointF point in contour)
-					{
+					foreach (PointF point in contour) {
 						++total;
 
-						if (first)
-						{
+						if (first) {
 							thinnedContour.Add(new PointF(point.X, point.Y));
 							lastPoint = point;
 							first = false;
-						}
-						else
-						{
-							if (SVGUtils.Distance(point, lastPoint) > threshhold)
-							{
+						} else {
+							if (SVGUtils.Distance(point, lastPoint) > threshhold) {
 								++thin;
 								thinnedContour.Add(point);
 								lastPoint = point;
@@ -2311,8 +2212,7 @@ namespace SVG
 						}
 					}
 
-					yield return new VectorContour()
-					{
+					yield return new VectorContour() {
 						Brightness = shape.OutlineColor.GetBrightness(),
 						Color = shape.OutlineColor,
 						Points = thinnedContour
