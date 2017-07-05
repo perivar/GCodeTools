@@ -24,9 +24,48 @@ namespace GCode
 
 			var parsed = new List<GCodeInstruction>();
 
-			foreach (string s in lines)
-			{
-				parsed.Add(ParseLine(s));
+			// keep an overview of the last command and position
+			string lastCommand = string.Empty;
+			float lastX = 0.0f;
+			float lastY = 0.0f;
+			float lastZ = 0.0f;
+			float lastF = 0.0f;
+			
+			// try to parse multi-line instructions
+			foreach (string s in lines) {
+				var currentInstruction = ParseLine(s);
+				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue)
+				    && !currentInstruction.Command.StartsWith("G")) {
+					// includes X, Y or Z but missing movement command
+					currentInstruction.Command = lastCommand;
+				}
+				if (currentInstruction.CommandType == CommandType.CCWArc
+				    || currentInstruction.CommandType == CommandType.CWArc) {
+					if (!currentInstruction.I.HasValue) currentInstruction.I = 0.0f;
+					if (!currentInstruction.J.HasValue) currentInstruction.J = 0.0f;
+				}
+				parsed.Add(currentInstruction);
+				
+				// merge previous coordinates with newer ones to maintain correct point coordinates
+				if ((currentInstruction.X.HasValue || currentInstruction.Y.HasValue || currentInstruction.Z.HasValue
+				     || currentInstruction.F.HasValue)) {
+					
+					if (currentInstruction.X.HasValue && currentInstruction.X.Value != lastX) {
+						lastX = currentInstruction.X.Value;
+					}
+					if (currentInstruction.Y.HasValue && currentInstruction.Y.Value != lastY) {
+						lastY = currentInstruction.Y.Value;
+					}
+					if (currentInstruction.Z.HasValue && currentInstruction.Z.Value != lastZ) {
+						lastZ = currentInstruction.Z.Value;
+					}
+					if (currentInstruction.F.HasValue && currentInstruction.F.Value != lastF) {
+						lastF = currentInstruction.F.Value;
+					}
+				}
+				if (currentInstruction.Command != null && !currentInstruction.Command.Equals(lastCommand)) {
+					lastCommand = currentInstruction.Command;
+				}
 			}
 
 			return parsed;
@@ -57,8 +96,14 @@ namespace GCode
 		// G2 X 30.0000 Y 30.0000 I 20.0000 J 40.0000
 		// or
 		// G02 X71.871087 Y23.266043 Z-0.050000 I2198.689889 J-561.348455
-		private static Regex GCodeSplitter = new Regex(@"([A-Z])\s*(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
+		// N46 G1 Z-.5 F10.
+		//private static Regex GCodeSplitter = new Regex(@"([A-Z])\s*(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		//private static Regex GCodeSplitter = new Regex(@"([ABDEFGHIJKLMPQRSTXYZ])\s*(\-?\d+\.?\d*)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		
+		// https://github.com/cncgoko/Goko/blob/master/org.goko.gcode.rs274ngcv3/src/org/goko/core/gcode/rs274ngcv3/parser/GCodeTokenType.java
+		// https://github.com/cncgoko/Goko/blob/master/org.goko.gcode.rs274ngcv3/src/org/goko/core/gcode/rs274ngcv3/parser/GCodeLexer.java
+		private static Regex GCodeSplitter = new Regex(@"([A-M|O-Z])((\-|\+)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+)))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		
 		// pattern matchers.
 		private static Regex parenPattern  = new Regex(@"\((.*)\)", RegexOptions.Compiled);
 		private static Regex semiPattern = new Regex(@";(.*)", RegexOptions.Compiled);
@@ -78,16 +123,20 @@ namespace GCode
 		
 		public string Comment { get; set; }
 		public string Command { get; set; }
+		public string NonMovementCommands { get; set; } // the remaining non movement commands
+		
+		// letter codes we understand
+		// ABDEFGHIJKLMPQRSTXYZ
+		
+		// letter values we care about
 		public float? X { get; set; }	// x coordinate
 		public float? Y { get; set; }	// y coordinate
 		public float? Z { get; set; }	// z coordinate
-		public float? F { get; set; } 	// feedrate
 		public float? I { get; set; }	// arc x coordinate
 		public float? J { get; set; }	// arc y coordinate
-		public float? P { get; set; }
-		public int? T { get; set; }		// tool change
-		public int? M { get; set; }		// machine commands
-
+		public float? K { get; set; }	// arc z coordinate
+		public float? F { get; set; } 	// feedrate
+		
 		internal float minX, minY, minZ;
 		internal float maxX, maxY, maxZ;
 		
@@ -336,6 +385,8 @@ namespace GCode
 		}
 
 		public void Update(string line) {
+			char firstChar = ' ';
+			
 			// parse comments and return the remaining command if any
 			string command = ParseComments(line).Trim();
 			
@@ -351,6 +402,19 @@ namespace GCode
 				if (matches.Count == 1) {
 					// only matched the command, store this
 					this.Command = matches[0].Groups[0].Value;
+
+					// get coordinate value
+					float value = float.Parse(matches[0].Groups[2].Value, InvariantCulture);
+
+					// get coordinate
+					string letterCode = matches[0].Groups[1].Value;
+					switch (letterCode)
+					{
+							case "X": X = value; break; // x
+							case "Y": Y = value; break; // y
+							case "Z": Z = value; break; // z
+					}
+
 				} else if (matches.Count > 1) {
 					// matched the command and something more
 					this.Command = matches[0].Groups[0].Value;
@@ -362,35 +426,68 @@ namespace GCode
 						float value = float.Parse(matches[index].Groups[2].Value, InvariantCulture);
 
 						// get coordinate
-						switch (matches[index].Groups[1].Value)
+						string letterCode = matches[index].Groups[1].Value;
+						switch (letterCode)
 						{
 								case "X": X = value; break; // x
 								case "Y": Y = value; break; // y
 								case "Z": Z = value; break; // z
-								case "F": F = value; break; // feedrate
 								case "I": I = value; break; // arc x
 								case "J": J = value; break; // arc y
-								case "P": P = value; break;
-							case "M":
+								case "K": K = value; break; // arc z
+								case "F": F = value; break; // feedrate
+							case "A":
+							case "B":
+							case "D":
+							case "E":
+							case "G":
+							case "H":
+							case "L":
+							case "M": // machine command
+							case "P":
+							case "Q":
+							case "R":
+							case "S":
+							case "T":
 								// M3 (Start Spindle)
 								// M7 (Flood Coolant On)
-								// etc.
-								if ("M" + value != this.Command) {
-									// concatinate
-									this.Command = string.Format(CultureInfo.InvariantCulture, "{0} M{1:0.##}", this.Command, value);
-								}
-								break;
-							case "T":
 								// M6 T1 (Change Tool: Diameter: 1.0000 mm)
-								if ("T" + value != this.Command) {
-									// concatinate
-									this.Command = string.Format(CultureInfo.InvariantCulture, "{0} T{1:0.##}", this.Command, value);
+								// etc.
+								if (NonMovementCommands==null) {
+									// add new non movement command
+									// if this is not already the main command
+									// match G1
+									var tmpCommand1 = string.Format(CultureInfo.InvariantCulture, "{0}{1:0.##}", letterCode, value);
+									// match G01
+									var tmpCommand2 = string.Format(CultureInfo.InvariantCulture, "{0}{1:00.##}", letterCode, value);
+									if (!tmpCommand1.Equals(this.Command)
+									    && !tmpCommand2.Equals(this.Command)) {
+										this.NonMovementCommands = tmpCommand1;
+									}
+								} else {
+									// concatinate non movement commands
+									this.NonMovementCommands = string.Format(CultureInfo.InvariantCulture, "{0} {1}{2:0.##}", this.NonMovementCommands, letterCode, value);
 								}
 								break;
 						}
 					}
 				} else {
 					// empty - ignore
+				}
+				
+				// check if the first letter is in fact a command
+				if (this.Command != null) {
+					firstChar = this.Command[0];
+					if (firstChar == 'X' || firstChar == 'Y' || firstChar == 'Z') {
+						// replace command with nothing
+						this.Command = "(no cmd)";
+					} else {
+						// remove everything exceept the command from original command
+						var commands = this.Command.Split(' ');
+						if (commands.Count() > 1) {
+							this.Command = commands[0];
+						}
+					}
 				}
 			}
 		}
@@ -443,8 +540,7 @@ namespace GCode
 
 		public string ToString(bool doMultiLayer, float? zOverride = null)
 		{
-			if (string.IsNullOrWhiteSpace(Command))
-			{
+			if (string.IsNullOrWhiteSpace(Command)) {
 				if (!string.IsNullOrWhiteSpace(Comment)) {
 					return string.Format("({0})", Comment);
 				} else {
@@ -471,11 +567,13 @@ namespace GCode
 			}
 			if (I.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " I{0:0.####}", this.I);
 			if (J.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " J{0:0.####}", this.J);
+			if (K.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " K{0:0.####}", this.K);
 			if (F.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " F{0:0.####}", this.F);
-			if (P.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " P{0:0.####}", this.P);
-			if (T.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " T{0}", this.T);
-			if (M.HasValue) sb.AppendFormat(CultureInfo.InvariantCulture, " M{0}", this.M);
-
+			
+			if (!string.IsNullOrWhiteSpace(NonMovementCommands)) {
+				sb.AppendFormat(" {0}", NonMovementCommands);
+			}
+			
 			if (!string.IsNullOrWhiteSpace(Comment)) {
 				sb.AppendFormat(" ({0})", Comment);
 			}

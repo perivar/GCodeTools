@@ -825,7 +825,6 @@ namespace GCodePlotter
 		}
 		
 		void PaintDrillPoint(Graphics g, Block blockItem) {
-			
 			// if this is a drillblock, paint a circle at the point
 			if (blockItem.IsDrillPoint) {
 				var x = blockItem.PlotPoints[1].X1 * multiplier + LEFT_MARGIN;
