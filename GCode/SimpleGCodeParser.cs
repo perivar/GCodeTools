@@ -117,7 +117,9 @@ namespace GCode
 		
 		public readonly IFormatProvider InvariantCulture = CultureInfo.InvariantCulture;
 		
-		public const float CurveSection = 1;
+		// smooth factor that decides how many steps the arc curve will have
+		// i.e. divide the length of the arc with this constant
+		public const float CURVE_SECTION = 1.0f;
 
 		// G90 (absolute positioning)
 		public bool AbsoluteMode = true;
@@ -659,26 +661,16 @@ namespace GCode
 
 		List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
 		{
+			// figure out our deltas
+			var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
+			double aX = current.X - center.X;
+			double aY = current.Y - center.Y;
+			double bX = endpoint.X - center.X;
+			double bY = endpoint.Y - center.Y;
+
 			// angle variables.
 			double angleA;
 			double angleB;
-			double angle;
-			double radius;
-			double length;
-
-			// delta variables.
-			double aX;
-			double aY;
-			double bX;
-			double bY;
-
-			// figure out our deltas
-			var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
-			aX = current.X - center.X;
-			aY = current.Y - center.Y;
-			bX = endpoint.X - center.X;
-			bY = endpoint.Y - center.Y;
-
 			// Clockwise
 			if (clockwise) {
 				angleA = Math.Atan2(bY, bX);
@@ -698,20 +690,15 @@ namespace GCode
 				angleB += 2 * Math.PI;
 			}
 			
-			angle = angleB - angleA;
+			double angle = angleB - angleA;
 			
 			// calculate a couple useful things.
-			radius = Math.Sqrt(aX * aX + aY * aY);
-			length = radius * angle;
-
-			// for doing the actual move.
-			int steps;
-			int s;
-			int step;
+			double radius = Math.Sqrt(aX * aX + aY * aY);
+			double length = radius * angle;
 
 			// Maximum of either 2.4 times the angle in radians
 			// or the length of the curve divided by the curve section constant
-			steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / CurveSection));
+			int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / CURVE_SECTION));
 
 			// this is the real draw action.
 			var newPoint = new Point3D(current.X, current.Y, current.Z);
@@ -719,7 +706,8 @@ namespace GCode
 			var output = new List<LinePoints>();
 			var p = clockwise ? PenColorList.CWArc : PenColorList.CCWArc;
 			
-			for (s = 1; s <= steps; s++) {
+			int step;
+			for (int s = 1; s <= steps; s++) {
 				// Forwards for CCW, backwards for CW
 				if (!clockwise) {
 					step = s;

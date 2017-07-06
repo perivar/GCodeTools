@@ -43,7 +43,12 @@ namespace SVG
 	/// </summary>
 	public static class SVGUtils {
 
+		// zero (or epsilon)
 		public const float SELF_ZERO = 0.0000001f;
+		
+		// smooth factor that decides how many steps the arc curve will have
+		// i.e. divide the length of the arc with this constant
+		public const float CURVE_SECTION = 2.0f;
 		
 		/// <summary>
 		/// Return the euclidean distance between two points
@@ -279,14 +284,15 @@ namespace SVG
 		
 		/// <summary>
 		/// Find out how meny segments to use for the bezier curves
+		/// I.e. 1 / number of segments
 		/// </summary>
-		/// <param name="pStart"></param>
-		/// <param name="pEnd"></param>
-		/// <param name="globalDPI"></param>
-		/// <returns></returns>
-		public static double GetPinSegments(PointF pStart, PointF pEnd, float globalDPI)
+		/// <param name="startpoint">start point</param>
+		/// <param name="endpoint">end point</param>
+		/// <param name="globalDPI">DPI</param>
+		/// <returns>delta step = 1 / number of segments</returns>
+		public static double GetDeltaStep(PointF startpoint, PointF endpoint, float globalDPI)
 		{
-			double distance = SVGUtils.Distance(pStart, pEnd) / globalDPI;
+			double distance = SVGUtils.Distance(startpoint, endpoint) / globalDPI;
 
 			// with a resolution of 500 dpi, the curve should be split into 500 segments per inch. so a distance of 1 should be 500 segments, which is 0.002
 			// subdivide the Bezier into 250 line segments
@@ -386,7 +392,18 @@ namespace SVG
 			return tempAngleFromPoint;
 		}
 		
-		public static List<PointF> ParseArcSegment(float RX, float RY, float rotAng, PointF P1, PointF P2, bool largeArcFlag, bool sweepFlag)
+		/// <summary>
+		/// Parse Arc Segment
+		/// </summary>
+		/// <param name="RX">radius X</param>
+		/// <param name="RY">radius Y</param>
+		/// <param name="rotAng">rotation angle in degrees</param>
+		/// <param name="P1">start point</param>
+		/// <param name="P2">end point</param>
+		/// <param name="largeArcFlag">use large arc (meaning the longest distance between the two points)</param>
+		/// <param name="sweepFlag">if true use increasing sweep (otherwise decreasing)</param>
+		/// <returns>a list of points forming the arc</returns>
+		public static List<PointF> ParseArcSegment(float RX, float RY, float rotAng, PointF P1, PointF P2, bool largeArcFlag, bool sweepFlag, int numSegments = -1)
 		{
 			// Parse "A" command in SVG, which is segments of an arc
 			// P1 is start point
@@ -441,7 +458,7 @@ namespace SVG
 
 			qBot = (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) + (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
 			if (qBot != 0) {
-				Q = Math.Sqrt((qTop) / (qBot));
+				Q = Math.Sqrt(qTop / qBot);
 			} else {
 				Q = 0;
 			}
@@ -472,14 +489,13 @@ namespace SVG
 			theta1 = theta1 - Math.PI;
 			thetaDelta = thetaDelta - Math.PI;
 
-			if (sweepFlag) // Sweep is POSITIVE
-			{
+			if (sweepFlag) {
+				// Sweep is POSITIVE
 				if (thetaDelta < theta1) {
 					thetaDelta = thetaDelta + (Math.PI * 2);
 				}
-			}
-			else // Sweep is NEGATIVE
-			{
+			} else {
+				// Sweep is NEGATIVE
 				if (thetaDelta > theta1) {
 					thetaDelta = thetaDelta - (Math.PI * 2);
 				}
@@ -488,7 +504,12 @@ namespace SVG
 			startAng = theta1;
 			endAng = thetaDelta;
 
-			angStep = (Math.PI / 180);
+			// calculate numbmer of segments
+			if (numSegments > 0) {
+				angStep = (Math.PI / (numSegments*2));
+			} else {
+				angStep = (Math.PI / 180);
+			}
 			
 			// Sweep flag indicates a positive step
 			if (!sweepFlag) {
@@ -889,7 +910,7 @@ namespace SVG
 			float rx = SVGUtils.ReadFloat(element, "rx");
 			float ry = SVGUtils.ReadFloat(element, "ry");
 
-			// rounded corners
+			// rounded corners exampple
 			// https://github.com/jstenback/inkscape-gcode/blob/master/src/export_gcode.py
 			
 			if (width > 0.0 && height >= 0.0) {
@@ -904,7 +925,7 @@ namespace SVG
 						var p7 = new PointF(x,y+height-ry);
 						var p8 = new PointF(x,y+ry);
 						
-						if ( (Math.Abs(rx - ry) < SVGUtils.SELF_ZERO)) {
+						if ((Math.Abs(rx - ry) < SVGUtils.SELF_ZERO)) {
 							// Use arcs for corners
 							var c23 = new PointF(x+width-rx,y+ry);
 							var c45 = new PointF(x+width-rx,y+height-ry);
@@ -974,40 +995,100 @@ namespace SVG
 			
 		}
 		
-		static void BezierSegment(List<PointF> points, PointF p2, PointF p3, PointF p2t, PointF p3t) {
-			// TODO: Fix
-		}
-		
-		static void ArcSegment(List<PointF> points, PointF current, PointF endpoint, PointF center, bool clockwise) {
-
-			float CurveSection = 2.0f;
-			
-			// angle variables.
-			double angleA;
-			double angleB;
-			double angle;
-			double radius;
-			double length;
-
-			// delta variables.
-			double aX;
-			double aY;
-			double bX;
-			double bY;
+		static void BezierSegment(List<PointF> points, PointF startpoint, PointF endpoint, PointF point1turn, PointF point2turn) {
 
 			// figure out our deltas
-			aX = current.X - center.X;
-			aY = current.Y - center.Y;
-			bX = endpoint.X - center.X;
-			bY = endpoint.Y - center.Y;
+			double aX = startpoint.X - point1turn.X;
+			double aY = startpoint.Y - point1turn.Y;
+			double bX = endpoint.X - point2turn.X;
+			double bY = endpoint.Y - point2turn.Y;
 
-			// Clockwise
+			double angleA = Math.Atan2(aY, aX);
+			double angleB = Math.Atan2(bY, bX);
+
+			// Make sure angleB is always greater than angleA
+			// and if not add 2PI so that it is (this also takes
+			// care of the special case of angleA == angleB,
+			// ie we want a complete circle)
+			if (angleB <= angleA) {
+				angleB += 2 * Math.PI;
+			}
+			
+			// calculate angle in radians
+			double angle = angleB - angleA;
+			
+			// calculate a couple useful things.
+			double radius = Math.Sqrt(aX * aX + aY * aY);
+			double length = radius * angle;
+			
+			// Maximum of either 2.4 times the angle in radians
+			// or the length of the curve divided by the curve section constant
+			int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
+
+			points.AddRange(Bezier.AddBezier( 1.0f / steps, startpoint, endpoint, point1turn, point2turn));
+		}
+		
+		static void ArcSegment(List<PointF> points, PointF startpoint, PointF endpoint, PointF center, bool sweep) {
+			
+			//ArcSegmentV2(points, startpoint, endpoint, center, sweep);
+			//return;
+			
+			// figure out our deltas
+			double aX = startpoint.X - center.X;
+			double aY = startpoint.Y - center.Y;
+			double bX = endpoint.X - center.X;
+			double bY = endpoint.Y - center.Y;
+
+			double angleA = Math.Atan2(aY, aX);
+			double angleB = Math.Atan2(bY, bX);
+
+			// Make sure angleB is always greater than angleA
+			// and if not add 2PI so that it is (this also takes
+			// care of the special case of angleA == angleB,
+			// ie we want a complete circle)
+			if (angleB <= angleA) {
+				angleB += 2 * Math.PI;
+			}
+			
+			// calculate angle in radians
+			double angle = angleB - angleA;
+			
+			// calculate a couple useful things.
+			double radius = Math.Sqrt(aX * aX + aY * aY);
+			double length = radius * angle;
+			
+			// Maximum of either 2.4 times the angle in radians
+			// or the length of the curve divided by the curve section constant
+			int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
+
+			// angle in degrees
+			float angleDegrees = (float) SVGUtils.Rad2Deg(angle);
+			var tmpPoints = SVGUtils.ParseArcSegment((float) radius, (float) radius, angleDegrees, startpoint, endpoint, false, !sweep, steps);
+			
+			// don't add the first point since it's already added
+			if (tmpPoints.Any()) {
+				tmpPoints.RemoveAt(0);
+				points.AddRange(tmpPoints);
+			}
+		}
+
+		// copied arc code from SimpleGCodeParser
+		static void ArcSegmentV2(List<PointF> points, PointF startpoint, PointF endpoint, PointF center, bool clockwise) {
+			
+			// figure out our deltas
+			double aX = startpoint.X - center.X;
+			double aY = startpoint.Y - center.Y;
+			double bX = endpoint.X - center.X;
+			double bY = endpoint.Y - center.Y;
+
+			double angleA;
+			double angleB;
 			if (clockwise) {
+				// Clockwise
 				angleA = Math.Atan2(bY, bX);
 				angleB = Math.Atan2(aY, aX);
-			}
-			// Counterclockwise
-			else {
+			} else {
+				// Counterclockwise
 				angleA = Math.Atan2(aY, aX);
 				angleB = Math.Atan2(bY, bX);
 			}
@@ -1020,25 +1101,23 @@ namespace SVG
 				angleB += 2 * Math.PI;
 			}
 			
-			angle = angleB - angleA;
+			// calculate angle in radians
+			double angle = angleB - angleA;
 			
 			// calculate a couple useful things.
-			radius = Math.Sqrt(aX * aX + aY * aY);
-			length = radius * angle;
-
-			// for doing the actual move.
-			int steps;
-			int s;
-			int step;
+			double radius = Math.Sqrt(aX * aX + aY * aY);
+			double length = radius * angle;
 
 			// Maximum of either 2.4 times the angle in radians
 			// or the length of the curve divided by the curve section constant
-			steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / CurveSection));
+			int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
 
 			// this is the real draw action.
 			var newPoint = PointF.Empty;
 			
-			for (s = 1; s <= steps; s++) {
+			// for doing the actual move.
+			int step;
+			for (int s = 1; s <= steps; s++) {
 				// Forwards for CCW, backwards for CW
 				if (!clockwise) {
 					step = s;
@@ -1119,13 +1198,17 @@ namespace SVG
 			float cy = SVGUtils.ReadFloat(element, "cy");
 			float r = SVGUtils.ReadFloat(element, "r");
 
-			for (double theta = 0.0; theta < 2.0*Math.PI; theta += Math.PI / 50.0)
-			{
+			// calculate number of steps
+			int steps = 10;
+			
+			// theta <= 2.0 * Math.PI to get a completely round circle
+			for (double theta = 0.0; theta <= 2.0 * Math.PI; theta += Math.PI / (float) (steps/2)) {
 				double x = Math.Sin(theta) * r + cx;
 				double y = Math.Cos(theta) * r + cy;
 
 				points.Add(new PointF((float)x, (float)y));
 			}
+			
 			points = Transform(points);
 
 			_path = new GraphicsPath();
@@ -1209,7 +1292,7 @@ namespace SVG
 		List<List<PointF>> contours = new List<List<PointF>>();
 		List<PointF> currentContour = new List<PointF>();
 		
-		public SVGPath(XElement element, Dictionary<string, SVGStyle> styleDictionary, float globalDPI)
+		public SVGPath(XElement element, Dictionary<string, SVGStyle> styleDictionary, float svgImportResolution)
 			: base(element, styleDictionary)
 		{
 			_path = new GraphicsPath();
@@ -1250,7 +1333,7 @@ namespace SVG
 			PointF prevPoint = PointF.Empty;
 			bool hasPrevPoint = false;
 
-			double pInSegments = 0;
+			double deltaStep = 0;
 
 			//M209.1,187.65c-0.3-0.2-0.7-0.4-1-0.4c-0.3,0-0.7,0.2-0.9,0.4c-0.3,0.3-0.4,0.6-0.4,0.9c0,0.4,0.1,0.7,0.4,1
 			//c0.2,0.2,0.6,0.4,0.9,0.4c0.3,0,0.7-0.2,1-0.4c0.2-0.3,0.3-0.6,0.3-1C209.4,188.25,209.3,187.95,209.1,187.65z
@@ -1335,9 +1418,6 @@ namespace SVG
 							curX = float.Parse(token1, CultureInfo.InvariantCulture);
 							curY = float.Parse(token2, CultureInfo.InvariantCulture);
 						}
-
-						// Start a new line, since we moved
-						//newLine currentLayer;
 
 						// Add the start point to this line
 						currentContour.Add(new PointF(curX, curY));
@@ -1559,10 +1639,10 @@ namespace SVG
 						pt3.X = curX;
 						pt3.Y = curY;
 
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt3, globalDPI);
+						deltaStep = SVGUtils.GetDeltaStep(pt0, pt3, svgImportResolution);
 
 						// Run the bezier code
-						currentContour.AddRange(Bezier.AddBezier((float)pInSegments, pt0, pt1, pt2, pt3));
+						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, pt1, pt2, pt3));
 						
 						// Reflect this point
 						prevPoint = SVGUtils.ReflectAbout(pt2, pt3);
@@ -1611,7 +1691,7 @@ namespace SVG
 						pt2.X = curX;
 						pt2.Y = curY;
 
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
+						deltaStep = SVGUtils.GetDeltaStep(pt0, pt2, svgImportResolution);
 
 						if (!hasPrevPoint) {
 							// Same as pt1
@@ -1619,7 +1699,7 @@ namespace SVG
 						}
 
 						// Run the bezier code
-						currentContour.AddRange(Bezier.AddBezier((float)pInSegments, pt0, prevPoint, pt1, pt2));
+						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, prevPoint, pt1, pt2));
 
 						// Reflect this point
 						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
@@ -1668,10 +1748,10 @@ namespace SVG
 						pt2.X = curX;
 						pt2.Y = curY;
 
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
+						deltaStep = SVGUtils.GetDeltaStep(pt0, pt2, svgImportResolution);
 
 						// Run the bezier code
-						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSegments, pt0, pt1, pt2));
+						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, pt1, pt2));
 						
 						// Reflect this point
 						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
@@ -1709,7 +1789,7 @@ namespace SVG
 						pt1.X = (isRelative ? curX : 0) + float.Parse(token1, CultureInfo.InvariantCulture);
 						pt1.Y = (isRelative ? curY : 0) + float.Parse(token2, CultureInfo.InvariantCulture);
 
-						pInSegments = SVGUtils.GetPinSegments(pt0, pt2, globalDPI);
+						deltaStep = SVGUtils.GetDeltaStep(pt0, pt2, svgImportResolution);
 
 						if (!hasPrevPoint) {
 							// Same as pt1
@@ -1717,7 +1797,7 @@ namespace SVG
 						}
 
 						// Run the bezier code
-						currentContour.AddRange(Bezier.AddQuadBezier((float)pInSegments, pt0, prevPoint, pt1));
+						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, prevPoint, pt1));
 						
 						// Reflect this point
 						prevPoint = SVGUtils.ReflectAbout(prevPoint, pt1);
@@ -1741,9 +1821,6 @@ namespace SVG
 						//addPoint startX, startY;
 						curX = startX;
 						curY = startY;
-
-						// Since this is a closed path, mark it as fillable.
-						//pData(currentLine).Fillable = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "End Shape" + System.Environment.NewLine;
 
@@ -1880,7 +1957,12 @@ namespace SVG
 	{
 		List<ISVGElement> shapes = new List<ISVGElement>();
 		
-		float GLOBAL_DPI = 1.0f; // define mm as the default unit
+		/* SVG Import Default Resolution (px/inch):
+		○ Illustrator: 72
+		○ Inkscape: 90
+		○ OpenSCAD: 25.4  // as 1 inch is 25.4 millimeters
+		 */
+		float SVG_IMPORT_RESOLUTION = 1.0f; // set mm to the default unit
 		float GLOBAL_WIDTH;
 		float GLOBAL_HEIGHT;
 		
@@ -2000,7 +2082,7 @@ namespace SVG
 			
 			// path
 			else if (tagName.Equals("path", StringComparison.InvariantCultureIgnoreCase)) {
-				doc.AddShape(new SVGPath(element, styleDictionary, doc.GLOBAL_DPI));
+				doc.AddShape(new SVGPath(element, styleDictionary, doc.SVG_IMPORT_RESOLUTION));
 			}
 			
 			// line
@@ -2176,7 +2258,7 @@ namespace SVG
 							// (point.X - minX)/GLOBAL_DPI 	=> removes space on the left
 							// (point.Y - minY)/GLOBAL_DPI 	=> removes space on the bottom
 							// (maxY - point.Y)/GLOBAL_DPI 	=> flips up-side down and scales using DPI
-							var scaledPoint = new PointF((point.X - minX)/GLOBAL_DPI, (point.Y - minY)/GLOBAL_DPI);
+							var scaledPoint = new PointF((point.X - minX)/SVG_IMPORT_RESOLUTION, (point.Y - minY)/SVG_IMPORT_RESOLUTION);
 							scaledPoints.Add(scaledPoint);
 						}
 						contours.Add(scaledPoints);
@@ -2191,7 +2273,7 @@ namespace SVG
 						var scaledPoints = new List<PointF>();
 						foreach (PointF point in contour)
 						{
-							var scaledPoint = new PointF( point.X/GLOBAL_DPI, point.Y/GLOBAL_DPI );
+							var scaledPoint = new PointF( point.X/SVG_IMPORT_RESOLUTION, point.Y/SVG_IMPORT_RESOLUTION );
 							scaledPoints.Add(scaledPoint);
 						}
 						contours.Add(scaledPoints);
@@ -2221,7 +2303,14 @@ namespace SVG
 			}
 		}
 
-		static float ScaleValueWithUnit(float value, string unit) {
+		/// <summary>
+		/// Scale a passed value with the defined unit into mm
+		/// i.e. 4mm or 6in
+		/// </summary>
+		/// <param name="value">unit less value (defaults to mm)</param>
+		/// <param name="unit">unit (cm, mm, in, pt, pc)</param>
+		/// <returns>a value in mm</returns>
+		static float ScaleValueWithUnit(float value, string unit="") {
 			
 			// Read the unit
 			// default is mm
@@ -2247,32 +2336,41 @@ namespace SVG
 			return value;
 		}
 		
+		/// <summary>
+		/// Set DPI and Svg Size parameters from the passed paramaters
+		/// </summary>
+		/// <param name="widthValue">width as string</param>
+		/// <param name="heightValue">heigh as string</param>
+		/// <param name="viewboxValue">viewbox as string</param>
 		void SetDPIAndSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
 		{
-			float realW = 0;
-			float realH = 0;
-			float realDPI = 0;
+			float widthMM = 0.0f;
+			float heightMM = 0.0f;
+			float svgImportResolution = 0.0f;
 
-			// width="8.5in"
-			// height="11in"
+			// width="8.5in" height="11in"
 			// viewBox="0 0 765.00001 990.00002"
+			// width="20mm" height="20mm" viewBox="0 -20 20 20"
 
 			// Read these numbers to determine the scale of the data inside the file.
 			// width and height are the real-world widths and heights
 			// viewbox is how we're going to scale the numbers in the file (expressed in pixels) to the native units of this program, which is mm
 			
-			// if we don't have a width value, we cannot set the DPI automatically
-			if (widthValue == null) return;
+			if (widthValue != null) {
+				string widthUnit;
+				ParseNumberWithOptionalUnit(widthValue, out widthMM, out widthUnit);
+				widthMM = ScaleValueWithUnit(widthMM, widthUnit);
+			}
 			
-			string widthUnit;
-			ParseNumberWithOptionalUnit(widthValue, out realW, out widthUnit);
-			realW = ScaleValueWithUnit(realW, widthUnit);
-			
-			string heightUnit;
-			ParseNumberWithOptionalUnit(heightValue, out realH, out heightUnit);
-			realH = ScaleValueWithUnit(realH, heightUnit);
+			if (heightValue != null) {
+				string heightUnit;
+				ParseNumberWithOptionalUnit(heightValue, out heightMM, out heightUnit);
+				heightMM = ScaleValueWithUnit(heightMM, heightUnit);
+			}
 
-			Debug.WriteLine("Size in mm: {0}, {1}", realW, realH);
+			if (widthMM != 0 && heightMM != 0) {
+				Debug.WriteLine("Size in mm: {0}, {1}", widthMM, heightMM);
+			}
 			
 			// The 'ViewBox' is how we scale an mm to a pixel.
 			// The default is 90dpi but it may not be.
@@ -2282,18 +2380,29 @@ namespace SVG
 				
 				if (viewBoxArgs.Count() == 4) {
 					// Get the width in pixels
-					if (realW == 0) {
-						realDPI = 25.4f;
+					if (widthMM == 0) {
+						svgImportResolution = 1.0f;
 					} else {
-						realDPI = viewBoxFloatArgs[2] / realW;
+						svgImportResolution = (viewBoxFloatArgs[2] / widthMM);
 					}
-					Debug.WriteLine("DPI: {0}", realDPI);
+					Debug.WriteLine("Svg Import Resolution: {0}", svgImportResolution);
+
+					// set width and height if they haven't already been set
+					if (widthMM == 0 || heightMM == 0) {
+						if (widthMM == 0) {
+							widthMM = viewBoxFloatArgs[2];
+						}
+						if (heightMM == 0) {
+							heightMM = viewBoxFloatArgs[3];
+						}
+						Debug.WriteLine("Size in mm: {0}, {1}", widthMM, heightMM);
+					}
 				}
 
 				// set the global variables
-				GLOBAL_DPI = realDPI;
-				GLOBAL_WIDTH = realW;
-				GLOBAL_HEIGHT = realH;
+				SVG_IMPORT_RESOLUTION = svgImportResolution;
+				GLOBAL_WIDTH = widthMM;
+				GLOBAL_HEIGHT = heightMM;
 			}
 		}
 		

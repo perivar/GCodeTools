@@ -427,7 +427,6 @@ namespace GCodePlotter
 		void LoadSVG(string svgFilePath) {
 			var svg = SVGDocument.LoadFromFile(svgFilePath);
 			var contours = svg.GetScaledContours();
-			//var contours = svg.GetContours();
 			float zSafeHeight = GetZSafeHeight();
 			float zDepth = GetZDepth();
 			float feedRateRapid = GetFeedRateRapidMoves();

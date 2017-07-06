@@ -109,7 +109,7 @@ namespace SVG
 		/// <summary>
 		/// Add Cubic Bezier Points (Degree-three curves)
 		/// </summary>
-		/// <param name="dt">delta step (1.0 / number of segements)</param>
+		/// <param name="dt">delta step (1.0 / number of segments)</param>
 		/// <param name="pt0">point</param>
 		/// <param name="pt1">point</param>
 		/// <param name="pt2">point</param>
@@ -159,7 +159,7 @@ namespace SVG
 		/// <summary>
 		/// Add Quadratic Bezier Points (Degree-two curves)
 		/// </summary>
-		/// <param name="dt">delta step (1.0 / number of segements)</param>
+		/// <param name="dt">delta step (1.0 / number of segments)</param>
 		/// <param name="pt0">point</param>
 		/// <param name="pt1">point</param>
 		/// <param name="pt2">point</param>
