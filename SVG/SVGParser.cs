@@ -43,6 +43,8 @@ namespace SVG
 	/// </summary>
 	public static class SVGUtils {
 
+		public const float SELF_ZERO = 0.0000001f;
+		
 		/// <summary>
 		/// Return the euclidean distance between two points
 		/// </summary>
@@ -427,8 +429,8 @@ namespace SVG
 
 			qTop = (((Math.Pow(RX, 2))) * ((Math.Pow(RY, 2)))) - (((Math.Pow(RX, 2))) * ((Math.Pow(P1Prime.Y, 2)))) - (((Math.Pow(RY, 2))) * ((Math.Pow(P1Prime.X, 2))));
 
-			if (qTop < 0) // We've been given an invalid arc. Calculate the correct value.
-			{
+			// We've been given an invalid arc. Calculate the correct value.
+			if (qTop < 0) {
 				c = Math.Sqrt((((Math.Pow(P1Prime.Y, 2))) / ((Math.Pow(RY, 2)))) + (((Math.Pow(P1Prime.X, 2))) / ((Math.Pow(RX, 2)))));
 
 				RX = (float) (RX * c);
@@ -487,8 +489,9 @@ namespace SVG
 			endAng = thetaDelta;
 
 			angStep = (Math.PI / 180);
-			if (! sweepFlag) // Sweep flag indicates a positive step
-			{
+			
+			// Sweep flag indicates a positive step
+			if (!sweepFlag) {
 				angStep = -angStep;
 			}
 
@@ -881,19 +884,174 @@ namespace SVG
 		{
 			float x = SVGUtils.ReadFloat(element, "x");
 			float y = SVGUtils.ReadFloat(element, "y");
-			float w = SVGUtils.ReadFloat(element, "width");
-			float h = SVGUtils.ReadFloat(element, "height");
+			float width = SVGUtils.ReadFloat(element, "width");
+			float height = SVGUtils.ReadFloat(element, "height");
+			float rx = SVGUtils.ReadFloat(element, "rx");
+			float ry = SVGUtils.ReadFloat(element, "ry");
 
-			points.Add(new PointF(x, y));
-			points.Add(new PointF(x + w, y));
-			points.Add(new PointF(x + w, y + h));
-			points.Add(new PointF(x, y + h));
-			points.Add(new PointF(x, y));
+			// rounded corners
+			// https://github.com/jstenback/inkscape-gcode/blob/master/src/export_gcode.py
+			
+			if (width > 0.0 && height >= 0.0) {
+				if (( rx < width / 2.0 ) && (ry < height / 2.0 )) {
+					if (rx + ry > 0.0f) {
+						var p1 = new PointF(x+rx,y);
+						var p2 = new PointF(x+width-rx,y);
+						var p3 = new PointF(x+width,y+ry);
+						var p4 = new PointF(x+width,y+height-ry);
+						var p5 = new PointF(x+width-rx,y+height);
+						var p6 = new PointF(x+rx,y+height);
+						var p7 = new PointF(x,y+height-ry);
+						var p8 = new PointF(x,y+ry);
+						
+						if ( (Math.Abs(rx - ry) < SVGUtils.SELF_ZERO)) {
+							// Use arcs for corners
+							var c23 = new PointF(x+width-rx,y+ry);
+							var c45 = new PointF(x+width-rx,y+height-ry);
+							var c67 = new PointF(x+rx,y+height-ry);
+							var c81 = new PointF(x+rx,y+ry);
 
+							StraightLineSegment(points, p1, p2);
+							ArcSegment(points, p2, p3, c23, false);
+							StraightLineSegment(points, p3, p4);
+							ArcSegment(points, p4, p5, c45, false);
+							StraightLineSegment(points, p5, p6);
+							ArcSegment(points, p6, p7, c67, false);
+							StraightLineSegment(points, p7, p8);
+							ArcSegment(points, p8, p1, c81, false);
+						} else {
+							// Use biarcs for corners
+							var p2t = new PointF(x+width-rx/2,y);
+							var p3t = new PointF(x+width,y+ry/2);
+							var p4t = new PointF(x+width,y+height-ry/2);
+							var p5t = new PointF(x+width-rx/2,y+height);
+							var p6t = new PointF(x+rx/2,y+height);
+							var p7t = new PointF(x,y+height-ry/2);
+							var p8t = new PointF(x,y+ry/2);
+							var p1t = new PointF(x+rx/2,y);
+
+							StraightLineSegment(points, p1, p2);
+							BezierSegment(points, p2, p3, p2t, p3t);
+							StraightLineSegment(points, p3, p4);
+							BezierSegment(points, p4, p5, p4t, p5t);
+							StraightLineSegment(points, p5, p6);
+							BezierSegment(points, p6, p7, p6t, p7t);
+							StraightLineSegment(points, p7, p8);
+							BezierSegment(points, p8, p1, p8t, p1t);
+						}
+					} else {
+						// Straight edges
+						var p1 = new PointF(x,y);
+						var p2 = new PointF(x+width,y);
+						var p3 = new PointF(x+width,y+height);
+						var p4 = new PointF(x,y+height);
+
+						StraightLineSegment(points, p1, p2);
+						StraightLineSegment(points, p2, p3);
+						StraightLineSegment(points, p3, p4);
+						StraightLineSegment(points, p4, p1);
+					}
+				}
+			}
+			
 			points = Transform(points);
 
 			_path = new GraphicsPath();
 			_path.AddPolygon(points.ToArray());
+		}
+
+		static void StraightLineSegment(List<PointF> points, PointF p1, PointF p2) {
+			
+			if (points.Count() > 1) {
+				var lastPoint = points.Last();
+				if (!lastPoint.Equals(p1)) {
+					points.Add(p1);
+				}
+			} else {
+				points.Add(p1);
+			}
+			points.Add(p2);
+			
+		}
+		
+		static void BezierSegment(List<PointF> points, PointF p2, PointF p3, PointF p2t, PointF p3t) {
+			// TODO: Fix
+		}
+		
+		static void ArcSegment(List<PointF> points, PointF current, PointF endpoint, PointF center, bool clockwise) {
+
+			float CurveSection = 2.0f;
+			
+			// angle variables.
+			double angleA;
+			double angleB;
+			double angle;
+			double radius;
+			double length;
+
+			// delta variables.
+			double aX;
+			double aY;
+			double bX;
+			double bY;
+
+			// figure out our deltas
+			aX = current.X - center.X;
+			aY = current.Y - center.Y;
+			bX = endpoint.X - center.X;
+			bY = endpoint.Y - center.Y;
+
+			// Clockwise
+			if (clockwise) {
+				angleA = Math.Atan2(bY, bX);
+				angleB = Math.Atan2(aY, aX);
+			}
+			// Counterclockwise
+			else {
+				angleA = Math.Atan2(aY, aX);
+				angleB = Math.Atan2(bY, bX);
+			}
+
+			// Make sure angleB is always greater than angleA
+			// and if not add 2PI so that it is (this also takes
+			// care of the special case of angleA == angleB,
+			// ie we want a complete circle)
+			if (angleB <= angleA) {
+				angleB += 2 * Math.PI;
+			}
+			
+			angle = angleB - angleA;
+			
+			// calculate a couple useful things.
+			radius = Math.Sqrt(aX * aX + aY * aY);
+			length = radius * angle;
+
+			// for doing the actual move.
+			int steps;
+			int s;
+			int step;
+
+			// Maximum of either 2.4 times the angle in radians
+			// or the length of the curve divided by the curve section constant
+			steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / CurveSection));
+
+			// this is the real draw action.
+			var newPoint = PointF.Empty;
+			
+			for (s = 1; s <= steps; s++) {
+				// Forwards for CCW, backwards for CW
+				if (!clockwise) {
+					step = s;
+				} else {
+					step = steps - s;
+				}
+
+				// calculate our waypoint.
+				newPoint.X = (float)((center.X + radius * Math.Cos(angleA + angle * ((double)step / steps))));
+				newPoint.Y = (float)((center.Y + radius * Math.Sin(angleA + angle * ((double)step / steps))));
+				
+				points.Add(newPoint);
+			}
 		}
 		
 		public List<List<PointF>> GetContours()
