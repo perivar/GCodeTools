@@ -283,22 +283,38 @@ namespace SVG
 		}
 		
 		/// <summary>
+		/// Calculate number of steps to use for circles and curved rectangles
+		/// </summary>
+		/// <param name="angle">angle in radians</param>
+		/// <param name="radius">radius</param>
+		/// <returns></returns>
+		public static double CalculateSteps(double angle, double radius) {
+			
+			// calculate a couple useful things.
+			double length = radius * angle;
+			
+			// Maximum of either 2.4 times the angle in radians
+			// or the length of the curve divided by the curve section constant
+			return Math.Max(angle * 2.4, length / CURVE_SECTION);
+		}
+
+		/// <summary>
 		/// Find out how meny segments to use for the bezier curves
 		/// I.e. 1 / number of segments
 		/// </summary>
 		/// <param name="startpoint">start point</param>
 		/// <param name="endpoint">end point</param>
-		/// <param name="globalDPI">DPI</param>
+		/// <param name="svgImportResolution">SVG Import Resolution (1.0f is mm)</param>
 		/// <returns>delta step = 1 / number of segments</returns>
-		public static double GetDeltaStep(PointF startpoint, PointF endpoint, float globalDPI)
+		public static double GetDeltaStep(PointF startpoint, PointF endpoint, float svgImportResolution)
 		{
-			double distance = SVGUtils.Distance(startpoint, endpoint) / globalDPI;
+			// SVG Import Resolution (1.0f is mm)
+			double distance = SVGUtils.Distance(startpoint, endpoint) / svgImportResolution;
 
-			// with a resolution of 500 dpi, the curve should be split into 500 segments per inch. so a distance of 1 should be 500 segments, which is 0.002
-			// subdivide the Bezier into 250 line segments
-			double segments = 0;
-			//segments = 250 * distance;
-			segments = distance / 4; // turns out distance / 4 works pretty OK
+			// with a resolution of 500 dpi, the curve should be split into 500 segments per inch.
+			// so a distance of 1 should be 500 segments, which is 0.002
+			
+			double segments = distance / 4; // turns out distance / 4 works pretty OK
 			
 			return Math.Max(0.01, 1.0 / segments);
 		}
@@ -867,9 +883,10 @@ namespace SVG
 			double y = 0;
 			long rr = 0;
 
-			rr = 2;
+			// calculate number of steps
+			rr = 8; // 2;
 			if (rx > 100 | ry > 100) {
-				rr = 1;
+				rr = 4; // 1;
 			}
 
 			for (a = 0; a <= 360; a += rr) {
@@ -981,18 +998,21 @@ namespace SVG
 			_path.AddPolygon(points.ToArray());
 		}
 
-		static void StraightLineSegment(List<PointF> points, PointF p1, PointF p2) {
+		static void StraightLineSegment(List<PointF> points, PointF startpoint, PointF endpoint) {
 			
+			// avoid duplicates by checking that the new starting point isn't
+			// the same as the previous one
 			if (points.Count() > 1) {
 				var lastPoint = points.Last();
-				if (!lastPoint.Equals(p1)) {
-					points.Add(p1);
+				if (!lastPoint.Equals(startpoint)) {
+					points.Add(startpoint);
 				}
 			} else {
-				points.Add(p1);
+				points.Add(startpoint);
 			}
-			points.Add(p2);
 			
+			// always add the second point
+			points.Add(endpoint);
 		}
 		
 		static void BezierSegment(List<PointF> points, PointF startpoint, PointF endpoint, PointF point1turn, PointF point2turn) {
@@ -1055,11 +1075,9 @@ namespace SVG
 			
 			// calculate a couple useful things.
 			double radius = Math.Sqrt(aX * aX + aY * aY);
-			double length = radius * angle;
-			
-			// Maximum of either 2.4 times the angle in radians
-			// or the length of the curve divided by the curve section constant
-			int steps = (int)Math.Ceiling(Math.Max(angle * 2.4, length / SVGUtils.CURVE_SECTION));
+
+			// calculate the steps
+			int steps = (int)Math.Ceiling(SVGUtils.CalculateSteps(angle, radius));
 
 			// angle in degrees
 			float angleDegrees = (float) SVGUtils.Rad2Deg(angle);
@@ -1190,7 +1208,7 @@ namespace SVG
 	public class SVGCircle : SVGShapeBase, ISVGElement
 	{
 		List<PointF> points = new List<PointF>();
-
+		
 		public SVGCircle(XElement element, Dictionary<string, SVGStyle> styleDictionary)
 			: base(element, styleDictionary)
 		{
@@ -1198,16 +1216,25 @@ namespace SVG
 			float cy = SVGUtils.ReadFloat(element, "cy");
 			float r = SVGUtils.ReadFloat(element, "r");
 
-			// calculate number of steps
-			int steps = 10;
+			// calculate number of steps to use
+			// It follows that the magnitude in radians of one complete revolution (360 degrees)
+			// is the length of the entire circumference divided by the radius, or 2πr / r, or 2π.
+			// Thus 2π radians is equal to 360 degrees, meaning that one radian is equal to
+			// 180/π degrees.
+			double steps = SVGUtils.CalculateSteps(2 * Math.PI, r);
 			
-			// theta <= 2.0 * Math.PI to get a completely round circle
-			for (double theta = 0.0; theta <= 2.0 * Math.PI; theta += Math.PI / (float) (steps/2)) {
+			for (double theta = 0.0; theta < 2.0 * Math.PI; theta += Math.PI / (steps / 2.0)) {
 				double x = Math.Sin(theta) * r + cx;
 				double y = Math.Cos(theta) * r + cy;
 
 				points.Add(new PointF((float)x, (float)y));
 			}
+			
+			// add last point
+			double xLast = Math.Sin(2.0 * Math.PI) * r + cx;
+			double yLast = Math.Cos(2.0 * Math.PI) * r + cy;
+			var lastPoint = new PointF((float)xLast, (float)yLast);
+			if (!points.Last().Equals(lastPoint)) points.Add(lastPoint);
 			
 			points = Transform(points);
 
@@ -1963,8 +1990,8 @@ namespace SVG
 		○ OpenSCAD: 25.4  // as 1 inch is 25.4 millimeters
 		 */
 		float SVG_IMPORT_RESOLUTION = 1.0f; // set mm to the default unit
-		float GLOBAL_WIDTH;
-		float GLOBAL_HEIGHT;
+		float SVG_WIDTH; // SVG width in mm
+		float SVG_HEIGHT; // SVG height in mm
 		
 		public List<ISVGElement> Shapes {
 			get {
@@ -2039,7 +2066,7 @@ namespace SVG
 				string widthValue = SVGUtils.GetAttribute(element, "width");
 				string heightValue = SVGUtils.GetAttribute(element, "height");
 				string viewBoxValue = SVGUtils.GetAttribute(element, "viewBox");
-				doc.SetDPIAndSVGSizeParameters(widthValue, heightValue, viewBoxValue);
+				doc.SetSVGImportResolutionAndSize(widthValue, heightValue, viewBoxValue);
 			}
 			
 			// g layer
@@ -2337,12 +2364,12 @@ namespace SVG
 		}
 		
 		/// <summary>
-		/// Set DPI and Svg Size parameters from the passed paramaters
+		/// Set SVG Import Resolution and Svg Size from the passed paramaters
 		/// </summary>
 		/// <param name="widthValue">width as string</param>
 		/// <param name="heightValue">heigh as string</param>
 		/// <param name="viewboxValue">viewbox as string</param>
-		void SetDPIAndSVGSizeParameters(string widthValue, string heightValue, string viewboxValue)
+		void SetSVGImportResolutionAndSize(string widthValue, string heightValue, string viewboxValue)
 		{
 			float widthMM = 0.0f;
 			float heightMM = 0.0f;
@@ -2401,8 +2428,8 @@ namespace SVG
 
 				// set the global variables
 				SVG_IMPORT_RESOLUTION = svgImportResolution;
-				GLOBAL_WIDTH = widthMM;
-				GLOBAL_HEIGHT = heightMM;
+				SVG_WIDTH = widthMM;
+				SVG_HEIGHT = heightMM;
 			}
 		}
 		
