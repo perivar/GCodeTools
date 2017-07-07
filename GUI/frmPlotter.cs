@@ -766,9 +766,6 @@ namespace GCodePlotter
 
 					var selectedInstruction = (GCodeInstruction) treeView.SelectedNode.Tag;
 					
-					// paint center point if the selected instruction is an arc
-					PaintCenterPoint(g, selectedInstruction);
-
 					// find what block this instruction is a part of
 					var parentBlock = (Block) treeView.SelectedNode.Parent.Tag;
 					
@@ -779,6 +776,20 @@ namespace GCodePlotter
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
 									subLinePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 								}
+							}
+							
+							// paint center point if the selected instruction is an arc
+							if (selectedInstruction.IsArc) {
+								float i = 0.0f;
+								float j = 0.0f;
+								
+								if (selectedInstruction.I.HasValue) i = selectedInstruction.I.Value;
+								if (selectedInstruction.J.HasValue) j = selectedInstruction.J.Value;
+								
+								// find last instruction that has X and Y coordinates
+								var startPoint = GetArcStartPosition(parentBlock.GCodeInstructions, selectedInstruction);
+								var centerPoint = new Point3D(startPoint.X + i, startPoint.Y + j);
+								PaintCenterPoint(g, centerPoint);
 							}
 						} else {
 							// draw instruction as normal
@@ -825,7 +836,63 @@ namespace GCodePlotter
 			// draw split lines
 			PaintSplitLines(g);
 		}
-		
+
+		/// <summary>
+		/// traverse back in the list of instructions and find the previous X and Y coordinate
+		/// </summary>
+		/// <param name="instructions">list of instructions</param>
+		/// <param name="arcInstruction">the instruction that contains the arc</param>
+		/// <returns>the arc start position if found</returns>
+		Point3D GetArcStartPosition (List<GCodeInstruction> instructions, GCodeInstruction arcInstruction) {
+
+			var startPoint = Point3D.Empty;
+			
+			if (instructions.Count == 0) return startPoint;
+			
+			float x = 0.0f;
+			float y = 0.0f;
+			
+			GCodeInstruction prevInstruction = null;
+			int index = 1;
+			bool foundX = false;
+			bool foundY = false;
+			
+			int startIndex = instructions.IndexOf(arcInstruction);
+			if (startIndex > 0) {
+				while (index <= startIndex) {
+					if (foundX && foundY) break;
+
+					prevInstruction = instructions[startIndex - index];
+					
+					if (prevInstruction.CommandType == CommandType.CWArc
+					    || prevInstruction.CommandType == CommandType.CCWArc
+					    || prevInstruction.CommandType == CommandType.NormalMove
+					    || prevInstruction.CommandType == CommandType.RapidMove) {
+						
+						if (!foundX && prevInstruction.X.HasValue) {
+							x = prevInstruction.X.Value;
+							foundX = true;
+						}
+						if (!foundY && prevInstruction.Y.HasValue) {
+							y = prevInstruction.Y.Value;
+							foundY = true;
+						}
+					}
+					
+					if (index == instructions.Count) {
+						// warning, no previous movements found
+						break;
+					}
+					
+					index++;
+				}
+				startPoint.X = x;
+				startPoint.Y = y;
+			}
+
+			return startPoint;
+		}
+
 		void PaintDrillPoint(Graphics g, Block blockItem) {
 			// if this is a drillblock, paint a circle at the point
 			if (blockItem.IsDrillPoint) {
@@ -856,16 +923,12 @@ namespace GCodePlotter
 			}
 		}
 		
-		void PaintCenterPoint(Graphics g, GCodeInstruction instruction) {
-			// check if arc, then draw center point as well
-			if (instruction.IsArc) {
-				var centerPoint = instruction.CenterPoint;
-				var x = centerPoint.X * multiplier + LEFT_MARGIN;
-				var y = gridHeigh - (centerPoint.Y * multiplier) - BOTTOM_MARGIN;
-				var radius = 3.5f/zoomScale;
-				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
-				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
-			}
+		void PaintCenterPoint(Graphics g, Point3D centerPoint) {
+			var x = centerPoint.X * multiplier + LEFT_MARGIN;
+			var y = gridHeigh - (centerPoint.Y * multiplier) - BOTTOM_MARGIN;
+			var radius = 3.5f/zoomScale;
+			var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
+			g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
 		}
 
 		void PaintSplitLines(Graphics g) {
