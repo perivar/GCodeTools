@@ -283,6 +283,35 @@ namespace GCode
 		#endregion
 		
 		#region Properties
+		public bool IsArc {
+			get {
+				if (CommandType == CommandType.CWArc ||
+				    CommandType == CommandType.CCWArc) {
+					return true;
+				}
+				return false;
+			}
+		}
+		
+		public Point3D CenterPoint {
+			get {
+				if (IsArc) {
+					float x = 0.0f;
+					float y = 0.0f;
+					float i = 0.0f;
+					float j = 0.0f;
+					
+					if (X.HasValue) x = X.Value;
+					if (Y.HasValue) y = Y.Value;
+					if (I.HasValue) i = I.Value;
+					if (J.HasValue) j = J.Value;
+					
+					return new Point3D(x - i, y - j);
+				}
+				return Point3D.Empty;
+			}
+		}
+		
 		public bool CanRender
 		{
 			get {

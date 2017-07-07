@@ -169,5 +169,31 @@ namespace GCodeOptimizer.Tests
 			Assert.IsFalse(Transformation.RectangleContains(rect, P5));
 			Assert.IsFalse(Transformation.RectangleContains(rect, P6));
 		}
+		
+		[Test]
+		public void TestGetAngle1() {
+			var c = new PointF(0,0);
+			var p1 = new Point(1,1);
+			
+			var theta1a = GCodeSplitter.GetAngle(p1.X-c.X, p1.Y-c.Y);
+			var theta1b = (float) GCodeSplitter.GetAngle(c, p1);
+			
+			Assert.IsTrue(theta1a == theta1b);
+			
+			
+			var p2 = new Point(9,5);
+			var theta2a = GCodeSplitter.GetAngle(p2.X-c.X, p2.Y-c.Y);
+			var theta2b = (float) GCodeSplitter.GetAngle(c, p2);
+			
+			Assert.IsTrue(theta2a == theta2b);
+
+
+			var p3 = new Point(2,-4);
+			var theta3a = GCodeSplitter.GetAngle(p3.X-c.X, p3.Y-c.Y);
+			var theta3b = (float) GCodeSplitter.GetAngle(c, p3);
+			
+			Assert.IsTrue(theta2a == theta2b);
+			
+		}
 	}
 }

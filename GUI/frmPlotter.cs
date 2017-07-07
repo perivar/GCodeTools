@@ -766,19 +766,22 @@ namespace GCodePlotter
 
 					var selectedInstruction = (GCodeInstruction) treeView.SelectedNode.Tag;
 					
+					// paint center point if the selected instruction is an arc
+					PaintCenterPoint(g, selectedInstruction);
+
 					// find what block this instruction is a part of
 					var parentBlock = (Block) treeView.SelectedNode.Parent.Tag;
 					
 					foreach (var instruction in parentBlock.GCodeInstructions) {
-						
 						if (instruction == selectedInstruction) {
+							// draw correct instruction as selected
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
-									// draw correct instruction as selected
 									subLinePlots.DrawSegment(g, gridHeigh, true, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
 								}
 							}
 						} else {
+							// draw instruction as normal
 							if (instruction.CachedLinePoints != null) {
 								foreach (var subLinePlots in instruction.CachedLinePoints) {
 									subLinePlots.DrawSegment(g, gridHeigh, false, multiplier, cbRenderG0.Checked, LEFT_MARGIN, BOTTOM_MARGIN, zoomScale);
@@ -853,6 +856,18 @@ namespace GCodePlotter
 			}
 		}
 		
+		void PaintCenterPoint(Graphics g, GCodeInstruction instruction) {
+			// check if arc, then draw center point as well
+			if (instruction.IsArc) {
+				var centerPoint = instruction.CenterPoint;
+				var x = centerPoint.X * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - (centerPoint.Y * multiplier) - BOTTOM_MARGIN;
+				var radius = 3.5f/zoomScale;
+				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
+				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
+			}
+		}
+
 		void PaintSplitLines(Graphics g) {
 			float splitX = 0.0f;
 			if ((splitX = GetSplitValue()) > 0) {

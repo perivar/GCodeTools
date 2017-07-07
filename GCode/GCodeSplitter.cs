@@ -511,7 +511,7 @@ namespace GCode
 			}
 
 			var transPoint1 = Rotate(-c.X, ycross1-c.Y, -theta);
-			float gt1 = GetAngle(transPoint1.X,transPoint1.Y, code);
+			float gt1 = GetAngle(transPoint1.X, transPoint1.Y, code);
 			
 			var transPoint2 = Rotate(-c.X, ycross2-c.Y, -theta);
 			float gt2 = GetAngle(transPoint2.X, transPoint2.Y, code);
@@ -560,6 +560,7 @@ namespace GCode
 		
 		/// <summary>
 		/// Routine takes an x and y coordinate and returns the angle in degrees (between 0 and 360)
+		/// I.e. angle of the position of the point relative to the X axis
 		/// </summary>
 		/// <param name="x">x</param>
 		/// <param name="y">y</param>
@@ -574,6 +575,53 @@ namespace GCode
 			if (code == CommandType.CWArc) {
 				return (360.0f - angle);
 			}
+			return angle;
+		}
+		
+		/// <summary>
+		/// Calculates angle in degrees between two points and x-axis.
+		/// Note this is not screen coordinates, but where Y axis is
+		/// positive above X.
+		/// </summary>
+		/// <param name="centerPoint">Point we are rotating around.</param>
+		/// <param name="targetPoint">Point we want to calcuate the angle to</param>
+		/// <returns>angle in degrees</returns>
+		public static double GetAngle(PointF centerPoint, PointF targetPoint) {
+			
+			// NOTE: Remember that most math has the Y axis as positive above the X.
+			// However, for screens we have Y as positive below. For this reason,
+			// the Y values can be inverted to get the expected results.
+			// E.g.
+			// double deltaY = (centerPoint.Y - targetPoint.Y);
+			
+			// calculate delta x and delta y between the two points
+			double deltaY = (targetPoint.Y - centerPoint.Y);
+			double deltaX = (targetPoint.X - centerPoint.X);
+			
+			// Calculate the angle theta from the deltaY and deltaX values
+			// (atan2 returns radians values from [-PI,PI])
+			// 0 currently points EAST.
+			// NOTE: By preserving Y and X param order to atan2,  we are expecting
+			// a CLOCKWISE angle direction.
+			double theta = Math.Atan2(deltaY, deltaX);
+			
+			// Convert from radians to degrees
+			double angle = Transformation.RadianToDegree(theta);
+			
+			// rotate the theta angle clockwise by 90 degrees
+			// (this makes 0 point NORTH)
+			// NOTE: adding to an angle rotates it clockwise.
+			// subtracting would rotate it counter-clockwise
+			//angle += 90.0;
+			
+			// Convert to positive range [0-360)
+			// since we want to prevent negative angles, adjust them now.
+			// we can assume that atan2 will not return a negative value
+			// greater than one partial rotation
+			if (angle < 0) {
+				angle += 360;
+			}
+			
 			return angle;
 		}
 		

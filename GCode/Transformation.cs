@@ -19,7 +19,8 @@ namespace GCode
 		/// <returns>angle in radians</returns>
 		public static double DegreeToRadian(double angle)
 		{
-			return Math.PI * angle / 180.0;
+			const double Deg2Rad = Math.PI / 180.0;
+			return angle * Deg2Rad;
 		}
 		
 		/// <summary>
@@ -29,7 +30,8 @@ namespace GCode
 		/// <returns>angle in degrees</returns>
 		public static double RadianToDegree(double angle)
 		{
-			return angle * (180.0 / Math.PI);
+			const double Rad2Deg = 180.0 / Math.PI;
+			return angle * Rad2Deg;
 		}
 		
 		/// <summary>
