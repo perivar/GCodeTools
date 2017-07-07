@@ -1,5 +1,5 @@
 (File built with GCodeTools)
-(Generated on 08.07.2017 00.50.50)
+(Generated on 07.07.2017 20.20.38)
 
 (Header)
 G90 (set absolute distance mode)
@@ -10,21 +10,9 @@ G0 Z2
 M3 S4000 (start the spindle clockwise at the S speed)
 (Header end.)
 
-G0 X0 Y0 Z1
-
-G0 X20 Y-20
-G1 Z-1 F5
-G2 X60 Y20 Z-1 I0 J40
-G0 Z1 (Retract)
-
-
-G0 X120 Y-20
-G1 Z-1 F5
-G2 X160 Y20 Z-1 I0 J40
-G0 Z1 (Retract)
-
-
-G0 X0 Y0 (Origin)
+G00 X0 Y0 Z0.1
+G01 Y10 F8
+G02 I10 J0
 
 (Footer)
 M5 (stop the spindle)

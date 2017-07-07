@@ -837,12 +837,61 @@ namespace GCodePlotter
 			PaintSplitLines(g);
 		}
 
+		void PaintDrillPoint(Graphics g, Block blockItem) {
+			// if this is a drillblock, paint a circle at the point
+			if (blockItem.IsDrillPoint) {
+				var x = blockItem.PlotPoints[1].X1 * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - (blockItem.PlotPoints[1].Y1 * multiplier) - BOTTOM_MARGIN;
+				var radius = 3.5f/zoomScale;
+				var drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPoint);
+				bool drawDrillPoint = !cbSoloSelect.Checked;
+
+				if (treeView.SelectedNode != null
+				    && treeView.SelectedNode.Tag.Equals(blockItem)) {
+					drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPointHighlight);
+					if (cbSoloSelect.Checked) drawDrillPoint = true;
+				}
+				if (drawDrillPoint) {
+					g.FillEllipse(drillPointBrush, x - radius, y - radius, radius*2, radius*2);
+				}
+			}
+		}
+		
+		void PaintHighlightedPoint(Graphics g, GCodeInstruction instruction) {
+			if (instruction.HasXY) {
+				var x = instruction.X.Value * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - (instruction.Y.Value * multiplier) - BOTTOM_MARGIN;
+				var radius = 3.5f/zoomScale;
+				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
+				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
+			}
+		}
+		
+		void PaintCenterPoint(Graphics g, Point3D centerPoint) {
+			var x = centerPoint.X * multiplier + LEFT_MARGIN;
+			var y = gridHeigh - (centerPoint.Y * multiplier) - BOTTOM_MARGIN;
+			var radius = 3.5f/zoomScale;
+			var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
+			g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
+		}
+
+		void PaintSplitLines(Graphics g) {
+			float splitX = 0.0f;
+			if ((splitX = GetSplitValue()) > 0) {
+				Pen splitPen = ColorHelper.GetPen(PenColorList.SplitLine, zoomScale);
+				var x = splitX * multiplier + LEFT_MARGIN;
+				var y = gridHeigh - BOTTOM_MARGIN;
+				g.DrawLine(splitPen, x, y, x, 0);
+			}
+		}
+
 		/// <summary>
-		/// traverse back in the list of instructions and find the previous X and Y coordinate
+		/// Traverse the list of instructions backwards
+		/// and find the previous X and Y coordinate
 		/// </summary>
 		/// <param name="instructions">list of instructions</param>
 		/// <param name="arcInstruction">the instruction that contains the arc</param>
-		/// <returns>the arc start position if found</returns>
+		/// <returns>the arc start position if found, otherwise Empty</returns>
 		Point3D GetArcStartPosition (List<GCodeInstruction> instructions, GCodeInstruction arcInstruction) {
 
 			var startPoint = Point3D.Empty;
@@ -891,54 +940,6 @@ namespace GCodePlotter
 			}
 
 			return startPoint;
-		}
-
-		void PaintDrillPoint(Graphics g, Block blockItem) {
-			// if this is a drillblock, paint a circle at the point
-			if (blockItem.IsDrillPoint) {
-				var x = blockItem.PlotPoints[1].X1 * multiplier + LEFT_MARGIN;
-				var y = gridHeigh - (blockItem.PlotPoints[1].Y1 * multiplier) - BOTTOM_MARGIN;
-				var radius = 3.5f/zoomScale;
-				var drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPoint);
-				bool drawDrillPoint = !cbSoloSelect.Checked;
-
-				if (treeView.SelectedNode != null
-				    && treeView.SelectedNode.Tag.Equals(blockItem)) {
-					drillPointBrush = ColorHelper.GetBrush(PenColorList.DrillPointHighlight);
-					if (cbSoloSelect.Checked) drawDrillPoint = true;
-				}
-				if (drawDrillPoint) {
-					g.FillEllipse(drillPointBrush, x - radius, y - radius, radius*2, radius*2);
-				}
-			}
-		}
-		
-		void PaintHighlightedPoint(Graphics g, GCodeInstruction instruction) {
-			if (instruction.HasXY) {
-				var x = instruction.X.Value * multiplier + LEFT_MARGIN;
-				var y = gridHeigh - (instruction.Y.Value * multiplier) - BOTTOM_MARGIN;
-				var radius = 3.5f/zoomScale;
-				var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
-				g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
-			}
-		}
-		
-		void PaintCenterPoint(Graphics g, Point3D centerPoint) {
-			var x = centerPoint.X * multiplier + LEFT_MARGIN;
-			var y = gridHeigh - (centerPoint.Y * multiplier) - BOTTOM_MARGIN;
-			var radius = 3.5f/zoomScale;
-			var highlightBrush = ColorHelper.GetBrush(PenColorList.SelectionHighlighted);
-			g.FillEllipse(highlightBrush, x - radius, y - radius, radius*2, radius*2);
-		}
-
-		void PaintSplitLines(Graphics g) {
-			float splitX = 0.0f;
-			if ((splitX = GetSplitValue()) > 0) {
-				Pen splitPen = ColorHelper.GetPen(PenColorList.SplitLine, zoomScale);
-				var x = splitX * multiplier + LEFT_MARGIN;
-				var y = gridHeigh - BOTTOM_MARGIN;
-				g.DrawLine(splitPen, x, y, x, 0);
-			}
 		}
 		#endregion
 		

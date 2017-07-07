@@ -1,0 +1,35 @@
+p1: {X=20, Y=-20, Z=-1}
+p2: {X=60, Y=20, Z=-1}
+c:  {X=20, Y=20, Z=-1}
+
+p1.X-c.X [deltax]: 0
+p1.Y-c.Y [deltay]: -40
+theta: 270
+
+p2.X-c.X [deltax]: 40
+p2.Y-c.Y [deltay]: 0
+angle: -270
+betaPoint: {X=-7,347638E-15, Y=40, Z=0}
+betaAngle: 270
+
+transPoint1
+-c.X: -20
+ycross1-c.Y: -34,64101
+angle: -270
+transPoint1: X=34,64101, Y=-20, Z=0}
+gt1: 30
+
+transPoint2
+-c.X: -20
+ycross2-c.Y: 34,64101
+angle: -270
+transPoint2: X=-34,64101, Y=-20, Z=0}
+gt1: 150
+
+
+deltaZ = p2.Z - p1.Z: 0
+deltaAngle = betaAngle = 270
+mz = deltaZ / deltaAngle = 0
+zcross1 = -1
+zcross2 = -1
+

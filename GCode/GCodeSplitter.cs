@@ -368,11 +368,11 @@ namespace GCode
 		}
 		
 		/// <summary>
-		/// traverse the instructions backwards until a movement is found,
+		/// Traverse the instructions backwards until a movement is found,
 		/// return as Point3D
 		/// </summary>
 		/// <param name="instructions">a list of gcode instructions</param>
-		/// <returns>a point 3D or empty</returns>
+		/// <returns>previous point as a Point3D or Empty</returns>
 		private static Point3D GetPreviousPoint(IList<GCodeInstruction> instructions) {
 			var prevPoint = Point3D.Empty;
 			
