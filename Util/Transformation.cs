@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 
+using System.Drawing.Drawing2D; // Matrix
 using GCode;
 
 namespace Util
@@ -188,21 +189,85 @@ namespace Util
 		/// <summary>
 		/// Reflect the point 180 degrees around the origin
 		/// </summary>
-		/// <param name="ptReflect">point to reflect</param>
-		/// <param name="ptOrigin">origin point</param>
+		/// <param name="point">point to reflect</param>
+		/// <param name="origin">origin point</param>
 		/// <returns>new reflected point</returns>
-		public static PointF ReflectAbout(PointF ptReflect, PointF ptOrigin)
+		public static PointF Reflect(PointF point, PointF origin)
 		{
-			PointF tempReflectAbout = Point.Empty;
+			PointF reflectPoint = Point.Empty;
 			
-			// Reflect ptReflect 180 degrees around ptOrigin
-			tempReflectAbout.X = (-(ptReflect.X - ptOrigin.X)) + ptOrigin.X;
-			tempReflectAbout.Y = (-(ptReflect.Y - ptOrigin.Y)) + ptOrigin.Y;
-			return tempReflectAbout;
+			// Reflect point 180 degrees around origin
+			reflectPoint.X = (-(point.X - origin.X)) + origin.X;
+			reflectPoint.Y = (-(point.Y - origin.Y)) + origin.Y;
+			return reflectPoint;
 		}
 		
 		/// <summary>
-		/// Rotate point through center with a certain angle
+		/// Reflect the point 180 degrees around the origin (using the Matrix class)
+		/// </summary>
+		/// <param name="point">point to reflect</param>
+		/// <param name="origin">origin point</param>
+		/// <returns>new reflected point</returns>
+		public static PointF ReflectMatrix(PointF point, PointF origin) {
+			
+			// Sources:
+			// http://accounts.smccd.edu/hasson/hcoords.html
+			// https://www.codeproject.com/Articles/8281/Matrix-Transformation-of-Images-using-NET-GDIplus
+			//
+			// See also setmatrix in
+			// https://github.com/bkubicek/grecode/blob/master/main.cpp
+			//
+			// The most common reflection matrices are:
+			// 1. for a reflection in the x-axis:
+			// [ 1  0] [ x ]
+			// [ 0 −1] [ y ]
+			// var reflectXMat = new Matrix(1, 0,
+			//                             0, -1,
+			//                             0, 0);
+			
+			// 2. for a reflection in the y-axis
+			// [-1  0] [ x ]
+			// [ 0  1] [ y ]
+			// var reflectYMat = new Matrix(-1, 0,
+			//                             0, 1,
+			//                             0, 0);
+			
+			// 3. for a reflection in the origin
+			// [-1  0] [ x ]
+			// [ 0 -1] [ y ]
+			var reflectOriginMat = new Matrix(-1, 0,
+			                                  0, -1,
+			                                  0, 0);
+			
+			// 4. for a reflection in the line y=x
+			// [ 0  1] [ x ]
+			// [ 1  0] [ y ]
+			// var reflectYXMat = new Matrix(0, 1,
+			//                              1, 0,
+			//                              0, 0);
+			
+			// setup the reflecton matrix
+			PointF reflectPoint = Point.Empty;
+			using (var matrix = new Matrix()) {
+				// Translate point to origin
+				matrix.Translate(-origin.X, -origin.Y, MatrixOrder.Append);
+
+				// setup the reflection transform around origin
+				matrix.Multiply(reflectOriginMat, MatrixOrder.Append);
+				
+				// Translate back to original point
+				matrix.Translate(origin.X, origin.Y, MatrixOrder.Append);
+				
+				PointF[] aPoints = { point };
+				matrix.TransformPoints(aPoints);
+				reflectPoint = aPoints[0];
+			}
+			
+			return reflectPoint;
+		}
+		
+		/// <summary>
+		/// Rotate point around a center point by a certain angle in degrees
 		/// (note that angle is negative for clockwise rotation)
 		/// </summary>
 		/// <param name="point">point to be rotated</param>
@@ -231,6 +296,38 @@ namespace Util
 		}
 		
 		/// <summary>
+		/// Rotate point around a center point by a certain angle in radians
+		/// </summary>
+		/// <param name="point">point to rotate</param>
+		/// <param name="center">center point</param>
+		/// <param name="theta">angle in radians</param>
+		/// <returns>rotated point</returns>
+		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
+		public static PointF RotateRadians(PointF point, PointF center, double theta)
+		{
+			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
+			// the coordinates of the new point would be located at (x',y').
+			// x′= xcosθ − ysinθ
+			// y′= ycosθ + xsinθ
+			
+			PointF rotatedPoint = point;
+
+			// first move point to origin
+			rotatedPoint.X = rotatedPoint.X - center.X;
+			rotatedPoint.Y = rotatedPoint.Y - center.Y;
+
+			// rotate
+			rotatedPoint.X = (float)((Math.Cos(theta) * rotatedPoint.X) + (-Math.Sin(theta) * rotatedPoint.Y));
+			rotatedPoint.Y = (float)((Math.Sin(theta) * rotatedPoint.X) + (Math.Cos(theta) * rotatedPoint.Y));
+
+			// then move point back to where it was originally
+			rotatedPoint.X = rotatedPoint.X + center.X;
+			rotatedPoint.Y = rotatedPoint.Y + center.Y;
+
+			return rotatedPoint;
+		}
+
+		/// <summary>
 		/// Rotate point through origin (0,0) with a certain angle
 		/// (note that angle is negative for clockwise rotation)
 		/// </summary>
@@ -250,40 +347,6 @@ namespace Util
 			float newX = (float)(point.X * Math.Cos(theta) - point.Y * Math.Sin(theta));
 			float newY = (float)(point.Y * Math.Cos(theta) + point.X * Math.Sin(theta));
 			return new PointF(newX, newY);
-		}
-		
-		/// <summary>
-		/// Rotate point around a center point
-		/// </summary>
-		/// <param name="inPoint">point to rotate</param>
-		/// <param name="theta">angle in radians</param>
-		/// <param name="centerPoint">center point</param>
-		/// <returns>rotated point</returns>
-		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
-		public static PointF RotatePoint(PointF inPoint, PointF centerPoint, double theta)
-		{
-			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
-			// the coordinates of the new point would be located at (x',y').
-			// x′= xcosθ − ysinθ
-			// y′= ycosθ + xsinθ
-			
-			PointF tempRotatePoint = PointF.Empty;
-
-			tempRotatePoint = inPoint;
-
-			// first move point to origin
-			tempRotatePoint.X = tempRotatePoint.X - centerPoint.X;
-			tempRotatePoint.Y = tempRotatePoint.Y - centerPoint.Y;
-
-			// rotate
-			tempRotatePoint.X = (float)((Math.Cos(theta) * tempRotatePoint.X) + (-Math.Sin(theta) * tempRotatePoint.Y));
-			tempRotatePoint.Y = (float)((Math.Sin(theta) * tempRotatePoint.X) + (Math.Cos(theta) * tempRotatePoint.Y));
-
-			// then move point back to where it was originally
-			tempRotatePoint.X = tempRotatePoint.X + centerPoint.X;
-			tempRotatePoint.Y = tempRotatePoint.Y + centerPoint.Y;
-
-			return tempRotatePoint;
 		}
 		
 		/// <summary>

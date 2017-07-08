@@ -552,6 +552,51 @@ namespace GCode
 		}
 		
 		/// <summary>
+		/// Shift the gcode instructions in x, y direction
+		/// Note! z is not supported
+		/// </summary>
+		/// <param name="instructions">list of instruction elements</param>
+		/// <param name="deltaX">delta x</param>
+		/// <param name="deltaY">delta y</param>
+		/// <param name="deltaZ">delta z (not used)</param>
+		/// <returns>list of shifted gcode</returns>
+		public static List<GCodeInstruction> GetShiftedGCodeMatrix(List<GCodeInstruction> instructions, float deltaX, float deltaY, float deltaZ) {
+			// Note! the Matrix class doesn't support the z axis
+			
+			var transformed = new List<GCodeInstruction>();
+
+			// get all points
+			var points = instructions.Select(item => item.PointF).ToArray();
+
+			// setup the translation matrix
+			using (var matrix = new Matrix()) {
+				// setup the matrix to shift with deltax and deltay
+				matrix.Translate(deltaX, deltaY);
+				
+				// transform the points
+				matrix.TransformPoints(points);
+			}
+
+			// append the transformed points to the list of instructions
+			int i = 0;
+			foreach (var instruction in instructions) {
+				var point = instruction.PointF;
+				if (point != PointF.Empty) {
+					var transformedPoint = points[i];
+					instruction.X = transformedPoint.X;
+					instruction.Y = transformedPoint.Y;
+					
+					transformed.Add(instruction);
+				} else {
+					transformed.Add(instruction);
+				}
+				i++;
+			}
+			
+			return transformed;
+		}
+		
+		/// <summary>
 		/// Rotate the passed gcode around the center point by the given degees
 		/// </summary>
 		/// <param name="instructions">list of instruction elements</param>
@@ -573,13 +618,18 @@ namespace GCode
 			var points = instructions.Select(item => item.PointF).ToArray();
 
 			// setup the rotation matrix
-			using (var mx = new Matrix()) {
-				mx.Translate(-center.X, -center.Y, MatrixOrder.Append);
-				mx.Rotate(angle, MatrixOrder.Append);
-				mx.Translate(center.X, center.Y, MatrixOrder.Append);
+			using (var matrix = new Matrix()) {
+				// Translate point to origin
+				matrix.Translate(-center.X, -center.Y, MatrixOrder.Append);
+				
+				// setup the rotation matrix
+				matrix.Rotate(angle, MatrixOrder.Append);
+				
+				// Translate back to original point
+				matrix.Translate(center.X, center.Y, MatrixOrder.Append);
 				
 				// rotate the points
-				mx.TransformPoints(points);
+				matrix.TransformPoints(points);
 			}
 			
 			// append the transformed points to the list of instructions

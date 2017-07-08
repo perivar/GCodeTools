@@ -199,5 +199,53 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(theta3a == theta3b && theta3b == theta3c);
 			
 		}
+		
+		
+		[Test]
+		public void TestReflection1() {
+			var c = new PointF(0,0);
+			var p1 = new Point(1,1);
+
+			var r1a = Transformation.Reflect(p1, c);
+			var r1b = Transformation.ReflectMatrix(p1, c);
+			
+			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
+			
+			var p2 = new Point(9,5);
+			var r2a = Transformation.Reflect(p2, c);
+			var r2b = Transformation.ReflectMatrix(p2, c);
+			
+			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
+
+			var p3 = new Point(2,-4);
+			var r3a = Transformation.Reflect(p3, c);
+			var r3b = Transformation.ReflectMatrix(p3, c);
+			
+			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
+		}
+
+		[Test]
+		public void TestReflection2() {
+			var c = new PointF(5,5);
+			var p1 = new Point(1,1);
+
+			var r1a = Transformation.Reflect(p1, c);
+			var r1b = Transformation.ReflectMatrix(p1, c);
+			
+			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
+			
+			var p2 = new Point(9,5);
+			var r2a = Transformation.Reflect(p2, c);
+			var r2b = Transformation.ReflectMatrix(p2, c);
+			
+			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
+
+			var p3 = new Point(2,-4);
+			var r3a = Transformation.Reflect(p3, c);
+			var r3b = Transformation.ReflectMatrix(p3, c);
+			
+			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
+		}
+		
 	}
 }

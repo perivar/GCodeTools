@@ -1461,7 +1461,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, pt1, pt2, pt3));
 						
 						// Reflect this point
-						prevPoint = Transformation.ReflectAbout(pt2, pt3);
+						prevPoint = Transformation.Reflect(pt2, pt3);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Bezier to " + currX + ", " + currY + System.Environment.NewLine;
@@ -1518,7 +1518,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, prevPoint, pt1, pt2));
 
 						// Reflect this point
-						prevPoint = Transformation.ReflectAbout(pt1, pt2);
+						prevPoint = Transformation.Reflect(pt1, pt2);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
@@ -1570,7 +1570,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, pt1, pt2));
 						
 						// Reflect this point
-						prevPoint = Transformation.ReflectAbout(pt1, pt2);
+						prevPoint = Transformation.Reflect(pt1, pt2);
 
 						hasPrevPoint = true;
 
@@ -1616,7 +1616,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, prevPoint, pt1));
 						
 						// Reflect this point
-						prevPoint = Transformation.ReflectAbout(prevPoint, pt1);
+						prevPoint = Transformation.Reflect(prevPoint, pt1);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
