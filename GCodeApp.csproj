@@ -76,7 +76,6 @@
     <Compile Include="GCode\Point3D.cs" />
     <Compile Include="GCode\QuickSettings.cs" />
     <Compile Include="GCode\SimpleGCodeParser.cs" />
-    <Compile Include="GCode\Transformation.cs" />
     <Compile Include="GUI\frmOptions.cs" />
     <Compile Include="GUI\frmOptions.Designer.cs">
       <DependentUpon>frmOptions.cs</DependentUpon>
@@ -97,6 +96,7 @@
     <Compile Include="SVG\SVGParser.cs" />
     <Compile Include="Tests\CoordinateUtilTests.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="Util\Transformation.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -124,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="GCode" />
+    <Folder Include="Util" />
     <Folder Include="GUI" />
     <Folder Include="JavaScript" />
     <Folder Include="GeneticAlgorithm" />

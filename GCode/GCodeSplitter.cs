@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Diagnostics;
 
+using Util;
+
 namespace GCode
 {
 	/// <summary>
@@ -577,54 +579,7 @@ namespace GCode
 			}
 			return angle;
 		}
-		
-		/// <summary>
-		/// Calculates angle in degrees between two points and x-axis.
-		/// Note this is not screen coordinates, but where Y axis is
-		/// positive above X.
-		/// </summary>
-		/// <param name="centerPoint">Point we are rotating around.</param>
-		/// <param name="targetPoint">Point we want to calcuate the angle to</param>
-		/// <returns>angle in degrees</returns>
-		public static double GetAngle(PointF centerPoint, PointF targetPoint) {
-			
-			// NOTE: Remember that most math has the Y axis as positive above the X.
-			// However, for screens we have Y as positive below. For this reason,
-			// the Y values can be inverted to get the expected results.
-			// E.g.
-			// double deltaY = (centerPoint.Y - targetPoint.Y);
-			
-			// calculate delta x and delta y between the two points
-			double deltaY = (targetPoint.Y - centerPoint.Y);
-			double deltaX = (targetPoint.X - centerPoint.X);
-			
-			// Calculate the angle theta from the deltaY and deltaX values
-			// (atan2 returns radians values from [-PI,PI])
-			// 0 currently points EAST.
-			// NOTE: By preserving Y and X param order to atan2,  we are expecting
-			// a CLOCKWISE angle direction.
-			double theta = Math.Atan2(deltaY, deltaX);
-			
-			// Convert from radians to degrees
-			double angle = Transformation.RadianToDegree(theta);
-			
-			// rotate the theta angle clockwise by 90 degrees
-			// (this makes 0 point NORTH)
-			// NOTE: adding to an angle rotates it clockwise.
-			// subtracting would rotate it counter-clockwise
-			//angle += 90.0;
-			
-			// Convert to positive range [0-360)
-			// since we want to prevent negative angles, adjust them now.
-			// we can assume that atan2 will not return a negative value
-			// greater than one partial rotation
-			if (angle < 0) {
-				angle += 360;
-			}
-			
-			return angle;
-		}
-		
+				
 		private static Point3D SetOffsetAndRotation(Point3D point, Point3D center, float degrees) {
 			
 			// How to properly rotate point around another point

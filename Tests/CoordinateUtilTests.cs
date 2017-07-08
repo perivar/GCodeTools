@@ -2,6 +2,7 @@
 using System.Drawing;
 using NUnit.Framework;
 using GCode;
+using Util;
 
 namespace GCodeOptimizer.Tests
 {
@@ -176,23 +177,26 @@ namespace GCodeOptimizer.Tests
 			var p1 = new Point(1,1);
 			
 			var theta1a = GCodeSplitter.GetAngle(p1.X-c.X, p1.Y-c.Y);
-			var theta1b = (float) GCodeSplitter.GetAngle(c, p1);
+			var theta1b = (float) Transformation.GetAngle(c, p1);
+			var theta1c = (float) Transformation.RadianToDegree(Transformation.GetAngleRadians(c, p1));
 			
-			Assert.IsTrue(theta1a == theta1b);
+			Assert.IsTrue(theta1a == theta1b && theta1b == theta1c);
 			
 			
 			var p2 = new Point(9,5);
 			var theta2a = GCodeSplitter.GetAngle(p2.X-c.X, p2.Y-c.Y);
-			var theta2b = (float) GCodeSplitter.GetAngle(c, p2);
+			var theta2b = (float) Transformation.GetAngle(c, p2);
+			var theta2c = (float) Transformation.RadianToDegree(Transformation.GetAngleRadians(c, p2));
 			
-			Assert.IsTrue(theta2a == theta2b);
+			Assert.IsTrue(theta2a == theta2b && theta2b == theta2c);
 
 
 			var p3 = new Point(2,-4);
 			var theta3a = GCodeSplitter.GetAngle(p3.X-c.X, p3.Y-c.Y);
-			var theta3b = (float) GCodeSplitter.GetAngle(c, p3);
+			var theta3b = (float) Transformation.GetAngle(c, p3);
+			var theta3c = (float) Transformation.RadianToDegree(Transformation.GetAngleRadians(c, p3));
 			
-			Assert.IsTrue(theta2a == theta2b);
+			Assert.IsTrue(theta3a == theta3b && theta3b == theta3c);
 			
 		}
 	}

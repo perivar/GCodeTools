@@ -1,9 +1,11 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 
-namespace GCode
+using GCode;
+
+namespace Util
 {
 	/// <summary>
 	/// Transformation Utility Methods.
@@ -51,6 +53,144 @@ namespace GCode
 			
 			return Math.Sqrt( Math.Pow(Math.Abs(p2.X - p1.X), 2) + Math.Pow(Math.Abs(p2.Y - p1.Y), 2) );
 		}
+
+		/// <summary>
+		/// Return the euclidean distance between two points
+		/// </summary>
+		/// <param name="a">first point</param>
+		/// <param name="b">second point</param>
+		/// <returns>the euclidean distance between two points</returns>
+		public static double Distance(PointF a, PointF b)
+		{
+			// From a Math point of view, the distance between two points in the same plane
+			// is the square root of the sum from the power of two from each side in a triangle
+			// distance = Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+			// Or alternatively:
+			// distance = Math.sqrt(Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2));
+
+			double xd = Math.Abs(a.X - b.X);
+			double yd = Math.Abs(a.Y - b.Y);
+
+			xd = xd * xd;
+			yd = yd * yd;
+
+			return Math.Sqrt(xd + yd);
+		}
+
+		/// <summary>
+		/// Return the bounding rectangle around a list of points
+		/// </summary>
+		/// <param name="points">points</param>
+		/// <returns>the bounding rectangle</returns>
+		public static RectangleF BoundingRect(IEnumerable<PointF> points)
+		{
+			var x_query = from PointF p in points select p.X;
+			float xmin = x_query.Min();
+			float xmax = x_query.Max();
+
+			var y_query = from PointF p in points select p.Y;
+			float ymin = y_query.Min();
+			float ymax = y_query.Max();
+
+			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
+		}
+		
+		/// <summary>
+		/// Return the center point of the bounding rectangle for a list of points
+		/// Note that this is not necceserily correct for skewed polygons
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <returns>the centerpoint of the bounding rectangle</returns>
+		public static PointF Center(IEnumerable<PointF> points)
+		{
+			var rect = BoundingRect(points);
+			
+			return new PointF(rect.Left + rect.Width/2,
+			                  rect.Top + rect.Height / 2);
+		}
+		
+		/// <summary>
+		/// Test if the passed list of points is a circle
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <returns>true if circle has been detected</returns>
+		public static bool IsPolygonCircle(IEnumerable<PointF> points) {
+			
+			// A circle:
+			// 1. Has more than 6 vertices.
+			// 2. Has diameter of the same size in each direction.
+			// 3. The area of the contour is ~πr2
+			
+			if (points.Count() < 6) return false;
+			
+			double area = PolygonArea(points);
+			var r = BoundingRect(points);
+			float radius = r.Width / 2;
+			
+			if (Math.Abs( 1 - ((double)r.Width / r.Height)) <= 0.2 &&
+			    Math.Abs(1 - (area / (Math.PI * Math.Pow(radius, 2)))) <= 0.2)
+			{
+				// found circle
+				return true;
+			}
+			return false;
+		}
+		
+		/// <summary>
+		/// If the polygon is a circle, this method can be used to
+		/// return the center point and radiu
+		/// </summary>
+		/// <param name="points">list of points</param>
+		/// <param name="center">out center point</param>
+		/// <param name="radius">out radius</param>
+		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius) {
+
+			center = new PointF {
+				X = (float)(points.Average(p => p.X)),
+				Y = (float)(points.Average(p => p.Y))
+			};
+			
+			var radiuses = new List<double>();
+			foreach (var point in points) {
+				double rad = Distance(center, point);
+				radiuses.Add(rad);
+			}
+			radius = (float)radiuses.Average();
+		}
+		
+		/// <summary>
+		/// Determine the area of the passed polygon
+		/// </summary>
+		/// <param name="points">contour</param>
+		/// <returns>area</returns>
+		public static double PolygonArea(IEnumerable<PointF> points) {
+			
+			int i,j;
+			double area = 0;
+			for (i=0; i < points.Count(); i++) {
+				j = (i + 1) % points.Count();
+				area += points.ElementAt(i).X * points.ElementAt(j).Y;
+				area -= points.ElementAt(i).Y * points.ElementAt(j).X;
+			}
+			area /= 2;
+			return (area < 0 ? -area : area);
+		}
+
+		/// <summary>
+		/// Reflect the point 180 degrees around the origin
+		/// </summary>
+		/// <param name="ptReflect">point to reflect</param>
+		/// <param name="ptOrigin">origin point</param>
+		/// <returns>new reflected point</returns>
+		public static PointF ReflectAbout(PointF ptReflect, PointF ptOrigin)
+		{
+			PointF tempReflectAbout = Point.Empty;
+			
+			// Reflect ptReflect 180 degrees around ptOrigin
+			tempReflectAbout.X = (-(ptReflect.X - ptOrigin.X)) + ptOrigin.X;
+			tempReflectAbout.Y = (-(ptReflect.Y - ptOrigin.Y)) + ptOrigin.Y;
+			return tempReflectAbout;
+		}
 		
 		/// <summary>
 		/// Rotate point through center with a certain angle
@@ -72,7 +212,7 @@ namespace GCode
 			// 2. Rotation around the origin by the required angle
 			// 3. A translation that brings point 1 back to its original position
 			
-			double theta = Transformation.DegreeToRadian(angle);
+			double theta = DegreeToRadian(angle);
 			
 			// Note that this makes the standard assumtion that the angle x is negative for clockwise rotation.
 			// If that's not the case, then you would need to reverse the sign on the terms involving sin(x).
@@ -96,11 +236,129 @@ namespace GCode
 			// x' = x * Cos(theta) - y * Sin(theta)
 			// y' = y * Cos(theta) + x * Sin(theta)
 			
-			double theta = Transformation.DegreeToRadian(angle);
+			double theta = DegreeToRadian(angle);
 			
 			float newX = (float)(point.X * Math.Cos(theta) - point.Y * Math.Sin(theta));
 			float newY = (float)(point.Y * Math.Cos(theta) + point.X * Math.Sin(theta));
 			return new PointF(newX, newY);
+		}
+		
+		/// <summary>
+		/// Rotate point around a center point
+		/// </summary>
+		/// <param name="inPoint">point to rotate</param>
+		/// <param name="theta">angle in radians</param>
+		/// <param name="centerPoint">center point</param>
+		/// <returns>rotated point</returns>
+		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
+		public static PointF RotatePoint(PointF inPoint, PointF centerPoint, double theta)
+		{
+			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
+			// the coordinates of the new point would be located at (x',y').
+			// x′= xcosθ − ysinθ
+			// y′= ycosθ + xsinθ
+			
+			PointF tempRotatePoint = PointF.Empty;
+
+			tempRotatePoint = inPoint;
+
+			// first move point to origin
+			tempRotatePoint.X = tempRotatePoint.X - centerPoint.X;
+			tempRotatePoint.Y = tempRotatePoint.Y - centerPoint.Y;
+
+			// rotate
+			tempRotatePoint.X = (float)((Math.Cos(theta) * tempRotatePoint.X) + (-Math.Sin(theta) * tempRotatePoint.Y));
+			tempRotatePoint.Y = (float)((Math.Sin(theta) * tempRotatePoint.X) + (Math.Cos(theta) * tempRotatePoint.Y));
+
+			// then move point back to where it was originally
+			tempRotatePoint.X = tempRotatePoint.X + centerPoint.X;
+			tempRotatePoint.Y = tempRotatePoint.Y + centerPoint.Y;
+
+			return tempRotatePoint;
+		}
+		
+		/// <summary>
+		/// Calculates angle in radians between two points and x-axis.
+		/// Note this is not screen coordinates, but where Y axis is
+		/// positive above X.
+		/// </summary>
+		/// <param name="centerPoint">Point we are rotating around.</param>
+		/// <param name="targetPoint">Point we want to calcuate the angle to</param>
+		/// <returns>angle in radians</returns>
+		public static double GetAngleRadians(PointF centerPoint, PointF targetPoint)
+		{
+			double tempAngleFromPoint = 0;
+			
+			// Calculate the angle of a point relative to the center
+			// Slope is rise over run
+			double slope = 0;
+
+			if (targetPoint.X == centerPoint.X) {
+				// Either 90 or 270
+				tempAngleFromPoint = ((targetPoint.Y > centerPoint.Y) ? Math.PI / 2 : -Math.PI / 2);
+
+			} else if (targetPoint.X > centerPoint.X) {
+				// 0 - 90 and 270 - 360
+				slope = (targetPoint.Y - centerPoint.Y) / (targetPoint.X - centerPoint.X);
+				tempAngleFromPoint = Math.Atan(slope);
+			} else {
+				// 180 - 270
+				slope = (targetPoint.Y - centerPoint.Y) / (targetPoint.X - centerPoint.X);
+				tempAngleFromPoint = Math.Atan(slope) + Math.PI;
+			}
+
+			if (tempAngleFromPoint < 0) {
+				tempAngleFromPoint = tempAngleFromPoint + (Math.PI * 2);
+			}
+			
+			return tempAngleFromPoint;
+		}
+		
+		/// <summary>
+		/// Calculates angle in degrees between two points and x-axis.
+		/// Note this is not screen coordinates, but where Y axis is
+		/// positive above X.
+		/// </summary>
+		/// <param name="centerPoint">Point we are rotating around.</param>
+		/// <param name="targetPoint">Point we want to calcuate the angle to</param>
+		/// <returns>angle in degrees</returns>
+		public static double GetAngle(PointF centerPoint, PointF targetPoint) {
+			
+			// NOTE: Remember that most math has the Y axis as positive above the X.
+			// However, for screens we have Y as positive below. For this reason,
+			// the Y values can be inverted to get the expected results.
+			// E.g.
+			// double deltaY = (centerPoint.Y - targetPoint.Y);
+			
+			// calculate delta x and delta y between the two points
+			double deltaY = (targetPoint.Y - centerPoint.Y);
+			double deltaX = (targetPoint.X - centerPoint.X);
+			
+			// Calculate the angle theta from the deltaY and deltaX values
+			// (atan2 returns radians values from [-PI,PI])
+			// 0 currently points EAST.
+			// NOTE: By preserving Y and X param order to atan2,  we are expecting
+			// a CLOCKWISE angle direction.
+			double theta = Math.Atan2(deltaY, deltaX);
+			
+			// Convert from radians to degrees
+			double angle = RadianToDegree(theta);
+			
+			// rotate the theta angle clockwise by 90 degrees
+			// (this makes 0 point NORTH)
+			// NOTE: adding to an angle rotates it clockwise.
+			// subtracting would rotate it counter-clockwise
+			//angle += 90.0;
+			
+			// Convert to positive range [0-360)
+			// since we want to prevent negative angles, adjust them now.
+			// we can assume that atan2 will not return a negative value
+			// greater than one partial rotation
+			if (angle < 0) {
+				angle += 360;
+			}
+			
+			return angle;
 		}
 		
 		/// <summary>

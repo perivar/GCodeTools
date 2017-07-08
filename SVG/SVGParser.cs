@@ -24,7 +24,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Drawing;
 using System.IO;
@@ -35,6 +34,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Globalization;
 using System.Diagnostics;
+using Util;
 
 namespace SVG
 {
@@ -50,128 +50,6 @@ namespace SVG
 		// i.e. divide the length of the arc with this constant
 		public const float CURVE_SECTION = 2.0f;
 		
-		/// <summary>
-		/// Return the euclidean distance between two points
-		/// </summary>
-		/// <param name="a">first point</param>
-		/// <param name="b">second point</param>
-		/// <returns>the euclidean distance between two points</returns>
-		public static double Distance(PointF a, PointF b)
-		{
-			// From a Math point of view, the distance between two points in the same plane
-			// is the square root of the sum from the power of two from each side in a triangle
-			// distance = Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
-			// Or alternatively:
-			// distance = Math.sqrt(Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2));
-
-			double xd = Math.Abs(a.X - b.X);
-			double yd = Math.Abs(a.Y - b.Y);
-
-			xd = xd * xd;
-			yd = yd * yd;
-
-			return Math.Sqrt(xd + yd);
-		}
-
-		/// <summary>
-		/// Return the bounding rectangle around a list of points
-		/// </summary>
-		/// <param name="points">points</param>
-		/// <returns>the bounding rectangle</returns>
-		public static RectangleF BoundingRect(IEnumerable<PointF> points)
-		{
-			var x_query = from PointF p in points select p.X;
-			float xmin = x_query.Min();
-			float xmax = x_query.Max();
-
-			var y_query = from PointF p in points select p.Y;
-			float ymin = y_query.Min();
-			float ymax = y_query.Max();
-
-			return new RectangleF(xmin, ymin, xmax - xmin, ymax - ymin);
-		}
-		
-		/// <summary>
-		/// Return the center point of the bounding rectangle for a list of points
-		/// Note that this is not necceserily correct for skewed polygons
-		/// </summary>
-		/// <param name="points">list of points</param>
-		/// <returns>the centerpoint of the bounding rectangle</returns>
-		public static PointF Center(IEnumerable<PointF> points)
-		{
-			var rect = BoundingRect(points);
-			
-			return new PointF(rect.Left + rect.Width/2,
-			                  rect.Top + rect.Height / 2);
-		}
-		
-		/// <summary>
-		/// Test if the passed list of points is a circle
-		/// </summary>
-		/// <param name="points">list of points</param>
-		/// <returns>true if circle has been detected</returns>
-		public static bool IsPolygonCircle(IEnumerable<PointF> points) {
-			
-			// A circle:
-			// 1. Has more than 6 vertices.
-			// 2. Has diameter of the same size in each direction.
-			// 3. The area of the contour is ~πr2
-			
-			if (points.Count() < 6) return false;
-			
-			double area = PolygonArea(points);
-			var r = BoundingRect(points);
-			float radius = r.Width / 2;
-			
-			if (Math.Abs( 1 - ((double)r.Width / r.Height)) <= 0.2 &&
-			    Math.Abs(1 - (area / (Math.PI * Math.Pow(radius, 2)))) <= 0.2)
-			{
-				// found circle
-				return true;
-			}
-			return false;
-		}
-		
-		/// <summary>
-		/// If the polygon is a circle, this method can be used to
-		/// return the center point and radiu
-		/// </summary>
-		/// <param name="points">list of points</param>
-		/// <param name="center">out center point</param>
-		/// <param name="radius">out radius</param>
-		public static void GetCenterAndRadiusForPolygonCircle(IEnumerable<PointF> points, ref PointF center, out float radius) {
-
-			center = new PointF {
-				X = (float)(points.Average(p => p.X)),
-				Y = (float)(points.Average(p => p.Y))
-			};
-			
-			var radiuses = new List<double>();
-			foreach (var point in points) {
-				double rad = Distance(center, point);
-				radiuses.Add(rad);
-			}
-			radius = (float)radiuses.Average();
-		}
-		
-		/// <summary>
-		/// Determine the area of the passed polygon
-		/// </summary>
-		/// <param name="points">contour</param>
-		/// <returns>area</returns>
-		public static double PolygonArea(IEnumerable<PointF> points) {
-			
-			int i,j;
-			double area = 0;
-			for (i=0; i < points.Count(); i++) {
-				j = (i + 1) % points.Count();
-				area += points.ElementAt(i).X * points.ElementAt(j).Y;
-				area -= points.ElementAt(i).Y * points.ElementAt(j).X;
-			}
-			area /= 2;
-			return (area < 0 ? -area : area);
-		}
-
 		/// <summary>
 		/// Read from the data string while a whitespace is found
 		/// </summary>
@@ -309,7 +187,7 @@ namespace SVG
 		public static double GetDeltaStep(PointF startpoint, PointF endpoint, float svgImportResolution)
 		{
 			// SVG Import Resolution (1.0f is mm)
-			double distance = SVGUtils.Distance(startpoint, endpoint) / svgImportResolution;
+			double distance = Transformation.Distance(startpoint, endpoint) / svgImportResolution;
 
 			// with a resolution of 500 dpi, the curve should be split into 500 segments per inch.
 			// so a distance of 1 should be 500 segments, which is 0.002
@@ -317,95 +195,6 @@ namespace SVG
 			double segments = distance / 4; // turns out distance / 4 works pretty OK
 			
 			return Math.Max(0.01, 1.0 / segments);
-		}
-		
-		/// <summary>
-		/// Reflect the point 180 degrees around the origin
-		/// </summary>
-		/// <param name="ptReflect">point to reflect</param>
-		/// <param name="ptOrigin">origin point</param>
-		/// <returns>new reflected point</returns>
-		public static PointF ReflectAbout(PointF ptReflect, PointF ptOrigin)
-		{
-			PointF tempReflectAbout = Point.Empty;
-			
-			// Reflect ptReflect 180 degrees around ptOrigin
-			tempReflectAbout.X = (-(ptReflect.X - ptOrigin.X)) + ptOrigin.X;
-			tempReflectAbout.Y = (-(ptReflect.Y - ptOrigin.Y)) + ptOrigin.Y;
-			return tempReflectAbout;
-		}
-		
-		/// <summary>
-		/// Rotate point around a center point
-		/// </summary>
-		/// <param name="inPoint">point to rotate</param>
-		/// <param name="theta">angle in radians</param>
-		/// <param name="centerPoint">center point</param>
-		/// <returns>rotated point</returns>
-		/// <see cref="https://academo.org/demos/rotation-about-point/"/>
-		public static PointF RotatePoint(PointF inPoint, PointF centerPoint, double theta)
-		{
-			// Imagine a point located at (x,y). If you wanted to rotate that point around the origin,
-			// the coordinates of the new point would be located at (x',y').
-			// x′= xcosθ − ysinθ
-			// y′= ycosθ + xsinθ
-			
-			PointF tempRotatePoint = PointF.Empty;
-
-			tempRotatePoint = inPoint;
-
-			// first move point to origin
-			tempRotatePoint.X = tempRotatePoint.X - centerPoint.X;
-			tempRotatePoint.Y = tempRotatePoint.Y - centerPoint.Y;
-
-			// rotate
-			tempRotatePoint.X = (float)((Math.Cos(theta) * tempRotatePoint.X) + (-Math.Sin(theta) * tempRotatePoint.Y));
-			tempRotatePoint.Y = (float)((Math.Sin(theta) * tempRotatePoint.X) + (Math.Cos(theta) * tempRotatePoint.Y));
-
-			// then move point back to where it was originally
-			tempRotatePoint.X = tempRotatePoint.X + centerPoint.X;
-			tempRotatePoint.Y = tempRotatePoint.Y + centerPoint.Y;
-
-			return tempRotatePoint;
-		}
-		
-		public static double Rad2Deg(double inRad)
-		{
-			return inRad * (180 / Math.PI);
-		}
-
-		public static double Deg2Rad(double inDeg)
-		{
-			return inDeg / (180 / Math.PI);
-		}
-		
-		public static double AngleFromPoint(PointF pCenter, PointF pPoint)
-		{
-			double tempAngleFromPoint = 0;
-			
-			// Calculate the angle of a point relative to the center
-			// Slope is rise over run
-			double slope = 0;
-
-			if (pPoint.X == pCenter.X) {
-				// Either 90 or 270
-				tempAngleFromPoint = ((pPoint.Y > pCenter.Y) ? Math.PI / 2 : -Math.PI / 2);
-
-			} else if (pPoint.X > pCenter.X) {
-				// 0 - 90 and 270 - 360
-				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
-				tempAngleFromPoint = Math.Atan(slope);
-			} else {
-				// 180 - 270
-				slope = (pPoint.Y - pCenter.Y) / (pPoint.X - pCenter.X);
-				tempAngleFromPoint = Math.Atan(slope) + Math.PI;
-			}
-
-			if (tempAngleFromPoint < 0) {
-				tempAngleFromPoint = tempAngleFromPoint + (Math.PI * 2);
-			}
-			
-			return tempAngleFromPoint;
 		}
 		
 		/// <summary>
@@ -451,7 +240,7 @@ namespace SVG
 			double thetaDelta = 0;
 
 			// Turn the degrees of rotation into radians
-			theta = Deg2Rad(rotAng);
+			theta = Transformation.DegreeToRadian(rotAng);
 
 			// Calculate P1Prime
 			P1Prime.X = (float)((Math.Cos(theta) * ((P1.X - P2.X) / 2)) + (Math.Sin(theta) * ((P1.Y - P2.Y) / 2)));
@@ -499,8 +288,8 @@ namespace SVG
 			centerPoint.Y = (float)(((Math.Sin(theta) * CPrime.X) + (Math.Cos(theta) * CPrime.Y)) + ((P1.Y + P2.Y) / 2));
 
 			// Calculate Theta1
-			theta1 = AngleFromPoint(P1Prime, CPrime);
-			thetaDelta = AngleFromPoint(P2Prime, CPrime);
+			theta1 = Transformation.GetAngleRadians(P1Prime, CPrime);
+			thetaDelta = Transformation.GetAngleRadians(P2Prime, CPrime);
 
 			theta1 = theta1 - Math.PI;
 			thetaDelta = thetaDelta - Math.PI;
@@ -532,15 +321,15 @@ namespace SVG
 				angStep = -angStep;
 			}
 
-			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Rad2Deg(startAng), Rad2Deg(endAng), Rad2Deg(angStep));
+			Debug.WriteLine("Start angle {0}, End angle {1}, Step {2}.", Transformation.RadianToDegree(startAng), Transformation.RadianToDegree(endAng), Transformation.RadianToDegree(angStep));
 
 			ang = startAng;
 			do {
 				tempPoint.X = (float)((RX * Math.Cos(ang)) + centerPoint.X);
 				tempPoint.Y = (float)((RY * Math.Sin(ang)) + centerPoint.Y);
 
-				tempAng = AngleFromPoint(centerPoint, tempPoint) + theta;
-				tempDist = Distance(centerPoint, tempPoint);
+				tempAng = Transformation.GetAngleRadians(centerPoint, tempPoint) + theta;
+				tempDist = Transformation.Distance(centerPoint, tempPoint);
 
 				tempPoint.X = (float)((tempDist * Math.Cos(tempAng)) + centerPoint.X);
 				tempPoint.Y = (float)((tempDist * Math.Sin(tempAng)) + centerPoint.Y);
@@ -626,7 +415,7 @@ namespace SVG
 					case "rotate":
 						splitParams = functionParams.Split(',');
 						p0 = float.Parse(splitParams[0], CultureInfo.InvariantCulture);
-						double angle = Deg2Rad(p0);
+						double angle = Transformation.DegreeToRadian(p0);
 						matrix = new Matrix((float)Math.Cos(angle), (float)Math.Sin(angle), (float)-Math.Sin(angle), (float)Math.Cos(angle), 0, 0);
 						break;
 						
@@ -1080,7 +869,7 @@ namespace SVG
 			int steps = (int)Math.Ceiling(SVGUtils.CalculateSteps(angle, radius));
 
 			// angle in degrees
-			float angleDegrees = (float) SVGUtils.Rad2Deg(angle);
+			float angleDegrees = (float) Transformation.RadianToDegree(angle);
 			var tmpPoints = SVGUtils.ParseArcSegment((float) radius, (float) radius, angleDegrees, startpoint, endpoint, false, !sweep, steps);
 			
 			// don't add the first point since it's already added
@@ -1672,7 +1461,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, pt1, pt2, pt3));
 						
 						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt2, pt3);
+						prevPoint = Transformation.ReflectAbout(pt2, pt3);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "Bezier to " + currX + ", " + currY + System.Environment.NewLine;
@@ -1729,7 +1518,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddBezier((float)deltaStep, pt0, prevPoint, pt1, pt2));
 
 						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
+						prevPoint = Transformation.ReflectAbout(pt1, pt2);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
@@ -1781,7 +1570,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, pt1, pt2));
 						
 						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(pt1, pt2);
+						prevPoint = Transformation.ReflectAbout(pt1, pt2);
 
 						hasPrevPoint = true;
 
@@ -1827,7 +1616,7 @@ namespace SVG
 						currentContour.AddRange(Bezier.AddQuadBezier((float)deltaStep, pt0, prevPoint, pt1));
 						
 						// Reflect this point
-						prevPoint = SVGUtils.ReflectAbout(prevPoint, pt1);
+						prevPoint = Transformation.ReflectAbout(prevPoint, pt1);
 						hasPrevPoint = true;
 
 						//pData(currentLine).PathCode = pData(currentLine).PathCode + "3Bezier to " + currX + ", " + currY + System.Environment.NewLine;
@@ -2498,7 +2287,7 @@ namespace SVG
 							lastPoint = point;
 							first = false;
 						} else {
-							if (SVGUtils.Distance(point, lastPoint) > threshhold) {
+							if (Transformation.Distance(point, lastPoint) > threshhold) {
 								++thin;
 								thinnedContour.Add(point);
 								lastPoint = point;

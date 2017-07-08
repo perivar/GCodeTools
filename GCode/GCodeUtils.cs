@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using SVG;
+using Util;
 
 namespace GCode
 {
@@ -402,7 +403,7 @@ namespace GCode
 			foreach (var contour in contours)
 			{
 				contourCounter++;
-				var center = SVGUtils.Center(contour);
+				var center = Transformation.Center(contour);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 X{0:0.##} Y{1:0.##}\n", (center.X - minX), (maxY - center.Y));
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G1 Z{0:0.##} F{1:0.##}\n", z, plungeFeed);
 				sb.AppendFormat(CultureInfo.InvariantCulture, "G0 Z{0:0.##}\n", safeHeight);
