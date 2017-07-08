@@ -39,6 +39,7 @@ namespace GCode
 			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
 			CommandType command = CommandType.Other;
 
+			const float xsplit = 0.0f; // xsplit is always zero, because the whole coordinate system is shifted to origin
 			var app = new List<List<GCodeInstruction>>();
 			app.Add(new List<GCodeInstruction>());
 			app.Add(new List<GCodeInstruction>());
@@ -110,20 +111,20 @@ namespace GCode
 					}
 					
 					// determine what side the move belongs to
-					if (previousPosAtOrigin.X > SELF_ZERO) {
+					if (previousPosAtOrigin.X > xsplit+SELF_ZERO) {
 						flag_side = Position.R;
-					} else if (previousPosAtOrigin.X < SELF_ZERO) {
+					} else if (previousPosAtOrigin.X < xsplit-SELF_ZERO) {
 						flag_side = Position.L;
 					} else {
 						if (command == CommandType.NormalMove) {
-							if (currentPosAtOrigin.X >= 0) {
+							if (currentPosAtOrigin.X >= xsplit) {
 								flag_side = Position.R;
 							} else {
 								flag_side = Position.L;
 							}
 						} else if (command == CommandType.CWArc) {
 							if (Math.Abs(previousPosAtOrigin.Y - centerPosAtOrigin.Y) < SELF_ZERO) {
-								if (centerPosAtOrigin.X > 0) {
+								if (centerPosAtOrigin.X > xsplit) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
@@ -137,7 +138,7 @@ namespace GCode
 							}
 						} else { //(mvtype == 3) {
 							if (Math.Abs(previousPosAtOrigin.Y - centerPosAtOrigin.Y) < SELF_ZERO) {
-								if (centerPosAtOrigin.X > 0) {
+								if (centerPosAtOrigin.X > xsplit) {
 									flag_side = Position.R;
 								} else {
 									flag_side = Position.L;
@@ -164,7 +165,7 @@ namespace GCode
 					if (command == CommandType.NormalMove) {
 						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
 						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
-						cross = GetLineIntersect(previousPosAtOrigin, currentPosAtOrigin);
+						cross = GetLineIntersect(previousPosAtOrigin, currentPosAtOrigin, xsplit);
 
 						if (cross.Count > 0) {
 							// Line crosses boundary
@@ -191,7 +192,7 @@ namespace GCode
 						A = UnsetOffsetAndRotation(previousPosAtOrigin, splitPoint, angle);
 						C = UnsetOffsetAndRotation(currentPosAtOrigin, splitPoint, angle);
 						D  = UnsetOffsetAndRotation(centerPosAtOrigin, splitPoint, angle);
-						cross = GetArcIntersects(previousPosAtOrigin, currentPosAtOrigin, centerPosAtOrigin, command);
+						cross = GetArcIntersects(previousPosAtOrigin, currentPosAtOrigin, centerPosAtOrigin, xsplit, command);
 
 						if (cross.Count > 0) {
 							// Arc crosses boundary at least once
@@ -417,12 +418,21 @@ namespace GCode
 			return prevPoint;
 		}
 		
-		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2) {
+		/// <summary>
+		/// Find line intersect at origin
+		/// </summary>
+		/// <remarks>Ported from Python: def get_line_intersect(self,p1, p2, xsplit)</remarks>
+		/// <seealso cref="http://www.scorchworks.com/Gcoderipper/gcoderipper.html#download"/>
+		/// <param name="p1">start point</param>
+		/// <param name="p2">end point</param>
+		/// <param name="xsplit">x split (always zero)</param>
+		/// <returns>a list with at most one intersect point</returns>
+		public static List<Point3D> GetLineIntersect(Point3D p1, Point3D p2, float xsplit) {
 			
 			var output = new List<Point3D>();
 			
 			// the coordinate system is shifted so that X is 0
-			float xcross = 0.0f;
+			float xcross = xsplit;
 			float ycross = 0.0f;
 			float zcross = 0.0f;
 
@@ -437,18 +447,18 @@ namespace GCode
 			
 			// x and y plane
 			try {
-				float ay = dy / dx;
-				float b1 = p1.Y - ay * p1.X;
-				ycross = b1;
+				float my = dy / dx;
+				float by = p1.Y - my * p1.X;
+				ycross = my * xsplit + by;
 			} catch (Exception) {
 				ycross = p1.Y;
 			}
 
 			// x and z plane
 			try {
-				float az = dz / dx;
-				float bz = p1.Z - az * p1.X;
-				zcross = bz;
+				float mz = dz / dx;
+				float bz = p1.Z - mz * p1.X;
+				zcross = mz * xsplit + bz;
 			} catch (Exception) {
 				zcross = p1.Z;
 			}
@@ -463,13 +473,24 @@ namespace GCode
 			return output;
 		}
 		
-		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D c, CommandType code) {
+		/// <summary>
+		/// Find arc intersects at origin
+		/// </summary>
+		/// <param name="p1">start point</param>
+		/// <param name="p2">end point</param>
+		/// <param name="cent">center point</param>
+		/// <param name="xsplit">x split (always zero)</param>
+		/// <param name="code">direction of arc (clock wise or counter clock wise)</param>
+		/// <returns>a list of intersect points</returns>
+		public static List<Point3D> GetArcIntersects(Point3D p1, Point3D p2, Point3D cent, float xsplit, CommandType code) {
 			
 			var output = new List<Point3D>();
 			
 			// the coordinate system is shifted so that X is 0
-			float xcross1 = 0.0f;
-			float xcross2 = 0.0f;
+			float xcross1 = xsplit;
+			float xcross2 = xsplit;
+			
+			// variables to find
 			float ycross1 = 0.0f;
 			float ycross2 = 0.0f;
 			float zcross1 = 0.0f;
@@ -478,45 +499,59 @@ namespace GCode
 			double gamma2 = 0.0f;
 			
 			// find radius of circle
-			double R = Transformation.Distance(p1, c);
-			double Rt = Transformation.Distance(p2, c);
+			double R = Transformation.Distance(p1, cent);
+			double Rt = Transformation.Distance(p2, cent);
 			
 			// check that the radiuses are equal
 			if (Math.Abs(R-Rt) > SELF_ACCURACY) {
 				Debug.WriteLine("Radius Warning: R1={0} R2={1}", R, Rt);
 			}
 
-			// calculate the ycrosses using c as a full circle
-			// using pythagoras:
+			// calculate where the split line crosses the y-axis
+			// c is the centerpoint.
+			// cx, v and r forms a right angled triangle.
+			// The square of the hypotenuse (r) is equal to
+			// the sum of the squares of the other two sides.
 			// cX^2 + v^2 = r^2
 			// v^2 = r^2 - cX^2
-			double vSquared =  Math.Pow(R,2) - Math.Pow(c.X,2);
+			double vSquared =  Math.Pow(R,2) - Math.Pow(cent.X,2);
 			
 			if (vSquared >= 0.0) {
 				double v = Math.Sqrt(vSquared);
-				ycross1 = (float) (c.Y - v);
-				ycross2 = (float) (c.Y + v);
+				ycross1 = (float) (cent.Y - v);
+				ycross2 = (float) (cent.Y + v);
 			} else {
 				// if v^2 is less than zero, no intersections at all
 				return output;
 			}
 
-			// Note! no code, defaults to CommandType.CCWArc
-			// theta = angle of the position of the start point relative to the X axis
-			float theta = GetAngle(p1.X-c.X, p1.Y-c.Y);
-
-			var betaPoint = Rotate(p2.X-c.X, p2.Y-c.Y, -theta);
-			float betaAngle = GetAngle(betaPoint.X, betaPoint.Y, code);
+			// see also: https://stackoverflow.com/questions/30006155/calculate-intersect-point-between-arc-and-line
 			
-			if (Math.Abs(betaAngle) <= SELF_ZERO) {
-				betaAngle = 360.0f;
+			// theta = angle of the position of the start point relative to the X axis
+			// Note! no code, defaults to CommandType.CCWArc
+			float deltaX1 = p1.X - cent.X;
+			float deltaY1 = p1.Y - cent.Y;
+			
+			// Calculates angle in degrees between two points and x-axis.
+			float theta = GetAngle(deltaX1, deltaY1);
+
+			// rotate the whole arc to make the math simpler
+			float deltaX2 = p2.X - cent.X;
+			float deltaY2 = p2.Y - cent.Y;
+			var betaPoint = Rotate(deltaX2, deltaY2, -theta);
+			
+			// beta = angle between the beta point and the X axis
+			float beta = GetAngle(betaPoint.X, betaPoint.Y, code);
+			
+			if (Math.Abs(beta) <= SELF_ZERO) {
+				beta = 360.0f;
 			}
 
-			var transPoint1 = Rotate(-c.X, ycross1-c.Y, -theta);
-			float gt1 = GetAngle(transPoint1.X, transPoint1.Y, code);
+			var t1 = Rotate(xsplit-cent.X, ycross1-cent.Y, -theta);
+			float gt1 = GetAngle(t1.X, t1.Y, code);
 			
-			var transPoint2 = Rotate(-c.X, ycross2-c.Y, -theta);
-			float gt2 = GetAngle(transPoint2.X, transPoint2.Y, code);
+			var t2 = Rotate(xsplit-cent.X, ycross2-cent.Y, -theta);
+			float gt2 = GetAngle(t2.X, t2.Y, code);
 
 			if (gt1 < gt2) {
 				gamma1 = gt1;
@@ -530,17 +565,32 @@ namespace GCode
 			}
 			
 			var deltaZ = p2.Z - p1.Z;
-			var deltaAngle = betaAngle;
+			var deltaAngle = beta;
 			var mz = deltaZ / deltaAngle;
 			zcross1 = (float) (p1.Z + gamma1 * mz);
 			zcross2 = (float) (p1.Z + gamma2 * mz);
 			
-			if (gamma1 < betaAngle && gamma1 > SELF_ZERO && gamma1 < betaAngle-SELF_ZERO)
+			if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta-SELF_ZERO)
 				output.Add(new Point3D(xcross1, ycross1, zcross1));
 			
-			if (gamma2 < betaAngle && gamma1 > SELF_ZERO && gamma2 < betaAngle-SELF_ZERO)
+			if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta-SELF_ZERO)
 				output.Add(new Point3D(xcross2, ycross2, zcross2));
 
+			#if DEBUG
+			Debug.WriteLine(" start: x1 ={0:0.####} y1={1:0.####} z1={2:0.####}", p1.X, p1.Y, p1.Z);
+			Debug.WriteLine("   end: x2 ={0:0.####} y2={1:0.####} z2={2:0.####}", p2.X, p2.Y, p2.Z);
+			Debug.WriteLine("center: xc ={0:0.####} yc={1:0.####} xsplit={2:0.####} code={3}", cent.X, cent.Y, xsplit, code);
+			Debug.WriteLine("R = {0:0.####}", R);
+			Debug.WriteLine("theta ={0:0.####}", theta);
+			Debug.WriteLine("beta  ={0:0.####} gamma1={1:0.####} gamma2={2:0.####}", beta, gamma1, gamma2);
+			int cnt = 1;
+			foreach (var line in output) {
+				Debug.WriteLine("arc cross {0}: {1:0.####}, {2:0.####}, {3:0.####}", cnt, line.X, line.Y, line.Z);
+				cnt++;
+			}
+			Debug.WriteLine("----------------------------------------------");
+			#endif
+			
 			return output;
 		}
 
@@ -579,7 +629,7 @@ namespace GCode
 			}
 			return angle;
 		}
-				
+		
 		private static Point3D SetOffsetAndRotation(Point3D point, Point3D center, float degrees) {
 			
 			// How to properly rotate point around another point
