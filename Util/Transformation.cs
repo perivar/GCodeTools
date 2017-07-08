@@ -45,38 +45,47 @@ namespace Util
 		/// <returns>the euclidean distance between the two points</returns>
 		public static double Distance(IPoint p1, IPoint p2)
 		{
-			// From a Math point of view, the distance between two points in the same plane
-			// is the square root of the sum from the power of two from each side in a triangle
-			// distance = Math.Sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
-			// Or alternatively:
-			// distance = Math.Sqrt(Math.Pow((x1-x2), 2) + Math.Pow((y1-y2), 2));
-			
-			return Math.Sqrt( Math.Pow(Math.Abs(p2.X - p1.X), 2) + Math.Pow(Math.Abs(p2.Y - p1.Y), 2) );
+			return Distance(p1.X, p1.Y, p2.X, p2.Y);
 		}
 
 		/// <summary>
 		/// Return the euclidean distance between two points
 		/// </summary>
-		/// <param name="a">first point</param>
-		/// <param name="b">second point</param>
+		/// <param name="p1">first point</param>
+		/// <param name="p2">second point</param>
 		/// <returns>the euclidean distance between two points</returns>
-		public static double Distance(PointF a, PointF b)
+		public static double Distance(PointF p1, PointF p2)
 		{
+			return Distance(p1.X, p1.Y, p2.X, p2.Y);
+		}
+
+		/// <summary>
+		/// Return the euclidean distance between two points using their x and y components
+		/// </summary>
+		/// <param name="p1X"></param>
+		/// <param name="p1Y"></param>
+		/// <param name="p2X"></param>
+		/// <param name="p2Y"></param>
+		/// <returns>the euclidean distance between two points</returns>
+		public static double Distance(float p1X, float p1Y, float p2X, float p2Y) {
+
 			// From a Math point of view, the distance between two points in the same plane
 			// is the square root of the sum from the power of two from each side in a triangle
 			// distance = Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 			// Or alternatively:
 			// distance = Math.sqrt(Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2));
 
-			double xd = Math.Abs(a.X - b.X);
-			double yd = Math.Abs(a.Y - b.Y);
+			double xd = Math.Abs(p1X - p2X);
+			double yd = Math.Abs(p1Y - p2Y);
 
+			// Do this manually since Math.Pow is slower than x * x
+			// http://bytewrangler.blogspot.com.es/2011/10/mathpowx2-vs-x-x.html
 			xd = xd * xd;
 			yd = yd * yd;
 
 			return Math.Sqrt(xd + yd);
 		}
-
+		
 		/// <summary>
 		/// Return the bounding rectangle around a list of points
 		/// </summary>
