@@ -879,8 +879,11 @@ namespace SVG
 			}
 		}
 
-		// copied arc code from SimpleGCodeParser
 		static void ArcSegmentV2(List<PointF> points, PointF startpoint, PointF endpoint, PointF center, bool clockwise) {
+			
+			// copied arc code from SimpleGCodeParser
+			// see also
+			// https://www.marginallyclever.com/2014/03/how-to-improve-the-2-axis-cnc-gcode-interpreter-to-understand-arcs/
 			
 			// figure out our deltas
 			double aX = startpoint.X - center.X;
@@ -922,8 +925,9 @@ namespace SVG
 			// this is the real draw action.
 			var newPoint = PointF.Empty;
 			
-			// for doing the actual move.
 			int step;
+			double fraction;
+			double angle3;
 			for (int s = 1; s <= steps; s++) {
 				// Forwards for CCW, backwards for CW
 				if (!clockwise) {
@@ -932,9 +936,13 @@ namespace SVG
 					step = steps - s;
 				}
 
-				// calculate our waypoint.
-				newPoint.X = (float)((center.X + radius * Math.Cos(angleA + angle * ((double)step / steps))));
-				newPoint.Y = (float)((center.Y + radius * Math.Sin(angleA + angle * ((double)step / steps))));
+				// interpolate around the arc
+				fraction = ((double)step / steps);
+				angle3 = (angle * fraction) + angleA;
+
+				// find the intermediate position
+				newPoint.X = (float)(center.X + Math.Cos(angle3) * radius);
+				newPoint.Y = (float)(center.Y + Math.Sin(angle3) * radius);
 				
 				points.Add(newPoint);
 			}

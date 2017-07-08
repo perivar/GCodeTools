@@ -671,10 +671,22 @@ namespace GCode
 			return null;
 		}
 
-		List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D currentPosition)
+		/// <summary>
+		/// Break each arc into lots of short straight lines.
+		/// If they’re short enough no one will be able to tell the difference.
+		/// </summary>
+		/// <param name="center">arc center position</param>
+		/// <param name="endpoint">arc end position</param>
+		/// <param name="clockwise">true if clockwise motion</param>
+		/// <param name="startpoint">arc start position</param>
+		/// <returns>the arc interpolated as a list of straight lines</returns>
+		List<LinePoints> RenderArc(Point3D center, Point3D endpoint, bool clockwise, ref Point3D startpoint)
 		{
+			// see also
+			// https://www.marginallyclever.com/2014/03/how-to-improve-the-2-axis-cnc-gcode-interpreter-to-understand-arcs/
+			
 			// figure out our deltas
-			var current = new Point3D(currentPosition.X, currentPosition.Y, currentPosition.Z);
+			var current = new Point3D(startpoint.X, startpoint.Y, startpoint.Z);
 			double aX = current.X - center.X;
 			double aY = current.Y - center.Y;
 			double bX = endpoint.X - center.X;
@@ -683,13 +695,12 @@ namespace GCode
 			// angle variables.
 			double angleA;
 			double angleB;
-			// Clockwise
 			if (clockwise) {
+				// Clockwise
 				angleA = Math.Atan2(bY, bX);
 				angleB = Math.Atan2(aY, aX);
-			}
-			// Counterclockwise
-			else {
+			} else {
+				// Counterclockwise
 				angleA = Math.Atan2(aY, aX);
 				angleB = Math.Atan2(bY, bX);
 			}
@@ -706,6 +717,11 @@ namespace GCode
 			
 			// calculate a couple useful things.
 			double radius = Math.Sqrt(aX * aX + aY * aY);
+			
+			// get length of arc
+			// float circumference = PI*2.0*radius;
+			// float length = angle*circumference/(PI*2.0);
+			// simplifies to:
 			double length = radius * angle;
 
 			// Maximum of either 2.4 times the angle in radians
@@ -719,6 +735,8 @@ namespace GCode
 			var p = clockwise ? PenColorList.CWArc : PenColorList.CCWArc;
 			
 			int step;
+			double fraction;
+			double angle3;
 			for (int s = 1; s <= steps; s++) {
 				// Forwards for CCW, backwards for CW
 				if (!clockwise) {
@@ -727,21 +745,26 @@ namespace GCode
 					step = steps - s;
 				}
 
-				// calculate our waypoint.
-				newPoint.X = (float)((center.X + radius * Math.Cos(angleA + angle * ((double)step / steps))));
-				newPoint.Y = (float)((center.Y + radius * Math.Sin(angleA + angle * ((double)step / steps))));
+				// interpolate around the arc
+				fraction = ((double)step / steps);
+				angle3 = (angle * fraction) + angleA;
+
+				// find the intermediate position
+				newPoint.X = (float)(center.X + Math.Cos(angle3) * radius);
+				newPoint.Y = (float)(center.Y + Math.Sin(angle3) * radius);
 				
+				// store max and min values
 				maxX = Math.Max(maxX, newPoint.X);
 				maxY = Math.Max(maxY, newPoint.Y);
-
 				minX = Math.Min(minX, newPoint.X);
 				minY = Math.Min(minY, newPoint.Y);
 
-				output.Add(new LinePoints(currentPosition, newPoint, p));
+				// and add the new line
+				output.Add(new LinePoints(startpoint, newPoint, p));
 				
-				// start the move
-				currentPosition.X = newPoint.X;
-				currentPosition.Y = newPoint.Y;
+				// store the last position
+				startpoint.X = newPoint.X;
+				startpoint.Y = newPoint.Y;
 			}
 			return output;
 		}
