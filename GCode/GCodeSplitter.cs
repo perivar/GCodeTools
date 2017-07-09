@@ -525,34 +525,52 @@ namespace GCode
 				return output;
 			}
 
-			// see also: https://stackoverflow.com/questions/30006155/calculate-intersect-point-between-arc-and-line
+			// Other sources:
+			// https://stackoverflow.com/questions/22472427/get-the-centerpoint-of-an-arc-g-code-conversion
+			// https://stackoverflow.com/questions/30006155/calculate-intersect-point-between-arc-and-line
+			// https://gamedev.stackexchange.com/questions/31218/how-to-move-an-object-along-a-circumference-of-another-object
 			
-			// theta = angle of the position of the start point relative to the X axis
-			// Note! no code, defaults to CommandType.CCWArc
+			// Find the relative vector from our center position to the p1 position
 			float deltaX1 = p1.X - cent.X;
 			float deltaY1 = p1.Y - cent.Y;
 			
-			// Calculates angle in degrees between two points and x-axis.
+			// From our relative vector we can find the precise angle relative to the X-axis with:
+			// curTheta = atan2(deltaX, deltaY);
+			// GetAngle calculates angle in degrees between the p1 relative vector
+			// (line between p1 and the center point) and the X-axis.
+			// Note! no code, defaults to CommandType.CCWArc
 			float theta = GetAngle(deltaX1, deltaY1);
 
-			// rotate the whole arc to make the math simpler
+			// Find the relative vector from our center position to the p2 position
 			float deltaX2 = p2.X - cent.X;
 			float deltaY2 = p2.Y - cent.Y;
+			
+			// Rotate the p2 vector (between p2 and the center point) by -theta
 			var betaPoint = Rotate(deltaX2, deltaY2, -theta);
 			
+			// And get the new angle after rotation
 			// beta = angle between the beta point and the X axis
 			float beta = GetAngle(betaPoint.X, betaPoint.Y, code);
 			
 			if (Math.Abs(beta) <= SELF_ZERO) {
 				beta = 360.0f;
 			}
-
+			
+			// Rotate the cross1 vector (between cross1 and the center point) by -theta
 			var t1 = Rotate(xsplit-cent.X, ycross1-cent.Y, -theta);
+			
+			// And get the new angle after rotation
+			// gt1 = angle between the t1 point and the X axis
 			float gt1 = GetAngle(t1.X, t1.Y, code);
 			
+			// Rotate the cross2 vector (between cross2 and the center point) by -theta
 			var t2 = Rotate(xsplit-cent.X, ycross2-cent.Y, -theta);
+
+			// And get the new angle after rotation
+			// gt1 = angle between the t1 point and the X axis
 			float gt2 = GetAngle(t2.X, t2.Y, code);
 
+			// determine gamma
 			if (gt1 < gt2) {
 				gamma1 = gt1;
 				gamma2 = gt2;
@@ -564,12 +582,18 @@ namespace GCode
 				ycross2 = temp;
 			}
 			
+			// if the z values for the two points are different
+			// we need to interpolate between them to find the z points for
+			// the cross1 and cross2 points
 			var deltaZ = p2.Z - p1.Z;
 			var deltaAngle = beta;
 			var mz = deltaZ / deltaAngle;
 			zcross1 = (float) (p1.Z + gamma1 * mz);
 			zcross2 = (float) (p1.Z + gamma2 * mz);
 			
+			// check if the angles of the intersection points and the X-axis is within the
+			// angles of the beta point and the X-axis.
+			// if not the cross points are outside the arc and shouldn't be included
 			if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta-SELF_ZERO)
 				output.Add(new Point3D(xcross1, ycross1, zcross1));
 			
