@@ -200,7 +200,6 @@ namespace GCodeOptimizer.Tests
 			
 		}
 		
-		
 		[Test]
 		public void TestReflection1() {
 			var c = new PointF(0,0);
@@ -247,5 +246,62 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
 		}
 		
+		[Test]
+		public void TestRotation1() {
+			float degree = 90.0f;
+			double theta = Transformation.DegreeToRadian(degree);
+			
+			var c = new PointF(0,0);
+			var p1 = new Point(1,1);
+
+			var r1a = Transformation.Rotate(p1, c, degree);
+			var r1b = Transformation.RotateRadians(p1, c, theta);
+			var r1c = Transformation.Rotate(p1, degree);
+			
+			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
+			Assert.IsTrue(r1a == r1c, "Not equal: " + r1a + " != " + r1c);
+			
+			var p2 = new Point(9,5);
+			var r2a = Transformation.Rotate(p2, c, degree);
+			var r2b = Transformation.RotateRadians(p2, c, theta);
+			var r2c = Transformation.Rotate(p2, degree);
+			
+			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
+			Assert.IsTrue(r2a == r2c, "Not equal: " + r2a + " != " + r2c);
+			
+			var p3 = new Point(2,-4);
+			var r3a = Transformation.Rotate(p3, c, degree);
+			var r3b = Transformation.RotateRadians(p3, c, theta);
+			var r3c = Transformation.Rotate(p3, degree);
+			
+			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
+			Assert.IsTrue(r3a == r3c, "Not equal: " + r3a + " != " + r3c);
+		}
+
+		[Test]
+		public void TestRotation2() {
+			float degree = 90.0f;
+			double theta = Transformation.DegreeToRadian(degree);
+			
+			var c = new PointF(5,5);
+			var p1 = new Point(1,1);
+
+			var r1a = Transformation.Rotate(p1, c, degree);
+			var r1b = Transformation.RotateRadians(p1, c, theta);
+			
+			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
+			
+			var p2 = new Point(9,5);
+			var r2a = Transformation.Rotate(p2, c, degree);
+			var r2b = Transformation.RotateRadians(p2, c, theta);
+			
+			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
+
+			var p3 = new Point(2,-4);
+			var r3a = Transformation.Rotate(p3, c, degree);
+			var r3b = Transformation.RotateRadians(p3, c, theta);
+			
+			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
+		}
 	}
 }

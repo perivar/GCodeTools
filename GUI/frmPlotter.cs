@@ -391,7 +391,7 @@ namespace GCodePlotter
 			var center = new PointF(0, 0);
 			var angle = GetAngle();
 			if (angle == 0) angle = 90;
-			var gcodeInstructions = GCodeUtils.GetRotatedGCodeMatrix(parsedInstructions, center, angle);
+			var gcodeInstructions = GCodeUtils.GetRotatedGCode(parsedInstructions, center, angle);
 			var gCode = GCodeUtils.GetGCode(gcodeInstructions);
 			ParseGCodeString(gCode, false);
 		}
@@ -1372,6 +1372,76 @@ namespace GCodePlotter
 				}
 				RenderBlocks();
 			}
+		}
+		
+		void BtnDbgClick(object sender, EventArgs e)
+		{
+			float theta = 123.0f;
+			
+			var transformed = new List<GCodeInstruction>();
+			
+			// get all points
+			var points = parsedInstructions.Select(item => item.PointF).ToArray();
+
+			// setup the rotation matrix
+			using (var matrix = new Matrix()) {
+				// Translate point to origin
+				//matrix.Translate(-center.X, -center.Y, MatrixOrder.Append);
+				
+				// setup the rotation matrix
+				matrix.Rotate(-theta, MatrixOrder.Append);
+				
+				// Translate back to original point
+				//matrix.Translate(center.X, center.Y, MatrixOrder.Append);
+				
+				// rotate the points
+				matrix.TransformPoints(points);
+			}
+			
+			// append the transformed points to the list of instructions
+			int origXSign = 0;
+			int origYSign = 0;
+			int newXSign = 0;
+			int newYSign = 0;
+			bool XSignChanged = false;
+			bool YSignChanged = false;
+			int i = 0;
+			foreach (var instruction in parsedInstructions) {
+				var point = instruction.PointF;
+				if (point != PointF.Empty) {
+					var rotatedPoint = points[i];
+					
+					origXSign = Math.Sign(instruction.X.Value);
+					origYSign = Math.Sign(instruction.Y.Value);
+					newXSign = Math.Sign(rotatedPoint.X);
+					newYSign = Math.Sign(rotatedPoint.Y);
+					
+					if (origXSign != newXSign) {
+						// sign changed
+						XSignChanged = true;
+					}
+					if (origYSign != newYSign) {
+						// sign changed
+						YSignChanged = true;
+					}
+					
+					instruction.X = rotatedPoint.X;
+					instruction.Y = rotatedPoint.Y;
+					
+					// arc
+					if (instruction.I.HasValue && instruction.J.HasValue) {
+						if (XSignChanged) instruction.I = instruction.I.Value * (float) newXSign;
+						if (YSignChanged) instruction.J = instruction.J.Value * (float) newYSign;
+					}
+					transformed.Add(instruction);
+				} else {
+					transformed.Add(instruction);
+				}
+				i++;
+			}
+			
+			var gCode = GCodeUtils.GetGCode(transformed);
+			ParseGCodeString(gCode, false);
 		}
 	}
 }

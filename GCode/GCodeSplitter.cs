@@ -507,8 +507,8 @@ namespace GCode
 				Debug.WriteLine("Radius Warning: R1={0} R2={1}", R, Rt);
 			}
 
-			// calculate where the split line crosses the y-axis
-			// c is the centerpoint.
+			// Calculate where the split line crosses the arc in the y-dimension
+			// c is the centerpoint, r is radius and v is the length we want to find.
 			// cx, v and r forms a right angled triangle.
 			// The square of the hypotenuse (r) is equal to
 			// the sum of the squares of the other two sides.
@@ -531,40 +531,44 @@ namespace GCode
 			// https://gamedev.stackexchange.com/questions/31218/how-to-move-an-object-along-a-circumference-of-another-object
 			
 			// Find the relative vector from our center position to the p1 position
-			float deltaX1 = p1.X - cent.X;
-			float deltaY1 = p1.Y - cent.Y;
+			float deltaP1X = p1.X - cent.X;
+			float deltaP1Y = p1.Y - cent.Y;
 			
 			// From our relative vector we can find the precise angle relative to the X-axis with:
 			// curTheta = atan2(deltaX, deltaY);
 			// GetAngle calculates angle in degrees between the p1 relative vector
 			// (line between p1 and the center point) and the X-axis.
 			// Note! no code, defaults to CommandType.CCWArc
-			float theta = GetAngle(deltaX1, deltaY1);
+			// Theta1=angle of the position of the start point relative to the X axis
+			float theta1 = GetAngle(deltaP1X, deltaP1Y);
 
 			// Find the relative vector from our center position to the p2 position
-			float deltaX2 = p2.X - cent.X;
-			float deltaY2 = p2.Y - cent.Y;
+			float deltaP2X = p2.X - cent.X;
+			float deltaP2Y = p2.Y - cent.Y;
+				
+			// Theta2=angle of the position of the end point relative to the X axis
+			float theta2 = GetAngle(deltaP2X, deltaP2Y);
 			
 			// Rotate the p2 vector (between p2 and the center point) by -theta
-			var betaPoint = Rotate(deltaX2, deltaY2, -theta);
+			var betaP = Rotate(deltaP2X, deltaP2Y, -theta1);
 			
 			// And get the new angle after rotation
 			// beta = angle between the beta point and the X axis
-			float beta = GetAngle(betaPoint.X, betaPoint.Y, code);
+			float beta = GetAngle(betaP.X, betaP.Y, code);
 			
 			if (Math.Abs(beta) <= SELF_ZERO) {
 				beta = 360.0f;
 			}
 			
 			// Rotate the cross1 vector (between cross1 and the center point) by -theta
-			var t1 = Rotate(xsplit-cent.X, ycross1-cent.Y, -theta);
+			var t1 = Rotate(xsplit-cent.X, ycross1-cent.Y, -theta1);
 			
 			// And get the new angle after rotation
 			// gt1 = angle between the t1 point and the X axis
 			float gt1 = GetAngle(t1.X, t1.Y, code);
 			
 			// Rotate the cross2 vector (between cross2 and the center point) by -theta
-			var t2 = Rotate(xsplit-cent.X, ycross2-cent.Y, -theta);
+			var t2 = Rotate(xsplit-cent.X, ycross2-cent.Y, -theta1);
 
 			// And get the new angle after rotation
 			// gt1 = angle between the t1 point and the X axis
@@ -605,7 +609,7 @@ namespace GCode
 			Debug.WriteLine("   end: x2 ={0:0.####} y2={1:0.####} z2={2:0.####}", p2.X, p2.Y, p2.Z);
 			Debug.WriteLine("center: xc ={0:0.####} yc={1:0.####} xsplit={2:0.####} code={3}", cent.X, cent.Y, xsplit, code);
 			Debug.WriteLine("R = {0:0.####}", R);
-			Debug.WriteLine("theta ={0:0.####}", theta);
+			Debug.WriteLine("theta ={0:0.####}", theta1);
 			Debug.WriteLine("beta  ={0:0.####} gamma1={1:0.####} gamma2={2:0.####}", beta, gamma1, gamma2);
 			int cnt = 1;
 			foreach (var line in output) {

@@ -1,0 +1,23 @@
+theta1: 236,3099
+theta2: 123,6901
+
+360 - 236,3099 = 123,6901
+
+betaP: {X=-13,86751, Y=-33,28201, Z=0}
+beta: 112,6199
+
+t1: {X=33,28201, Y=-13,86751, Z=0}
+gt1 (gamma1): 22,61987
+
+t2: {X=-2,548247E-06, Y=-36,05551, Z=0}
+gt2 (gamma2): 90
+
+
+if (gamma1 < beta && gamma1 > SELF_ZERO && gamma1 < beta-SELF_ZERO)
+	output.Add(new Point3D(xcross1, ycross1, zcross1));
+			
+if (gamma2 < beta && gamma1 > SELF_ZERO && gamma2 < beta-SELF_ZERO)
+	output.Add(new Point3D(xcross2, ycross2, zcross2));
+
+
+

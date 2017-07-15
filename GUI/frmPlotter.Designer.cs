@@ -74,6 +74,7 @@ namespace GCodePlotter
 			this.cbRenderG0 = new System.Windows.Forms.CheckBox();
 			this.sfdSaveDialog = new System.Windows.Forms.SaveFileDialog();
 			this.ofdLoadDialog = new System.Windows.Forms.OpenFileDialog();
+			this.btnDbg = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
 			this.splitContainer1.Panel1.SuspendLayout();
 			this.splitContainer1.Panel2.SuspendLayout();
@@ -144,6 +145,7 @@ namespace GCodePlotter
 			// 
 			// panelZoomFilename
 			// 
+			this.panelZoomFilename.Controls.Add(this.btnDbg);
 			this.panelZoomFilename.Controls.Add(this.txtCoordinates);
 			this.panelZoomFilename.Controls.Add(this.txtFile);
 			this.panelZoomFilename.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -567,6 +569,16 @@ namespace GCodePlotter
 			this.ofdLoadDialog.DefaultExt = "gcode";
 			this.ofdLoadDialog.Filter = "GCode Files|*.gcode;*.nc;*.ngc|All Files|*.*";
 			// 
+			// btnDbg
+			// 
+			this.btnDbg.Location = new System.Drawing.Point(447, 17);
+			this.btnDbg.Name = "btnDbg";
+			this.btnDbg.Size = new System.Drawing.Size(75, 23);
+			this.btnDbg.TabIndex = 12;
+			this.btnDbg.Text = "Dbg";
+			this.btnDbg.UseVisualStyleBackColor = true;
+			this.btnDbg.Click += new System.EventHandler(this.BtnDbgClick);
+			// 
 			// frmPlotter
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -647,5 +659,6 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button btnRotate;
 		private System.Windows.Forms.TextBox txtAngle;
 		private System.Windows.Forms.Label lblAngle;
+		private System.Windows.Forms.Button btnDbg;
 	}
 }

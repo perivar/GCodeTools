@@ -270,11 +270,13 @@ namespace Util
 		/// Rotate point around a center point by a certain angle in degrees
 		/// (note that angle is negative for clockwise rotation)
 		/// </summary>
-		/// <param name="point">point to be rotated</param>
-		/// <param name="center">center point</param>
+		/// <param name="x">point to be rotated, X</param>
+		/// <param name="y">point to be rotated, Y</param>
+		/// <param name="cx">center point, X</param>
+		/// <param name="cy">center point, Y</param>
 		/// <param name="angle">angle in degrees is negative for clockwise rotation</param>
 		/// <returns>rotated point</returns>
-		public static PointF Rotate(PointF point, PointF center, float angle) {
+		public static PointF Rotate(float x, float y, float cx, float cy, float angle) {
 			
 			// If you want to rotate about arbitrary center (cx, cy)
 			// then equations are:
@@ -290,9 +292,22 @@ namespace Util
 			
 			// Note that this makes the standard assumtion that the angle x is negative for clockwise rotation.
 			// If that's not the case, then you would need to reverse the sign on the terms involving sin(x).
-			float newX = (float)(center.X + (point.X-center.X)*Math.Cos(theta) - (point.Y-center.Y)*Math.Sin(theta));
-			float newY = (float)(center.Y + (point.X-center.X)*Math.Sin(theta) + (point.Y-center.Y)*Math.Cos(theta));
+			float newX = (float)(cx + (x-cx) * Math.Cos(theta) - (y-cy) * Math.Sin(theta));
+			float newY = (float)(cy + (x-cx) * Math.Sin(theta) + (y-cy) * Math.Cos(theta));
+
 			return new PointF(newX, newY);
+		}
+		
+		/// <summary>
+		/// Rotate point around a center point by a certain angle in degrees
+		/// (note that angle is negative for clockwise rotation)
+		/// </summary>
+		/// <param name="point">point to be rotated</param>
+		/// <param name="center">center point</param>
+		/// <param name="angle">angle in degrees is negative for clockwise rotation</param>
+		/// <returns>rotated point</returns>
+		public static PointF Rotate(PointF point, PointF center, float angle) {
+			return Rotate(point.X, point.Y, center.X, center.Y, angle);
 		}
 		
 		/// <summary>
@@ -310,21 +325,19 @@ namespace Util
 			// x′= xcosθ − ysinθ
 			// y′= ycosθ + xsinθ
 			
-			PointF rotatedPoint = point;
-
-			// first move point to origin
-			rotatedPoint.X = rotatedPoint.X - center.X;
-			rotatedPoint.Y = rotatedPoint.Y - center.Y;
+			// bring point to origin
+			float x = point.X - center.X;
+			float y = point.Y - center.Y;
 
 			// rotate
-			rotatedPoint.X = (float)((Math.Cos(theta) * rotatedPoint.X) + (-Math.Sin(theta) * rotatedPoint.Y));
-			rotatedPoint.Y = (float)((Math.Sin(theta) * rotatedPoint.X) + (Math.Cos(theta) * rotatedPoint.Y));
+			float newX = (float)(x * Math.Cos(theta) - y * Math.Sin(theta));
+			float newY = (float)(y * Math.Cos(theta) + x * Math.Sin(theta));
 
-			// then move point back to where it was originally
-			rotatedPoint.X = rotatedPoint.X + center.X;
-			rotatedPoint.Y = rotatedPoint.Y + center.Y;
+			// translate point back to it's original position
+			x = newX + center.X;
+			y = newY + center.Y;
 
-			return rotatedPoint;
+			return new PointF(x, y);
 		}
 
 		/// <summary>

@@ -605,6 +605,8 @@ namespace GCode
 		/// <returns>list of rotated gcode</returns>
 		public static List<GCodeInstruction> GetRotatedGCodeMatrix(List<GCodeInstruction> instructions, PointF center, float angle) {
 			
+			// NOTE, THIS DOESN'T SUPPORT ARCS
+			
 			var transformed = new List<GCodeInstruction>();
 			
 			// sources
@@ -662,27 +664,55 @@ namespace GCode
 		/// <param name="center">center point to rotate around</param>
 		/// <param name="angle">angle in degrees</param>
 		/// <returns>list of rotated gcode</returns>
-		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float angle) {
+		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float degrees) {
 			
 			var transformed = new List<GCodeInstruction>();
-			
-			// sources
+
+			// Sources
 			// https://www.codeproject.com/Articles/8281/Matrix-Transformation-of-Images-using-NET-GDIplus
 			// http://csharphelper.com/blog/2015/05/rotate-around-a-point-other-than-the-origin-in-c/
 			
-			// see setmatrix in
+			// See setmatrix in
 			// https://github.com/bkubicek/grecode/blob/master/main.cpp
 			
+			// Main source
+			// https://github.com/thegaragelab/gctools/blob/master/util/filters.py
+			
+			float i = 0.0f;
+			float j = 0.0f;
+			float ox = 0.0f;
+			float oy = 0.0f;
+			float nx = 0.0f;
+			float ny = 0.0f;
+			
 			foreach (var instruction in instructions) {
-				var point = instruction.PointF;
-				if (point != PointF.Empty) {
-					var rotatedPoint = Transformation.Rotate(point, center, angle);
-					instruction.X = rotatedPoint.X;
-					instruction.Y = rotatedPoint.Y;
-					transformed.Add(instruction);
-				} else {
-					transformed.Add(instruction);
+				if (instruction.HasXY) {
+					// I, J are relative to current position so translate before rotating
+					if (instruction.I.HasValue && instruction.J.HasValue) {
+						i = instruction.I.Value + ox;
+						j = instruction.J.Value + oy;
+						
+						var rotatedIJPoint = Transformation.Rotate(i, j, center.X, center.Y, degrees);
+						instruction.I = rotatedIJPoint.X - nx;
+						instruction.J = rotatedIJPoint.Y - ny;
+					}
+					
+					// Do the X, Y co-ordinates
+					if (instruction.X.HasValue && instruction.Y.HasValue) {
+						var rotatedXYPoint = Transformation.Rotate(instruction.X.Value, instruction.Y.Value, center.X, center.Y, degrees);
+						instruction.X = rotatedXYPoint.X;
+						instruction.Y = rotatedXYPoint.Y;
+					}
 				}
+				transformed.Add(instruction);
+				
+				// Save position
+				ox = instruction.X.HasValue ? instruction.X.Value : ox;
+				oy = instruction.Y.HasValue ? instruction.Y.Value : oy;
+				
+				var rotatedNXYPoint = Transformation.Rotate(ox, oy, center.X, center.Y, degrees);
+				nx = rotatedNXYPoint.X;
+				ny = rotatedNXYPoint.Y;
 			}
 
 			return transformed;
