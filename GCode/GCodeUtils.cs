@@ -662,7 +662,7 @@ namespace GCode
 		/// </summary>
 		/// <param name="instructions">list of instruction elements</param>
 		/// <param name="center">center point to rotate around</param>
-		/// <param name="angle">angle in degrees</param>
+		/// <param name="degrees">angle in degrees</param>
 		/// <returns>list of rotated gcode</returns>
 		public static List<GCodeInstruction> GetRotatedGCode(List<GCodeInstruction> instructions, PointF center, float degrees) {
 			

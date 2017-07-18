@@ -447,6 +447,83 @@ namespace Util
 		}
 		
 		/// <summary>
+		/// Get Arc center from two points and radius
+		/// </summary>
+		/// <param name="p1">point 1</param>
+		/// <param name="p2">point 2</param>
+		/// <param name="radius">radius</param>
+		/// <param name="clockwise">whether the arc is clockwise (default true)</param>
+		/// <returns>the arc center point</returns>
+		public static PointF GetArcCenter(PointF p1, PointF p2, float radius, bool clockwise = true) {
+			
+			// Source:
+			// https://stackoverflow.com/questions/22472427/get-the-centerpoint-of-an-arc-g-code-conversion
+			
+			// Compute arc center from radius
+			var theta = 0.0f;
+			var w = 0.0f;
+			var betaCenter = PointF.Empty;
+			
+			// It works by rotating the coordinate system by the angle between the two points,
+			// thus greatly simplifying the math.
+			theta = (float) GetAngle(p1, p2);
+			
+			// rotate p2 using p1 as origin
+			var betaP2 = Rotate(p2, p1, -theta);
+			
+			// set center
+			betaCenter.X = (p1.X + betaP2.X) / 2;
+			betaCenter.Y = 0.0f;
+			
+			w = betaCenter.X - p1.X;
+			if (Math.Abs(radius) < w) {
+				// radius is too small
+				if (w - Math.Abs(radius) > 0.00) {
+					throw new Exception("R-word too small");
+				}
+			} else {
+				betaCenter.Y = - (float) Math.Sqrt(radius * radius - w * w);
+			}
+			
+			// Choose out of the 4 possible arcs
+			if (!clockwise) betaCenter.Y = -betaCenter.Y;
+			if (radius < 0) betaCenter.Y = -betaCenter.Y;
+			
+			betaCenter.Y = betaCenter.Y + p1.Y;
+			
+			// rotate back to origin
+			var center = Rotate(betaCenter, p1, theta);
+			//var p2New = Rotate(betaP2, p1, theta);
+			
+			return center;
+			
+			/*
+			  '--- Compute arc center from radius
+			  Dim tang#, w#
+			  tang = co1.Tangent(co2)
+			  co2.Rotate co1, -tang
+			  center.X = (co1.X + co2.X) / 2
+			  center.Y = 0
+			  w = center.X - co1.X
+			  If Abs(mModal.RWord) < w Then
+			    '--- R-word too small
+			    If mModal.ThrowErr And w - Abs(mModal.RWord) > 0.00
+			      Err.Raise 911, , "R-word too small"
+			    End If
+			  Else
+			    center.Y = -Sqr(mModal.RWord * mModal.RWord - w * w
+			  End If
+			  '--- Choose out of the 4 possible arcs
+			  If Not cw Then center.Y = -center.Y
+			  If mModal.RWord < 0 Then center.Y = -center.Y
+			  center.Y = center.Y + co1.Y
+			  center.Rotate co1, tang
+			  co2.Rotate co1, tang
+			  GetArcCenter = center
+			 */
+		}
+		
+		/// <summary>
 		/// Find the points of intersection between a circle and a line
 		/// </summary>
 		/// <param name="cx">x coordinate of center point of circle</param>

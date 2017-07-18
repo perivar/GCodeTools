@@ -545,7 +545,7 @@ namespace GCode
 			// Find the relative vector from our center position to the p2 position
 			float deltaP2X = p2.X - cent.X;
 			float deltaP2Y = p2.Y - cent.Y;
-				
+			
 			// Theta2=angle of the position of the end point relative to the X axis
 			float theta2 = GetAngle(deltaP2X, deltaP2Y);
 			

@@ -174,7 +174,7 @@ namespace GCodeOptimizer.Tests
 		[Test]
 		public void TestGetAngle1() {
 			var c = new PointF(0,0);
-			var p1 = new Point(1,1);
+			var p1 = new PointF(1,1);
 			
 			var theta1a = GCodeSplitter.GetAngle(p1.X-c.X, p1.Y-c.Y);
 			var theta1b = (float) Transformation.GetAngle(c, p1);
@@ -183,7 +183,7 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(theta1a == theta1b && theta1b == theta1c);
 			
 			
-			var p2 = new Point(9,5);
+			var p2 = new PointF(9,5);
 			var theta2a = GCodeSplitter.GetAngle(p2.X-c.X, p2.Y-c.Y);
 			var theta2b = (float) Transformation.GetAngle(c, p2);
 			var theta2c = (float) Transformation.RadianToDegree(Transformation.GetAngleRadians(c, p2));
@@ -191,7 +191,7 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(theta2a == theta2b && theta2b == theta2c);
 
 
-			var p3 = new Point(2,-4);
+			var p3 = new PointF(2,-4);
 			var theta3a = GCodeSplitter.GetAngle(p3.X-c.X, p3.Y-c.Y);
 			var theta3b = (float) Transformation.GetAngle(c, p3);
 			var theta3c = (float) Transformation.RadianToDegree(Transformation.GetAngleRadians(c, p3));
@@ -203,20 +203,20 @@ namespace GCodeOptimizer.Tests
 		[Test]
 		public void TestReflection1() {
 			var c = new PointF(0,0);
-			var p1 = new Point(1,1);
+			var p1 = new PointF(1,1);
 
 			var r1a = Transformation.Reflect(p1, c);
 			var r1b = Transformation.ReflectMatrix(p1, c);
 			
 			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
 			
-			var p2 = new Point(9,5);
+			var p2 = new PointF(9,5);
 			var r2a = Transformation.Reflect(p2, c);
 			var r2b = Transformation.ReflectMatrix(p2, c);
 			
 			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
 
-			var p3 = new Point(2,-4);
+			var p3 = new PointF(2,-4);
 			var r3a = Transformation.Reflect(p3, c);
 			var r3b = Transformation.ReflectMatrix(p3, c);
 			
@@ -226,20 +226,20 @@ namespace GCodeOptimizer.Tests
 		[Test]
 		public void TestReflection2() {
 			var c = new PointF(5,5);
-			var p1 = new Point(1,1);
+			var p1 = new PointF(1,1);
 
 			var r1a = Transformation.Reflect(p1, c);
 			var r1b = Transformation.ReflectMatrix(p1, c);
 			
 			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
 			
-			var p2 = new Point(9,5);
+			var p2 = new PointF(9,5);
 			var r2a = Transformation.Reflect(p2, c);
 			var r2b = Transformation.ReflectMatrix(p2, c);
 			
 			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
 
-			var p3 = new Point(2,-4);
+			var p3 = new PointF(2,-4);
 			var r3a = Transformation.Reflect(p3, c);
 			var r3b = Transformation.ReflectMatrix(p3, c);
 			
@@ -252,7 +252,7 @@ namespace GCodeOptimizer.Tests
 			double theta = Transformation.DegreeToRadian(degree);
 			
 			var c = new PointF(0,0);
-			var p1 = new Point(1,1);
+			var p1 = new PointF(1,1);
 
 			var r1a = Transformation.Rotate(p1, c, degree);
 			var r1b = Transformation.RotateRadians(p1, c, theta);
@@ -261,7 +261,7 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
 			Assert.IsTrue(r1a == r1c, "Not equal: " + r1a + " != " + r1c);
 			
-			var p2 = new Point(9,5);
+			var p2 = new PointF(9,5);
 			var r2a = Transformation.Rotate(p2, c, degree);
 			var r2b = Transformation.RotateRadians(p2, c, theta);
 			var r2c = Transformation.Rotate(p2, degree);
@@ -269,7 +269,7 @@ namespace GCodeOptimizer.Tests
 			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
 			Assert.IsTrue(r2a == r2c, "Not equal: " + r2a + " != " + r2c);
 			
-			var p3 = new Point(2,-4);
+			var p3 = new PointF(2,-4);
 			var r3a = Transformation.Rotate(p3, c, degree);
 			var r3b = Transformation.RotateRadians(p3, c, theta);
 			var r3c = Transformation.Rotate(p3, degree);
@@ -284,24 +284,54 @@ namespace GCodeOptimizer.Tests
 			double theta = Transformation.DegreeToRadian(degree);
 			
 			var c = new PointF(5,5);
-			var p1 = new Point(1,1);
+			var p1 = new PointF(1,1);
 
 			var r1a = Transformation.Rotate(p1, c, degree);
 			var r1b = Transformation.RotateRadians(p1, c, theta);
 			
 			Assert.IsTrue(r1a == r1b, "Not equal: " + r1a + " != " + r1b);
 			
-			var p2 = new Point(9,5);
+			var p2 = new PointF(9,5);
 			var r2a = Transformation.Rotate(p2, c, degree);
 			var r2b = Transformation.RotateRadians(p2, c, theta);
 			
 			Assert.IsTrue(r2a == r2b, "Not equal: " + r2a + " != " + r2b);
 
-			var p3 = new Point(2,-4);
+			var p3 = new PointF(2,-4);
 			var r3a = Transformation.Rotate(p3, c, degree);
 			var r3b = Transformation.RotateRadians(p3, c, theta);
 			
 			Assert.IsTrue(r3a == r3b, "Not equal: " + r3a + " != " + r3b);
+		}
+		
+		[Test]
+		public void TestArcCenter1() {
+
+			var p1 = new PointF(1,-2);
+			var p2 = new PointF(1,4);
+			var c = new PointF(3, 1);
+			
+			// pythagoras: r^2 = cx^2 + v^2
+			float radius = (float) Math.Sqrt(3*3 + 2*2);
+			
+			var c2 = Transformation.GetArcCenter(p1, p2, radius);
+			
+			Assert.IsTrue(c == c2, "Not equal: " + c + " != " + c2);
+		}
+
+		[Test]
+		public void TestArcCenter2() {
+
+			var p1 = new PointF(1,-2);
+			var p2 = new PointF(5,4);
+			var c = new PointF(3, 1);
+			
+			// pythagoras: r^2 = cx^2 + v^2
+			float radius = (float) Math.Sqrt(3*3 + 2*2);
+			
+			var c2 = Transformation.GetArcCenter(p1, p2, radius);
+			
+			Assert.IsTrue(c == c2, "Not equal: " + c + " != " + c2);
 		}
 	}
 }
