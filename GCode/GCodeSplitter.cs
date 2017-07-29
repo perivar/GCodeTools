@@ -31,7 +31,7 @@ namespace GCode
 		/// <param name="zClearance">z-height (clearance) to use in added rapid moves</param>
 		/// <returns>List of tiles</returns>
 		/// <remarks>
-		/// Copied from the G-Code_Ripper-0.12 Python App
+		/// Porteed from the G-Code_Ripper-0.14 Python App
 		/// Method: def split_code(self,code2split,shift=[0,0,0],angle=0.0)
 		/// </remarks>
 		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance)
@@ -262,114 +262,6 @@ namespace GCode
 			return app;
 		}
 		
-		public static List<List<GCodeInstruction>> Split(List<GCodeInstruction> instructions, Point3D splitPoint, float angle, float zClearance, float minX, float maxX, float minY, float maxY) {
-			
-			return Split(instructions, splitPoint, angle, zClearance);
-			
-			// G0 (Rapid), G1 (linear), G2 (clockwise arc) or G3 (counterclockwise arc).
-			CommandType mvtype = CommandType.Other;
-			
-			var app = new List<List<GCodeInstruction>>();
-			app.Add(new List<GCodeInstruction>());
-			app.Add(new List<GCodeInstruction>());
-			
-			var currentPos = Point3D.Empty;		// current position as read
-			var previousPos = Point3D.Empty;	// current position as read
-			var centerPos = Point3D.Empty;		// center position converted
-			float currentFeedrate = 0.0f;
-			
-			// original rectangle
-			var origRect = new RectangleF(minX, minY, Math.Abs(maxX-minX), Math.Abs(maxY-minY));
-			
-			int numTiles = 2; //9;
-
-			// split into equal sized rectangles (tiles)
-			int numColumns = (int) (Math.Ceiling(Math.Sqrt(numTiles)));
-			int numRows = (int) Math.Ceiling(numTiles / (double)numColumns);
-			
-			float width =  origRect.Width / numColumns;
-			float height = origRect.Height / numRows;
-			
-			var allTileRectangles = new Dictionary<RectangleF, List<GCodeInstruction>>();
-			for (int y = 0; y < numRows; ++y) {
-				for (int x = 0; x < numColumns; ++x) {
-					allTileRectangles.Add(new RectangleF(x * width, y * height, width, height), new List<GCodeInstruction>());
-				}
-			}
-			
-			// for each tile, add corresponding gcode instructions
-			int numInstructions = 1;
-			foreach (var instruction in instructions)
-			{
-				// store move type
-				mvtype = instruction.CommandType;
-				
-				// merge previous coordinates with newer ones to maintain correct point coordinates
-				if ((instruction.X.HasValue || instruction.Y.HasValue || instruction.Z.HasValue
-				     || instruction.F.HasValue)) {
-					if (instruction.X.HasValue && instruction.X.Value != currentPos.X) {
-						currentPos.X = instruction.X.Value;
-					}
-					if (instruction.Y.HasValue && instruction.Y.Value != currentPos.Y) {
-						currentPos.Y = instruction.Y.Value;
-					}
-					if (instruction.Z.HasValue && instruction.Z.Value != currentPos.Z) {
-						currentPos.Z = instruction.Z.Value;
-					}
-					if (instruction.F.HasValue && instruction.F.Value != currentFeedrate) {
-						currentFeedrate = instruction.F.Value;
-					}
-				}
-				
-				// figure out what tile(s) this instruction belongs to
-				var tileRectangles = GetImpactedTileRectangles(allTileRectangles, instruction, previousPos, currentPos);
-
-				if (mvtype == CommandType.NormalMove
-				    || mvtype == CommandType.CWArc
-				    || mvtype == CommandType.CCWArc) {
-					
-					// store center point
-					if (instruction.I.HasValue && instruction.J.HasValue) {
-						centerPos = new Point3D(previousPos.X+instruction.I.Value,
-						                        previousPos.Y+instruction.J.Value,
-						                        currentPos.Z);
-					}
-
-					// Handle normal moves
-					if (mvtype == CommandType.NormalMove) {
-						
-					}
-					
-					// Handle Arc moves
-					if (mvtype == CommandType.CWArc || mvtype == CommandType.CCWArc ) {
-					}
-					
-				} else {
-					// if not any normal or arc moves, store the instruction in all tiles
-					// rapid moves are also handled here
-				}
-				
-				// store current position
-				previousPos = currentPos;
-				
-				// count number of instructions processed
-				numInstructions++;
-			}
-			
-			return app;
-		}
-		
-		static List<RectangleF> GetImpactedTileRectangles(Dictionary<RectangleF, List<GCodeInstruction>> tileRects, GCodeInstruction instruction, Point3D previousPos, Point3D currentPos) {
-			var rectangles = new List<RectangleF>();
-			
-			foreach (var rect in tileRects.Keys) {
-				if (Transformation.RectangleContains(rect, currentPos)) {
-					rectangles.Add(rect);
-				}
-			}
-			return rectangles;
-		}
-		
 		/// <summary>
 		/// Traverse the instructions backwards until a movement is found,
 		/// return as Point3D
@@ -421,7 +313,7 @@ namespace GCode
 		/// <summary>
 		/// Find line intersect at origin
 		/// </summary>
-		/// <remarks>Ported from Python: def get_line_intersect(self,p1, p2, xsplit)</remarks>
+		/// <remarks>Ported from Python: def get_line_intersect(self, p1, p2, xsplit)</remarks>
 		/// <seealso cref="http://www.scorchworks.com/Gcoderipper/gcoderipper.html#download"/>
 		/// <param name="p1">start point</param>
 		/// <param name="p2">end point</param>
@@ -476,6 +368,8 @@ namespace GCode
 		/// <summary>
 		/// Find arc intersects at origin
 		/// </summary>
+		/// <remarks>Ported from Python: def get_arc_intersects(self, p1, p2, xsplit, cent, code)</remarks>
+		/// <seealso cref="http://www.scorchworks.com/Gcoderipper/gcoderipper.html#download"/>
 		/// <param name="p1">start point</param>
 		/// <param name="p2">end point</param>
 		/// <param name="cent">center point</param>
