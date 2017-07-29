@@ -58,6 +58,13 @@ namespace GCodePlotter
 			InitializeComponent();
 			
 			filePathArgument = filePath;
+			
+			string version = GetInformationalVersion(System.Reflection.Assembly.GetExecutingAssembly());
+			this.Text = String.Format("GCode App Version {0}", version);
+		}
+		
+		public string GetInformationalVersion(System.Reflection.Assembly assembly) {
+			return System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).ProductVersion;
 		}
 		
 		DialogResult AskToLoadData()
