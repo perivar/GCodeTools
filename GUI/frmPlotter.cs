@@ -13,6 +13,9 @@ using System.Globalization;
 using GCode;
 using SVG;
 
+using System.Reflection; // for Assembly
+using System.Diagnostics; // for FileVersionInfo
+
 namespace GCodePlotter
 {
 	public partial class frmPlotter : Form
@@ -59,12 +62,20 @@ namespace GCodePlotter
 			
 			filePathArgument = filePath;
 			
-			string version = GetInformationalVersion(System.Reflection.Assembly.GetExecutingAssembly());
-			this.Text = String.Format("GCode App Version {0}", version);
+			SetFormText(null);
 		}
 		
-		public string GetInformationalVersion(System.Reflection.Assembly assembly) {
-			return System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).ProductVersion;
+		public string GetInformationalVersion(Assembly assembly) {
+			return FileVersionInfo.GetVersionInfo(assembly.Location).ProductVersion;
+		}
+		
+		private void SetFormText(string text) {
+			string version = GetInformationalVersion(Assembly.GetExecutingAssembly());
+			if (text != null) {
+				this.Text = String.Format("{0} - GCode App Version {1}", text, version);
+			} else {
+				this.Text = String.Format("GCode App Version {0}", version);
+			}
 		}
 		
 		DialogResult AskToLoadData()
@@ -93,7 +104,7 @@ namespace GCodePlotter
 				{
 					txtFile.Text = fileInfo.Name;
 					txtFile.Tag = fileInfo.FullName;
-					this.Text = fileInfo.Name;
+					SetFormText(fileInfo.Name);
 					
 					Application.DoEvents();
 					ParseData();
@@ -163,7 +174,7 @@ namespace GCodePlotter
 
 				txtFile.Text = fileInfo.Name;
 				txtFile.Tag = fileInfo.FullName;
-				this.Text = fileInfo.Name;
+				SetFormText(fileInfo.Name);
 
 				string gCode = File.ReadAllText(fileInfo.FullName);
 				ParseGCodeString(gCode);
@@ -419,7 +430,7 @@ namespace GCodePlotter
 				{
 					txtFile.Text = fileInfo.Name;
 					txtFile.Tag = fileInfo.FullName;
-					this.Text = fileInfo.Name;
+					SetFormText(fileInfo.Name);
 					
 					// Cannot store with QuickSettings since the last opened file is
 					// opened with another load method than SVGs
@@ -1227,7 +1238,7 @@ namespace GCodePlotter
 			foreach (Block block in myBlocks)
 			{
 				// cache if this is a drill point
-				block.CheckIfDrillPoint();
+				block.CheckIfDrillOrProbePoint();
 				
 				block.CalculateMinAndMax();
 				

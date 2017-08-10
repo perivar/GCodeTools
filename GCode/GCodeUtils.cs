@@ -205,7 +205,8 @@ namespace GCode
 			bool found = false;
 
 			foreach (var instruction in instructions) {
-				if (instruction.CommandType == CommandType.NormalMove
+				if ((instruction.CommandType == CommandType.NormalMove
+				     || instruction.Command.Equals("G38.2"))
 				    && !instruction.X.HasValue
 				    && !instruction.Y.HasValue
 				    && instruction.Z.HasValue) {

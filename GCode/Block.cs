@@ -99,7 +99,7 @@ namespace GCode
 		/// 2. Drill
 		/// 3. Raise bit
 		/// </summary>
-		public void CheckIfDrillPoint() {
+		public void CheckIfDrillOrProbePoint() {
 			if (GCodeInstructions.Count == 3) {
 				bool hasRapidMove = false;
 				bool hasZUp = false;
@@ -113,7 +113,13 @@ namespace GCode
 					} else if (instruction.CommandType == CommandType.RapidMove
 					           && !instruction.Z.HasValue) {
 						hasRapidMove = true;
+						// Z down
 					} else if (instruction.CommandType == CommandType.NormalMove
+					           && instruction.Z.HasValue
+					           && instruction.Z.Value < 0) {
+						hasZDown = true;
+						// also Probe Point is a Z down point
+					} else if (instruction.Command.Equals("G38.2")
 					           && instruction.Z.HasValue
 					           && instruction.Z.Value < 0) {
 						hasZDown = true;
@@ -126,7 +132,7 @@ namespace GCode
 			}
 			IsDrillPoint = false;
 		}
-
+		
 		/// <summary>
 		/// Calculate Min and Max values based on all included gcode instructions
 		/// </summary>
