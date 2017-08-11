@@ -143,8 +143,9 @@ namespace GCode
 					// if we have blocks available and
 					// we have reached a new block (i.e. different X and Y coordinate)
 					// store it and clear the blocks
-					if (blocksWithSameXY.Count > 0 &&
-					    !block.EqualXYCoordinates(previousBlock)) {
+					if (blocksWithSameXY.Count > 0
+					    && !block.EqualXYCoordinates(previousBlock)
+					   ) {
 						// sort the blocks with same xy by z coordinate
 						var sortedByZ = blocksWithSameXY.OrderByDescending(s => s.Z);
 
@@ -154,6 +155,8 @@ namespace GCode
 						
 						// reset block
 						blocksWithSameXY.Clear();
+					} else {
+						// can this happen?
 					}
 
 					// store original index
@@ -206,7 +209,7 @@ namespace GCode
 
 			foreach (var instruction in instructions) {
 				if ((instruction.CommandType == CommandType.NormalMove
-				     || instruction.Command.Equals("G38.2"))
+				     || "G38.2".Equals(instruction.Command))
 				    && !instruction.X.HasValue
 				    && !instruction.Y.HasValue
 				    && instruction.Z.HasValue) {

@@ -31,6 +31,7 @@ namespace GCodePlotter
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmPlotter));
 			this.splitContainer1 = new System.Windows.Forms.SplitContainer();
 			this.panelViewerAndCommands = new System.Windows.Forms.Panel();
 			this.panelViewer = new System.Windows.Forms.Panel();
@@ -573,6 +574,7 @@ namespace GCodePlotter
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(1270, 800);
 			this.Controls.Add(this.splitContainer1);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.Name = "frmPlotter";
 			this.Padding = new System.Windows.Forms.Padding(8);

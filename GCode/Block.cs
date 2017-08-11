@@ -119,7 +119,7 @@ namespace GCode
 					           && instruction.Z.Value < 0) {
 						hasZDown = true;
 						// also Probe Point is a Z down point
-					} else if (instruction.Command.Equals("G38.2")
+					} else if ("G38.2".Equals(instruction.Command)
 					           && instruction.Z.HasValue
 					           && instruction.Z.Value < 0) {
 						hasZDown = true;
