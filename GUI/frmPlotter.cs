@@ -378,6 +378,16 @@ namespace GCodePlotter
 			// set handled to true to disable scrolling the scrollbars using the mousewheel
 			((HandledMouseEventArgs)mea).Handled = true;
 		}
+
+		void BtnGenerateClick(object sender, EventArgs e)
+		{
+			using (var options = new frmGenerate(this)) {
+				var result = options.ShowDialog();
+				if (result == DialogResult.OK) {
+					//SaveGCodes(true);
+				}
+			}
+		}
 		
 		void BtnOptimizeClick(object sender, EventArgs e)
 		{
@@ -983,7 +993,7 @@ namespace GCodePlotter
 			return splitValue;
 		}
 		
-		float GetFeedRateRapidMoves() {
+		public float GetFeedRateRapidMoves() {
 			// allow leading sign (minus) and decimal fractions
 			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 			
@@ -1000,7 +1010,7 @@ namespace GCodePlotter
 			return f;
 		}
 		
-		float GetFeedRatePlungeMoves() {
+		public float GetFeedRatePlungeMoves() {
 			// allow leading sign (minus) and decimal fractions
 			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 			
@@ -1017,7 +1027,7 @@ namespace GCodePlotter
 			return f;
 		}
 		
-		float GetZSafeHeight() {
+		public float GetZSafeHeight() {
 			// only allow decimal and not minus
 			NumberStyles style = NumberStyles.AllowDecimalPoint;
 			float zSafeHeight = 2.0f;
@@ -1028,7 +1038,7 @@ namespace GCodePlotter
 			return zSafeHeight;
 		}
 
-		float GetZDepth() {
+		public float GetZDepth() {
 			// allow leading sign (minus) and decimal fractions
 			NumberStyles style = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 			float zDepth = -0.1f;

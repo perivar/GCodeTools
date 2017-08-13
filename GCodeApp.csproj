@@ -79,6 +79,10 @@
     <Compile Include="GCode\Point3D.cs" />
     <Compile Include="GCode\QuickSettings.cs" />
     <Compile Include="GCode\SimpleGCodeParser.cs" />
+    <Compile Include="GUI\frmGenerate.cs" />
+    <Compile Include="GUI\frmGenerate.Designer.cs">
+      <DependentUpon>frmGenerate.cs</DependentUpon>
+    </Compile>
     <Compile Include="GUI\frmOptions.cs" />
     <Compile Include="GUI\frmOptions.Designer.cs">
       <DependentUpon>frmOptions.cs</DependentUpon>
@@ -121,6 +125,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="GUI\frmGenerate.resx">
+      <DependentUpon>frmGenerate.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="GUI\frmOptions.resx">
       <DependentUpon>frmOptions.cs</DependentUpon>
     </EmbeddedResource>

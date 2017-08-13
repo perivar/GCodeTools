@@ -40,6 +40,7 @@ namespace GCodePlotter
 			this.txtCoordinates = new System.Windows.Forms.TextBox();
 			this.txtFile = new System.Windows.Forms.TextBox();
 			this.panelCommands = new System.Windows.Forms.Panel();
+			this.btnGenerate = new System.Windows.Forms.Button();
 			this.txtAngle = new System.Windows.Forms.TextBox();
 			this.lblAngle = new System.Windows.Forms.Label();
 			this.panelMove = new System.Windows.Forms.Panel();
@@ -163,7 +164,7 @@ namespace GCodePlotter
 			this.txtCoordinates.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtCoordinates.Name = "txtCoordinates";
 			this.txtCoordinates.Size = new System.Drawing.Size(181, 26);
-			this.txtCoordinates.TabIndex = 11;
+			this.txtCoordinates.TabIndex = 26;
 			// 
 			// txtFile
 			// 
@@ -174,10 +175,11 @@ namespace GCodePlotter
 			this.txtFile.Name = "txtFile";
 			this.txtFile.ReadOnly = true;
 			this.txtFile.Size = new System.Drawing.Size(395, 26);
-			this.txtFile.TabIndex = 10;
+			this.txtFile.TabIndex = 25;
 			// 
 			// panelCommands
 			// 
+			this.panelCommands.Controls.Add(this.btnGenerate);
 			this.panelCommands.Controls.Add(this.txtAngle);
 			this.panelCommands.Controls.Add(this.lblAngle);
 			this.panelCommands.Controls.Add(this.panelMove);
@@ -197,13 +199,24 @@ namespace GCodePlotter
 			this.panelCommands.Size = new System.Drawing.Size(188, 784);
 			this.panelCommands.TabIndex = 11;
 			// 
+			// btnGenerate
+			// 
+			this.btnGenerate.Location = new System.Drawing.Point(15, 88);
+			this.btnGenerate.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+			this.btnGenerate.Name = "btnGenerate";
+			this.btnGenerate.Size = new System.Drawing.Size(159, 34);
+			this.btnGenerate.TabIndex = 4;
+			this.btnGenerate.Text = "Generate";
+			this.btnGenerate.UseVisualStyleBackColor = true;
+			this.btnGenerate.Click += new System.EventHandler(this.BtnGenerateClick);
+			// 
 			// txtAngle
 			// 
 			this.txtAngle.Location = new System.Drawing.Point(108, 477);
 			this.txtAngle.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtAngle.Name = "txtAngle";
 			this.txtAngle.Size = new System.Drawing.Size(66, 26);
-			this.txtAngle.TabIndex = 21;
+			this.txtAngle.TabIndex = 20;
 			this.txtAngle.Text = "0.0";
 			// 
 			// lblAngle
@@ -225,14 +238,14 @@ namespace GCodePlotter
 			this.panelMove.Location = new System.Drawing.Point(10, 171);
 			this.panelMove.Name = "panelMove";
 			this.panelMove.Size = new System.Drawing.Size(171, 79);
-			this.panelMove.TabIndex = 32;
+			this.panelMove.TabIndex = 6;
 			// 
 			// btnRotate
 			// 
 			this.btnRotate.Location = new System.Drawing.Point(82, 0);
 			this.btnRotate.Name = "btnRotate";
 			this.btnRotate.Size = new System.Drawing.Size(82, 34);
-			this.btnRotate.TabIndex = 33;
+			this.btnRotate.TabIndex = 7;
 			this.btnRotate.Text = "Rotate";
 			this.btnRotate.UseVisualStyleBackColor = true;
 			this.btnRotate.Click += new System.EventHandler(this.BtnRotateClick);
@@ -243,7 +256,7 @@ namespace GCodePlotter
 			this.btnShift.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnShift.Name = "btnShift";
 			this.btnShift.Size = new System.Drawing.Size(70, 34);
-			this.btnShift.TabIndex = 21;
+			this.btnShift.TabIndex = 6;
 			this.btnShift.Text = "Move";
 			this.btnShift.UseVisualStyleBackColor = true;
 			this.btnShift.Click += new System.EventHandler(this.BtnShiftClick);
@@ -255,7 +268,7 @@ namespace GCodePlotter
 			this.txtShiftX.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftX.Name = "txtShiftX";
 			this.txtShiftX.Size = new System.Drawing.Size(44, 26);
-			this.txtShiftX.TabIndex = 23;
+			this.txtShiftX.TabIndex = 8;
 			this.txtShiftX.Text = "0.0";
 			// 
 			// txtShiftY
@@ -265,7 +278,7 @@ namespace GCodePlotter
 			this.txtShiftY.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftY.Name = "txtShiftY";
 			this.txtShiftY.Size = new System.Drawing.Size(44, 26);
-			this.txtShiftY.TabIndex = 24;
+			this.txtShiftY.TabIndex = 9;
 			this.txtShiftY.Text = "0.0";
 			// 
 			// txtShiftZ
@@ -275,7 +288,7 @@ namespace GCodePlotter
 			this.txtShiftZ.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtShiftZ.Name = "txtShiftZ";
 			this.txtShiftZ.Size = new System.Drawing.Size(44, 26);
-			this.txtShiftZ.TabIndex = 25;
+			this.txtShiftZ.TabIndex = 10;
 			this.txtShiftZ.Text = "0.0";
 			// 
 			// panelSVG
@@ -288,7 +301,7 @@ namespace GCodePlotter
 			this.panelSVG.Location = new System.Drawing.Point(10, 250);
 			this.panelSVG.Name = "panelSVG";
 			this.panelSVG.Size = new System.Drawing.Size(178, 113);
-			this.panelSVG.TabIndex = 31;
+			this.panelSVG.TabIndex = 11;
 			// 
 			// radSVGCenter
 			// 
@@ -296,7 +309,7 @@ namespace GCodePlotter
 			this.radSVGCenter.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radSVGCenter.Name = "radSVGCenter";
 			this.radSVGCenter.Size = new System.Drawing.Size(93, 37);
-			this.radSVGCenter.TabIndex = 27;
+			this.radSVGCenter.TabIndex = 13;
 			this.radSVGCenter.TabStop = true;
 			this.radSVGCenter.Text = "Center";
 			this.radSVGCenter.UseVisualStyleBackColor = true;
@@ -307,8 +320,8 @@ namespace GCodePlotter
 			this.btnLoadSVG.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnLoadSVG.Name = "btnLoadSVG";
 			this.btnLoadSVG.Size = new System.Drawing.Size(159, 34);
-			this.btnLoadSVG.TabIndex = 22;
-			this.btnLoadSVG.Text = "SVG Load";
+			this.btnLoadSVG.TabIndex = 11;
+			this.btnLoadSVG.Text = "SVG Import";
 			this.btnLoadSVG.UseVisualStyleBackColor = true;
 			this.btnLoadSVG.Click += new System.EventHandler(this.BtnSVGLoadClick);
 			// 
@@ -327,7 +340,7 @@ namespace GCodePlotter
 			this.txtZDepth.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtZDepth.Name = "txtZDepth";
 			this.txtZDepth.Size = new System.Drawing.Size(45, 26);
-			this.txtZDepth.TabIndex = 28;
+			this.txtZDepth.TabIndex = 14;
 			this.txtZDepth.Text = "-0.1";
 			// 
 			// radSVGAll
@@ -337,7 +350,7 @@ namespace GCodePlotter
 			this.radSVGAll.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radSVGAll.Name = "radSVGAll";
 			this.radSVGAll.Size = new System.Drawing.Size(68, 37);
-			this.radSVGAll.TabIndex = 26;
+			this.radSVGAll.TabIndex = 12;
 			this.radSVGAll.TabStop = true;
 			this.radSVGAll.Text = "All";
 			this.radSVGAll.UseVisualStyleBackColor = true;
@@ -353,7 +366,7 @@ namespace GCodePlotter
 			this.panelSplitCmds.Location = new System.Drawing.Point(10, 362);
 			this.panelSplitCmds.Name = "panelSplitCmds";
 			this.panelSplitCmds.Size = new System.Drawing.Size(178, 112);
-			this.panelSplitCmds.TabIndex = 30;
+			this.panelSplitCmds.TabIndex = 15;
 			// 
 			// btnSplit
 			// 
@@ -361,7 +374,7 @@ namespace GCodePlotter
 			this.btnSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSplit.Name = "btnSplit";
 			this.btnSplit.Size = new System.Drawing.Size(69, 34);
-			this.btnSplit.TabIndex = 12;
+			this.btnSplit.TabIndex = 15;
 			this.btnSplit.Text = "Split";
 			this.btnSplit.UseVisualStyleBackColor = true;
 			this.btnSplit.Click += new System.EventHandler(this.btnSplitClick);
@@ -373,7 +386,7 @@ namespace GCodePlotter
 			this.radLeft.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radLeft.Name = "radLeft";
 			this.radLeft.Size = new System.Drawing.Size(68, 37);
-			this.radLeft.TabIndex = 15;
+			this.radLeft.TabIndex = 17;
 			this.radLeft.TabStop = true;
 			this.radLeft.Text = "Left";
 			this.radLeft.UseVisualStyleBackColor = true;
@@ -384,7 +397,7 @@ namespace GCodePlotter
 			this.radRight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.radRight.Name = "radRight";
 			this.radRight.Size = new System.Drawing.Size(87, 37);
-			this.radRight.TabIndex = 16;
+			this.radRight.TabIndex = 18;
 			this.radRight.TabStop = true;
 			this.radRight.Text = "Right";
 			this.radRight.UseVisualStyleBackColor = true;
@@ -404,7 +417,7 @@ namespace GCodePlotter
 			this.txtSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtSplit.Name = "txtSplit";
 			this.txtSplit.Size = new System.Drawing.Size(66, 26);
-			this.txtSplit.TabIndex = 14;
+			this.txtSplit.TabIndex = 19;
 			this.txtSplit.Text = "0.0";
 			// 
 			// btnSaveSplit
@@ -413,7 +426,7 @@ namespace GCodePlotter
 			this.btnSaveSplit.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSaveSplit.Name = "btnSaveSplit";
 			this.btnSaveSplit.Size = new System.Drawing.Size(82, 34);
-			this.btnSaveSplit.TabIndex = 19;
+			this.btnSaveSplit.TabIndex = 16;
 			this.btnSaveSplit.Text = "Save";
 			this.btnSaveSplit.UseVisualStyleBackColor = true;
 			this.btnSaveSplit.Click += new System.EventHandler(this.btnSaveSplitClick);
@@ -424,7 +437,7 @@ namespace GCodePlotter
 			this.btnOptimize.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnOptimize.Name = "btnOptimize";
 			this.btnOptimize.Size = new System.Drawing.Size(159, 34);
-			this.btnOptimize.TabIndex = 20;
+			this.btnOptimize.TabIndex = 5;
 			this.btnOptimize.Text = "Optimize";
 			this.btnOptimize.UseVisualStyleBackColor = true;
 			this.btnOptimize.Click += new System.EventHandler(this.BtnOptimizeClick);
@@ -444,7 +457,7 @@ namespace GCodePlotter
 			this.txtZClearance.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.txtZClearance.Name = "txtZClearance";
 			this.txtZClearance.Size = new System.Drawing.Size(46, 26);
-			this.txtZClearance.TabIndex = 17;
+			this.txtZClearance.TabIndex = 21;
 			this.txtZClearance.Text = "2.0";
 			// 
 			// txtDimension
@@ -459,26 +472,26 @@ namespace GCodePlotter
 			this.txtDimension.Name = "txtDimension";
 			this.txtDimension.ReadOnly = true;
 			this.txtDimension.Size = new System.Drawing.Size(178, 126);
-			this.txtDimension.TabIndex = 11;
+			this.txtDimension.TabIndex = 24;
 			// 
 			// cmdSaveLayers
 			// 
-			this.cmdSaveLayers.Location = new System.Drawing.Point(15, 89);
+			this.cmdSaveLayers.Location = new System.Drawing.Point(15, 47);
 			this.cmdSaveLayers.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cmdSaveLayers.Name = "cmdSaveLayers";
 			this.cmdSaveLayers.Size = new System.Drawing.Size(159, 34);
-			this.cmdSaveLayers.TabIndex = 9;
+			this.cmdSaveLayers.TabIndex = 3;
 			this.cmdSaveLayers.Text = "Save (Peck Drill)";
 			this.cmdSaveLayers.UseVisualStyleBackColor = true;
 			this.cmdSaveLayers.Click += new System.EventHandler(this.btnSavePeckDrillingClick);
 			// 
 			// btnSave
 			// 
-			this.btnSave.Location = new System.Drawing.Point(15, 47);
+			this.btnSave.Location = new System.Drawing.Point(92, 5);
 			this.btnSave.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnSave.Name = "btnSave";
-			this.btnSave.Size = new System.Drawing.Size(159, 34);
-			this.btnSave.TabIndex = 9;
+			this.btnSave.Size = new System.Drawing.Size(82, 34);
+			this.btnSave.TabIndex = 2;
 			this.btnSave.Text = "Save";
 			this.btnSave.UseVisualStyleBackColor = true;
 			this.btnSave.Click += new System.EventHandler(this.btnSaveClick);
@@ -488,9 +501,9 @@ namespace GCodePlotter
 			this.btnLoad.Location = new System.Drawing.Point(15, 5);
 			this.btnLoad.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.btnLoad.Name = "btnLoad";
-			this.btnLoad.Size = new System.Drawing.Size(159, 34);
-			this.btnLoad.TabIndex = 9;
-			this.btnLoad.Text = "Load";
+			this.btnLoad.Size = new System.Drawing.Size(70, 34);
+			this.btnLoad.TabIndex = 1;
+			this.btnLoad.Text = "Open";
 			this.btnLoad.UseVisualStyleBackColor = true;
 			this.btnLoad.Click += new System.EventHandler(this.btnLoadClick);
 			// 
@@ -539,7 +552,7 @@ namespace GCodePlotter
 			this.cbSoloSelect.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbSoloSelect.Name = "cbSoloSelect";
 			this.cbSoloSelect.Size = new System.Drawing.Size(116, 24);
-			this.cbSoloSelect.TabIndex = 6;
+			this.cbSoloSelect.TabIndex = 23;
 			this.cbSoloSelect.Text = "Solo Select";
 			this.cbSoloSelect.UseVisualStyleBackColor = true;
 			this.cbSoloSelect.CheckedChanged += new System.EventHandler(this.cbSoloSelectCheckedChanged);
@@ -553,7 +566,7 @@ namespace GCodePlotter
 			this.cbRenderG0.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
 			this.cbRenderG0.Name = "cbRenderG0";
 			this.cbRenderG0.Size = new System.Drawing.Size(122, 24);
-			this.cbRenderG0.TabIndex = 5;
+			this.cbRenderG0.TabIndex = 22;
 			this.cbRenderG0.Text = "Render G0s";
 			this.cbRenderG0.UseVisualStyleBackColor = true;
 			this.cbRenderG0.CheckedChanged += new System.EventHandler(this.cbRenderG0CheckedChanged);
@@ -649,5 +662,6 @@ namespace GCodePlotter
 		private System.Windows.Forms.Button btnRotate;
 		private System.Windows.Forms.TextBox txtAngle;
 		private System.Windows.Forms.Label lblAngle;
+		private System.Windows.Forms.Button btnGenerate;
 	}
 }
