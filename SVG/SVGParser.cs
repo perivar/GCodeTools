@@ -1837,24 +1837,22 @@ namespace SVG
 			// Does the document contain in-page styles?
 			if (tagName.Equals("style", StringComparison.InvariantCultureIgnoreCase)) {
 				
+				// get style data
 				var styleData = String.Join("", element.Nodes()).Trim();
-				var styleReader = new StringReader(styleData);
-				string line;
-				while ((line = styleReader.ReadLine()) != null) {
-					string[] splitLine;
-
-					line = line.Trim();
-					if (line == "") continue;
+				
+				// remove all new lines and whitespaces etc
+				styleData = Regex.Replace(styleData, @"\s+", string.Empty);
+				
+				// extract each css class section
+				var regex = new Regex(@"\.?([_a-zA-Z\-]+[\w\-]*)\s*(\{.*?\})");
+				foreach (Match match in regex.Matches(styleData))
+				{
+					// remove any new lines etc
+					string cssClassName = match.Groups[1].Value;
+					string cssClassValues = match.Groups[2].Value;
 					
-					splitLine = line.Split(new [] { ' ', '\t', '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
-
-					string name = splitLine[0];
-					if (name.StartsWith(".")) {
-						name = name.Substring(1);
-					}
-					if (splitLine.Count() == 2) {
-						styleDictionary.Add(name, new SVGStyle(name, splitLine[1]));
-					}
+					// and add to style dictionary
+					styleDictionary.Add(cssClassName, new SVGStyle(cssClassName, cssClassValues));
 				}
 			}
 			
