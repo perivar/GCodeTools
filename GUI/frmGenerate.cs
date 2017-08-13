@@ -31,8 +31,8 @@ namespace GCodePlotter
 		}
 		
 		private void CalculatePreview() {
-			textBoxPreviewX.Text = string.Format("{0} - {1}mm", numericUpDownOffsetX.Value, numericUpDownGridSize.Value * (numericUpDownPointsX.Value - 1) + numericUpDownOffsetX.Value);
-			textBoxPreviewY.Text = string.Format("{0} - {1}mm", numericUpDownOffsetY.Value, numericUpDownGridSize.Value * (numericUpDownPointsY.Value - 1) + numericUpDownOffsetY.Value);
+			textBoxPreviewX.Text = string.Format("{0} - {1} mm", numericUpDownOffsetX.Value, numericUpDownGridSize.Value * (numericUpDownPointsX.Value - 1) + numericUpDownOffsetX.Value);
+			textBoxPreviewY.Text = string.Format("{0} - {1} mm", numericUpDownOffsetY.Value, numericUpDownGridSize.Value * (numericUpDownPointsY.Value - 1) + numericUpDownOffsetY.Value);
 		}
 		
 		void BtnGenerateProbeClick(object sender, EventArgs e)

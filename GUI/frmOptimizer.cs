@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Threading;
 using GeneticAlgorithm;
@@ -158,8 +159,15 @@ namespace GCodeOptimizer
 			gfx.Clear(Color.White);
 
 			// define pens
-			var straightPen = new Pen(Color.Red, 0.5f);
+			var straightPen = new Pen(Color.Red, 1.0f);
+			straightPen.StartCap = LineCap.NoAnchor;
+			straightPen.EndCap = LineCap.ArrowAnchor;
+			
 			var lastStraightPen = new Pen(Color.HotPink, 1.0f);
+			lastStraightPen.StartCap = LineCap.NoAnchor;
+			lastStraightPen.EndCap = LineCap.ArrowAnchor;
+			
+			var lastBrush = new SolidBrush(lastStraightPen.Color);
 			var arcPen = new Pen(Color.Black, 0.5f);
 			var arcBrush = new SolidBrush(Color.Black);
 			
@@ -185,7 +193,7 @@ namespace GCodeOptimizer
 				if (previousLocation != null) {
 					
 					// draw
-					gfx.FillEllipse( arcBrush, currentLocation.X*scale-radius, (maxY-currentLocation.Y)*scale-radius, radius*2, radius*2 );
+					gfx.FillEllipse(arcBrush, currentLocation.X*scale-radius, (maxY-currentLocation.Y)*scale-radius, radius*2, radius*2 );
 					
 					gfx.DrawLine(straightPen,
 					             previousLocation.X*scale,
@@ -204,8 +212,8 @@ namespace GCodeOptimizer
 				firstLocation = points[0];
 			}
 			
-			// draw last circle
-			gfx.FillEllipse( Brushes.Yellow, firstLocation.X*scale-radius, (maxY-firstLocation.Y)*scale-radius, radius*2, radius*2 );
+			// draw last circle back to first location
+			gfx.FillEllipse(lastBrush, firstLocation.X*scale-radius, (maxY-firstLocation.Y)*scale-radius, radius*2, radius*2 );
 
 			// draw last line
 			gfx.DrawLine(lastStraightPen,
@@ -214,10 +222,14 @@ namespace GCodeOptimizer
 			             firstLocation.X*scale,
 			             (maxY-firstLocation.Y)*scale);
 
+
 			gfx.Flush();
 			gfx.Dispose();
+
+			// dispose pens
 			straightPen.Dispose();
 			lastStraightPen.Dispose();
+			lastBrush.Dispose();
 			arcPen.Dispose();
 			arcBrush.Dispose();
 
